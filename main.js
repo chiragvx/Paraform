@@ -3059,12 +3059,7 @@ function showCreateChoice() {
 function showConfigurator() {
     document.getElementById('create-selection').classList.add('hidden');
     
-    // Back button to choice screen
-    document.getElementById('create-back-btn').onclick = (e) => {
-        e.preventDefault();
-        currentState.template = null;
-        showCreateChoice();
-    };
+    // Back button removed from HTML — no-op
 
     const browseBtn = document.getElementById('studio-browse-btn');
     if (browseBtn) browseBtn.onclick = openStudioLibrary;
@@ -3192,10 +3187,14 @@ function renderParameters() {
         let inputHtml = '';
         
         if (param.type === 'number' || param.type === 'integer') {
+            const unit = param.unit ? `<span class="param-unit">${param.unit}</span>` : '';
             inputHtml = `
                 <div class="param-label">
                     <span>${param.label}</span>
-                    <input type="number" class="manual-input" value="${currentState.params[param.key]}" step="${param.step}">
+                    <div class="param-value-wrap">
+                        <input type="number" class="manual-input" value="${currentState.params[param.key]}" step="${param.step}">
+                        ${unit}
+                    </div>
                 </div>
                 <input type="range" min="${param.min}" max="${param.max}" step="${param.step}" value="${currentState.params[param.key]}">
             `;

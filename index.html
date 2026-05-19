@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body class="dark-theme">
     <div id="app-loader">
@@ -16,16 +16,6 @@
             <div class="loader-logo">
                 <span class="logo-icon">⬢</span>
                 <span class="logo-text">ParaForm</span>
-            </div>
-            <div class="cube-wrapper">
-                <div class="css-cube">
-                    <div class="side front"></div>
-                    <div class="side back"></div>
-                    <div class="side right"></div>
-                    <div class="side left"></div>
-                    <div class="side top"></div>
-                    <div class="side bottom"></div>
-                </div>
             </div>
             <div class="loader-status">
                 <div class="progress-container">
@@ -41,7 +31,7 @@
             <a href="#/" class="logo">
                 <span class="logo-icon">⬢</span>
                 <span class="logo-text">ParaForm</span>
-                <span id="editor-badge" class="badge mini hidden">Editor</span>
+                <span id="editor-badge" class="badge mini hidden">Studio</span>
             </a>
             <div class="nav-links">
                 <a href="#/" class="nav-link">Home</a>
@@ -50,11 +40,12 @@
             </div>
             <div class="nav-actions">
                 <a href="#/auth" id="auth-btn" class="secondary-btn">Login</a>
-                <a href="#/create" class="primary-btn">Launch Studio</a>
+                <a href="#/create" class="primary-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Launch Studio
+                </a>
                 <button id="mobile-menu-toggle" class="icon-btn mobile-only">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                    <span></span><span></span><span></span>
                 </button>
             </div>
         </div>
@@ -63,18 +54,18 @@
     <main id="view-router">
         <!-- AUTH PAGE -->
         <section id="view-auth" class="view hidden">
-            <div class="auth-container glass">
+            <div class="auth-container">
                 <div class="auth-header">
-                    <span class="logo-icon">⬢</span>
-                    <h2>Join ParaForm</h2>
-                    <p>Create an account to save your designs and share them with the community.</p>
+                    <span class="logo-icon" style="font-size:32px;color:var(--accent-color)">⬢</span>
+                    <h2>Welcome to ParaForm</h2>
+                    <p>Create an account to save your designs and access the full library.</p>
                 </div>
                 <div class="auth-methods">
                     <button id="github-login" class="primary-btn full-width">
                         <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="Github" class="btn-img">
                         Continue with GitHub
                     </button>
-                    <div class="divider-text">or</div>
+                    <div class="auth-divider"><span>or</span></div>
                     <div class="email-login">
                         <input type="email" id="magic-link-email" placeholder="Enter your email" class="glass-input">
                         <button id="magic-link-btn" class="secondary-btn full-width">Send Magic Link</button>
@@ -85,89 +76,122 @@
 
         <!-- LANDING PAGE -->
         <section id="view-landing" class="view">
-            <!-- Hero Panel -->
             <div class="hero">
                 <div class="hero-content">
-                    <h1>3D Objects, <br><span class="accent-text">Now Programmatic.</span></h1>
-                    <p>Shift from rigid meshes to flexible formulas. Customize professional gadgets in your browser and download print-ready STL files instantly.</p>
+                    <div class="hero-badge">
+                        <span class="hero-badge-dot"></span>
+                        Browser-Native &nbsp;·&nbsp; Zero Install &nbsp;·&nbsp; 100% Local
+                    </div>
+                    <h1>3D Objects,<br><span class="accent-text">Now Programmatic.</span></h1>
+                    <p>Stop wrestling with rigid meshes. Customize professional 3D models with simple sliders and download print-ready STL files — entirely in your browser.</p>
                     <div class="hero-actions">
-                        <a href="#/explore" class="primary-btn">Explore Templates</a>
-                        <a href="#features-section" class="outline-btn">How it Works</a>
+                        <a href="#/explore" class="primary-btn hero-cta">
+                            Explore Templates
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                        <a href="#features-section" class="ghost-btn">How it Works</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="hero-stat"><span class="stat-value">100%</span><span class="stat-label">Local Processing</span></div>
+                        <div class="hero-stat-divider"></div>
+                        <div class="hero-stat"><span class="stat-value">STL</span><span class="stat-label">Slicer-Ready Export</span></div>
+                        <div class="hero-stat-divider"></div>
+                        <div class="hero-stat"><span class="stat-value">0ms</span><span class="stat-label">Server Latency</span></div>
                     </div>
                 </div>
-                <div class="hero-visual glass">
+                <div class="hero-visual">
+                    <div class="hero-visual-glow"></div>
                     <div id="hero-viewport"></div>
                     <div class="hero-demo-control">
-                        <label>Adjust Part Size</label>
+                        <label>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20V4M4 12h16"/></svg>
+                            Adjust Part Size
+                        </label>
                         <input type="range" id="hero-slider" min="40" max="150" value="80">
                     </div>
                 </div>
             </div>
 
-            <!-- Features Capability Grid -->
+            <!-- Features -->
             <div id="features-section" class="landing-section">
-                <h2 class="section-title">Why Programmatic CAD?</h2>
+                <div class="section-header">
+                    <p class="section-eyebrow">Why ParaForm</p>
+                    <h2 class="section-title">Designed for precision. <br>Built for speed.</h2>
+                </div>
                 <div class="features-grid">
-                    <div class="feature-card glass">
-                        <div class="feature-icon">⬢</div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrap" style="--icon-color: #4b9eff">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+                        </div>
                         <h3>Parametric Core</h3>
-                        <p>Change simple sliders to customize thickness, scale, and layout. Watch meshes re-calculate in real time.</p>
+                        <p>Adjust sliders to customize thickness, scale, and layout. Watch meshes recalculate in real time — no manual editing.</p>
                     </div>
-                    <div class="feature-card glass">
-                        <div class="feature-icon">⚡</div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrap" style="--icon-color: #a78bfa">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        </div>
                         <h3>WASM Compiler</h3>
-                        <p>Multi-threaded OpenSCAD compiler runs 100% locally in your browser. Zero latency, complete offline privacy.</p>
+                        <p>Multi-threaded OpenSCAD runs 100% locally in your browser. Zero latency, complete privacy, full offline capability.</p>
                     </div>
-                    <div class="feature-card glass">
-                        <div class="feature-icon">📤</div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrap" style="--icon-color: #34d399">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </div>
                         <h3>Manifold Export</h3>
-                        <p>Generate print-ready STL meshes with flawless watertight manifolds. Compatible with all major slicers.</p>
+                        <p>Generate print-ready STL meshes with flawless watertight manifolds. Compatible with Bambu, Prusa, Ender, and all major slicers.</p>
                     </div>
-                    <div class="feature-card glass">
-                        <div class="feature-icon">⚙️</div>
+                    <div class="feature-card">
+                        <div class="feature-icon-wrap" style="--icon-color: #fb923c">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        </div>
                         <h3>Direct SCAD Scripting</h3>
-                        <p>Write standard OpenSCAD code in the built-in editor. Instantly bind inputs to GUI sliders.</p>
+                        <p>Drop into the code editor and write standard OpenSCAD. Sliders bind automatically to parameters — code and GUI stay in sync.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Platform Architecture & Manifesto -->
+            <!-- How it works -->
+            <div class="landing-section workflow-section">
+                <div class="section-header centered">
+                    <p class="section-eyebrow">Workflow</p>
+                    <h2 class="section-title">From idea to print in three steps.</h2>
+                </div>
+                <div class="workflow-steps">
+                    <div class="step">
+                        <div class="step-num-wrap"><span class="step-num">01</span></div>
+                        <h4>Choose a Template</h4>
+                        <p>Pick from a library of functional, mathematically-defined models — enclosures, mounts, tools, and more.</p>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step">
+                        <div class="step-num-wrap"><span class="step-num">02</span></div>
+                        <h4>Adjust Parameters</h4>
+                        <p>Drag sliders or edit source code directly. The compiler re-runs instantly and updates the 3D view.</p>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step">
+                        <div class="step-num-wrap"><span class="step-num">03</span></div>
+                        <h4>Export & Print</h4>
+                        <p>Download a watertight STL and drop it straight into your slicer. Done in minutes, not hours.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manifesto & Stack -->
             <div class="landing-section double-column">
-                <div class="manifesto glass">
+                <div class="manifesto">
                     <h2>The Manifesto</h2>
                     <p>We believe the 3D asset world is stuck in the era of static, uneditable meshes. ParaForm was built to transition creators to <strong>flexible, mathematical formulas</strong>.</p>
                     <p>By bringing the robust power of OpenSCAD to the browser via WebAssembly, we enable zero-overhead, highly customizable manufacturing files for everyone.</p>
                 </div>
-                <div class="tech-stack glass">
+                <div class="tech-stack">
                     <h3>Technical Stack</h3>
                     <ul class="terminal-list">
-                        <li><span>OpenSCAD WASM</span><span>Multi-threaded C++ engine running locally.</span></li>
-                        <li><span>Three.js WebGL</span><span>Instant interactive viewport feedback.</span></li>
-                        <li><span>Supabase Engine</span><span>PostgreSQL storage with strict Row Level Security.</span></li>
-                        <li><span>Cloudflare CDN</span><span>Ultra-fast asset loading and caching.</span></li>
+                        <li><span>OpenSCAD WASM</span><span>Multi-threaded C++ engine, local</span></li>
+                        <li><span>Three.js WebGL</span><span>Instant interactive viewport</span></li>
+                        <li><span>Supabase</span><span>PostgreSQL with Row Level Security</span></li>
+                        <li><span>Vercel CDN</span><span>Ultra-fast edge delivery</span></li>
                     </ul>
-                </div>
-            </div>
-
-            <!-- Workflow Steps -->
-            <div class="landing-section workflow-section glass">
-                <h2 class="section-title">The Three-Step Workflow</h2>
-                <div class="workflow-steps">
-                    <div class="step">
-                        <span class="step-num">01</span>
-                        <h4>Choose Template</h4>
-                        <p>Select from a library of functional, mathematically calculated models.</p>
-                    </div>
-                    <div class="step">
-                        <span class="step-num">02</span>
-                        <h4>Flex Parameters</h4>
-                        <p>Drag simple sliders or modify source code blocks in real time.</p>
-                    </div>
-                    <div class="step">
-                        <span class="step-num">03</span>
-                        <h4>Print Instantly</h4>
-                        <p>Export flawless manifold geometry and send directly to your slicer.</p>
-                    </div>
                 </div>
             </div>
         </section>
@@ -177,15 +201,16 @@
             <header class="page-header">
                 <div class="header-main">
                     <div>
-                        <h2>Explore Library</h2>
-                        <p>Discover community models and start customizing in the Studio.</p>
+                        <h2>Model Library</h2>
+                        <p>Discover parametric models. Click any to open in the Studio.</p>
                     </div>
                     <button id="add-custom-model-btn" class="secondary-btn">
-                        <span class="icon">➕</span> Add Custom Model
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Custom Model
                     </button>
                 </div>
-                <div class="search-bar glass">
-                    <input type="text" id="template-search" placeholder="Search gadgets, categories, tags...">
+                <div class="search-bar">
+                    <input type="text" id="template-search" placeholder="Search models by name, tag, or category...">
                     <div class="filters">
                         <button class="filter-chip active">All</button>
                         <button class="filter-chip">Tech</button>
@@ -194,14 +219,12 @@
                     </div>
                 </div>
             </header>
-            <div id="template-grid" class="template-grid">
-                <!-- Template cards injected here -->
-            </div>
+            <div id="template-grid" class="template-grid"></div>
         </section>
 
         <!-- CUSTOM MODEL MODAL -->
         <div id="custom-model-modal" class="modal-overlay hidden">
-            <div class="modal-content glass">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3>Add Custom Model</h3>
                     <button class="close-modal">×</button>
@@ -209,12 +232,12 @@
                 <div class="modal-body">
                     <div class="upload-options">
                         <div class="option-group">
-                            <label>Option 1: Paste OpenSCAD Code</label>
+                            <label>Paste OpenSCAD Code</label>
                             <textarea id="modal-code-input" class="glass-input" rows="8" placeholder="// Paste your OpenSCAD code here..."></textarea>
                         </div>
-                        <div class="divider-text">or</div>
+                        <div class="upload-divider"><span>or</span></div>
                         <div class="option-group">
-                            <label>Option 2: Upload .scad File</label>
+                            <label>Upload .scad File</label>
                             <div id="modal-drop-zone" class="drop-zone mini">
                                 <span class="icon">📁</span>
                                 <p>Drag & Drop or <span>Browse</span></p>
@@ -230,89 +253,100 @@
             </div>
         </div>
 
-        <!-- CREATE PAGE (Configurator) -->
+        <!-- CREATE PAGE (Studio) -->
         <section id="view-create" class="view hidden">
             <div id="configurator-container" class="configurator-layout">
                 <div id="viewport-container" class="full-viewport">
                     <div id="viewport"></div>
 
-                    <!-- Viewport Floating Toolbar (Creality-style Workspace Tools) -->
-                    <div id="viewport-toolbar" class="viewport-toolbar glass">
-                        <button class="tool-btn active" id="tool-select" title="Selection Mode">
-                            <span class="tool-icon">⬈</span>
+                    <!-- Floating Tool Toolbar -->
+                    <div id="viewport-toolbar" class="viewport-toolbar">
+                        <button class="tool-btn active" id="tool-select" title="Select (V)">
+                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-7 1-4 7z"/></svg>
+                            <span class="tool-label">Select</span>
                         </button>
-                        <button class="tool-btn" id="tool-translate" title="Move Model (T)">
-                            <span class="tool-icon">✥</span>
+                        <button class="tool-btn" id="tool-translate" title="Move (G)">
+                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+                            <span class="tool-label">Move</span>
                         </button>
-                        <button class="tool-btn" id="tool-rotate" title="Rotate Model (R)">
-                            <span class="tool-icon">⟳</span>
+                        <button class="tool-btn" id="tool-rotate" title="Rotate (R)">
+                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M22 13A10 10 0 0 0 3.2 7.2M2 11a10 10 0 0 0 18.8 4.8"/></svg>
+                            <span class="tool-label">Rotate</span>
                         </button>
-                        <button class="tool-btn" id="tool-scale" title="Scale Model (S)">
-                            <span class="tool-icon">⤢</span>
+                        <button class="tool-btn" id="tool-scale" title="Scale (S)">
+                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                            <span class="tool-label">Scale</span>
                         </button>
                         <button class="tool-btn" id="tool-layflat" title="Lay Flat on Bed">
-                            <span class="tool-icon">↧</span>
-                        </button>
-                        <div class="tool-divider"></div>
-                        <button class="tool-btn" id="tool-reset" title="Reset Transform">
-                            <span class="tool-icon">↺</span>
-                        </button>
-                        <div class="tool-divider"></div>
-                        <button class="tool-btn disabled" id="tool-undo" title="Undo Action (Ctrl+Z)" disabled>
-                            <span class="tool-icon">↶</span>
-                        </button>
-                        <button class="tool-btn disabled" id="tool-redo" title="Redo Action (Ctrl+Y)" disabled>
-                            <span class="tool-icon">↷</span>
+                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="21" x2="19" y2="21"/></svg>
+                            <span class="tool-label">Lay Flat</span>
                         </button>
                     </div>
 
-                    <!-- Floating Gizmo Details Panel -->
-                    <div id="gizmo-details-panel" class="gizmo-details-panel glass hidden">
-                        <header class="panel-header-mini">
-                            <span id="gizmo-panel-title">Rotate</span>
-                            <button id="gizmo-panel-close" title="Close Panel">✕</button>
-                        </header>
-                        <div id="gizmo-panel-body" class="panel-body-mini">
-                            <!-- Injected dynamically based on active tool -->
-                        </div>
+                    <!-- Viewport overlay controls (bottom-right) -->
+                    <div class="viewport-controls-overlay">
+                        <button id="view-reset" class="vp-ctrl-btn" title="Reset Camera">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        </button>
+                        <button id="view-wireframe" class="vp-ctrl-btn" title="Toggle Wireframe">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><path d="M2 8.5l10 7 10-7"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Gizmo Details Panel (hidden, used by JS) -->
+                    <div id="gizmo-details-panel" class="gizmo-details-panel hidden">
+                        <div id="gizmo-panel-body" class="panel-body-mini"></div>
                     </div>
                 </div>
 
-                <div id="editor-top-bar" class="glass">
+                <div id="editor-top-bar">
                     <div class="editor-title">
-                        <a href="#/create" id="create-back-btn" class="back-link-icon" title="Exit Editor">✕</a>
                         <h3 id="active-template-title">Untitled Project</h3>
                     </div>
                     <div class="editor-actions">
-                        <button id="studio-browse-btn" class="secondary-btn">Browse Library</button>
-                        <button id="save-btn" class="secondary-btn hidden">Save Project</button>
-                        <button id="export-stl" class="primary-btn">Export STL</button>
+                        <button id="studio-browse-btn" class="secondary-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            Library
+                        </button>
+                        <button id="save-btn" class="secondary-btn hidden">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save
+                        </button>
+                        <button id="export-stl" class="primary-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export STL
+                        </button>
                     </div>
                 </div>
 
                 <div id="loader-overlay" class="hidden">
                     <div class="loader"></div>
-                    <p>Processing Mesh...</p>
+                    <p>Compiling mesh...</p>
                 </div>
             </div>
 
             <div id="create-selection" class="create-selection-overlay hidden">
-                <div class="selection-modal glass">
+                <div class="selection-modal">
                     <div class="selection-header">
-                        <h2>Welcome to ParaForm Studio</h2>
-                        <p>Select your starting environment</p>
+                        <span class="logo-icon" style="font-size:28px;color:var(--accent-color)">⬢</span>
+                        <h2>Start a new project</h2>
+                        <p>Choose how you want to begin</p>
                     </div>
                     <div class="selection-grid">
-                        <div class="selection-card glass" id="choice-existing">
-                            <div class="card-icon">📚</div>
-                            <h3>Studio Library</h3>
-                            <p>Browse official ParaForm models.</p>
-                            <button class="primary-btn">Browse</button>
+                        <div class="selection-card" id="choice-existing">
+                            <div class="card-icon-wrap">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            </div>
+                            <h3>Browse Library</h3>
+                            <p>Start from a curated parametric model and customize it to your needs.</p>
+                            <button class="primary-btn">Browse Templates</button>
                         </div>
-                        <div class="selection-card glass" id="choice-custom">
-                            <div class="card-icon">⌨️</div>
-                            <h3>New Script</h3>
-                            <p>Start a blank Studio project.</p>
+                        <div class="selection-card" id="choice-custom">
+                            <div class="card-icon-wrap">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            </div>
+                            <h3>Write a Script</h3>
+                            <p>Open a blank editor and write OpenSCAD from scratch. Full compiler access.</p>
                             <button class="secondary-btn">Open Editor</button>
                         </div>
                     </div>
@@ -320,16 +354,15 @@
             </div>
         </section>
 
-        <!-- MANAGE PAGE (Upload) -->
+        <!-- MANAGE PAGE -->
         <section id="view-manage" class="view hidden">
             <div class="manage-layout">
                 <header class="page-header">
                     <h2>Admin: Manage Library</h2>
-                    <p>Upload new OpenSCAD templates and set their parametric configuration.</p>
+                    <p>Upload new OpenSCAD templates and configure their parametric settings.</p>
                 </header>
-                
                 <div class="upload-grid">
-                    <div class="upload-form glass">
+                    <div class="upload-form">
                         <div class="form-group">
                             <label>SCAD Source File</label>
                             <div id="drop-zone" class="drop-zone">
@@ -338,7 +371,6 @@
                                 <input type="file" id="scad-file-input" accept=".scad" hidden>
                             </div>
                         </div>
-
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Model Title</label>
@@ -354,41 +386,36 @@
                                 </select>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label>Description</label>
                             <textarea id="upload-desc" placeholder="Describe the model and its parametric capabilities..." class="glass-input" rows="3"></textarea>
                         </div>
-
                         <div class="form-group">
                             <label>Tags (comma separated)</label>
                             <input type="text" id="upload-tags" placeholder="parametric, rpi, box, tool" class="glass-input">
                         </div>
-
                         <div class="form-group">
                             <label>Thumbnail URL (Optional)</label>
                             <input type="text" id="upload-thumb" placeholder="https://..." class="glass-input">
                         </div>
-
                         <div class="form-actions">
                             <button id="publish-btn" class="primary-btn full-width">Publish to Library</button>
                         </div>
                     </div>
-
-                    <div class="upload-preview glass">
+                    <div class="upload-preview">
                         <div class="preview-header">
-                            <h4>3D Validation</h4>
+                            <h4>3D Preview</h4>
                             <span id="preview-status" class="badge">No file loaded</span>
                         </div>
                         <div id="upload-viewport-container">
                             <div id="upload-viewport"></div>
-                            <div id="upload-diag-overlay" class="glass">
+                            <div id="upload-diag-overlay">
                                 <span id="upload-render-time">0ms</span>
                             </div>
                         </div>
                         <div class="preview-actions">
                             <button id="extract-params-btn" class="secondary-btn">Auto-Extract Parameters</button>
-                            <p class="hint">Will scan for // [type: label, min, max] style comments.</p>
+                            <p class="hint">Scans for <code>// [type: label, min, max]</code> comments</p>
                         </div>
                     </div>
                 </div>
@@ -396,186 +423,196 @@
         </section>
     </main>
 
-    <!-- Global Floating Panels (Moved outside router for stability) -->
-    <aside id="config-panel" class="floating-panel left glass hidden-global">
+    <!-- LEFT PANEL: Parameters & Script -->
+    <aside id="config-panel" class="floating-panel left hidden-global">
         <header class="config-header">
             <div class="config-tabs">
-                <button class="tab-btn active" data-tab="params">Parameters</button>
-                <button class="tab-btn" data-tab="code">Source</button>
+                <button class="tab-btn active" data-tab="params">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
+                    Parameters
+                </button>
+                <button class="tab-btn" data-tab="code">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    Script
+                </button>
             </div>
         </header>
 
         <div id="tab-content-params" class="tab-content">
-            <div id="parameters-container">
-                <!-- Parameters injected here -->
-            </div>
+            <div id="parameters-container"></div>
         </div>
 
         <div id="tab-content-code" class="tab-content hidden">
             <div class="code-editor-wrapper">
-                <textarea id="code-editor" spellcheck="false" placeholder="// OpenSCAD code..."></textarea>
+                <textarea id="code-editor" spellcheck="false" placeholder="// Write OpenSCAD here...
+// Use // [range: Label, min, max] to bind a parameter to a slider"></textarea>
                 <div class="editor-actions">
-                    <button id="run-code-btn" class="primary-btn full-width">Compile & Run</button>
-                    <p class="hint">Press Ctrl + S to re-render</p>
+                    <button id="run-code-btn" class="primary-btn full-width">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Compile & Run
+                    </button>
+                    <p class="hint">Ctrl + S to re-compile</p>
                 </div>
             </div>
         </div>
     </aside>
 
-    <aside id="info-panel" class="floating-panel right glass hidden-global">
+    <!-- RIGHT PANEL: Transform & Scene -->
+    <aside id="info-panel" class="floating-panel right hidden-global">
         <header class="config-header">
             <div class="config-tabs">
                 <button class="right-tab-btn active" data-right-tab="transform">Transform</button>
-                <button class="right-tab-btn" data-right-tab="env-mat">Env & Mat</button>
+                <button class="right-tab-btn" data-right-tab="env-mat">Scene</button>
             </div>
         </header>
 
-        <!-- TRANSFORM TAB CONTENT -->
+        <!-- TRANSFORM TAB -->
         <div id="right-tab-transform" class="tab-content">
             <div class="control-section">
-                <h5 class="section-title-mini">Move Model (mm)</h5>
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+                    Position
+                </h5>
                 <div class="param-row-compact">
-                    <label>X:</label>
+                    <span class="axis-badge x">X</span>
                     <input type="range" id="trans-move-x" min="-100" max="100" step="1" value="0">
                     <span id="lbl-move-x" class="val-lbl">0</span>
                 </div>
                 <div class="param-row-compact">
-                    <label>Y:</label>
+                    <span class="axis-badge y">Y</span>
                     <input type="range" id="trans-move-y" min="-100" max="100" step="1" value="0">
                     <span id="lbl-move-y" class="val-lbl">0</span>
                 </div>
                 <div class="param-row-compact">
-                    <label>Z:</label>
+                    <span class="axis-badge z">Z</span>
                     <input type="range" id="trans-move-z" min="-50" max="150" step="1" value="0">
                     <span id="lbl-move-z" class="val-lbl">0</span>
                 </div>
             </div>
 
-            <div class="control-section mt-12">
-                <h5 class="section-title-mini">Rotate Model (deg)</h5>
+            <div class="control-section">
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M22 13A10 10 0 0 0 3.2 7.2M2 11a10 10 0 0 0 18.8 4.8"/></svg>
+                    Rotation
+                </h5>
                 <div class="param-row-compact">
-                    <label>X:</label>
+                    <span class="axis-badge x">X</span>
                     <input type="range" id="trans-rot-x" min="-180" max="180" step="5" value="0">
                     <span id="lbl-rot-x" class="val-lbl">0°</span>
                 </div>
                 <div class="param-row-compact">
-                    <label>Y:</label>
+                    <span class="axis-badge y">Y</span>
                     <input type="range" id="trans-rot-y" min="-180" max="180" step="5" value="0">
                     <span id="lbl-rot-y" class="val-lbl">0°</span>
                 </div>
                 <div class="param-row-compact">
-                    <label>Z:</label>
+                    <span class="axis-badge z">Z</span>
                     <input type="range" id="trans-rot-z" min="-180" max="180" step="5" value="0">
                     <span id="lbl-rot-z" class="val-lbl">0°</span>
                 </div>
             </div>
 
-            <div class="control-section mt-12">
-                <h5 class="section-title-mini">Scale Model</h5>
+            <div class="control-section">
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    Scale
+                </h5>
                 <div class="param-row-compact">
-                    <label>S:</label>
+                    <span class="axis-badge scale">S</span>
                     <input type="range" id="trans-scale" min="0.1" max="3.0" step="0.05" value="1.0">
-                    <span id="lbl-scale" class="val-lbl">1.0x</span>
+                    <span id="lbl-scale" class="val-lbl">1.0×</span>
                 </div>
             </div>
 
-            <button id="btn-reset-transform" class="secondary-btn full-width mt-12">Reset Transform</button>
         </div>
 
-        <!-- ENVIRONMENT & MATERIAL TAB CONTENT -->
+        <!-- SCENE TAB -->
         <div id="right-tab-env-mat" class="tab-content hidden">
-            <!-- Filament colors -->
             <div class="control-section">
-                <h5 class="section-title-mini">Model Material (PLA)</h5>
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
+                    Material Color
+                </h5>
                 <div class="color-swatches">
-                    <button class="swatch active" data-color="#6366f1" title="PLA Purple (Default)" style="background-color: #6366f1;"></button>
-                    <button class="swatch" data-color="#ffffff" title="PLA White" style="background-color: #ffffff;"></button>
-                    <button class="swatch" data-color="#ff5500" title="PLA Orange" style="background-color: #ff5500;"></button>
-                    <button class="swatch" data-color="#111111" title="PLA Charcoal Black" style="background-color: #111111; border: 1px solid #333;"></button>
-                    <button class="swatch" data-color="#00ff66" title="PLA Neon Green" style="background-color: #00ff66;"></button>
-                    <button class="swatch" data-color="#0066ff" title="PLA Translucent Blue" style="background-color: #0066ff; opacity: 0.8;"></button>
-                    <button class="swatch" data-color="#ff1493" title="PLA Pink" style="background-color: #ff1493;"></button>
-                    <button class="swatch" data-color="#d4af37" title="Silk Gold" style="background-color: #d4af37;"></button>
+                    <button class="swatch active" data-color="#6366f1" title="Indigo" style="background-color:#6366f1"></button>
+                    <button class="swatch" data-color="#ffffff" title="White" style="background-color:#ffffff"></button>
+                    <button class="swatch" data-color="#ff5500" title="Orange" style="background-color:#ff5500"></button>
+                    <button class="swatch" data-color="#1a1a1a" title="Black" style="background-color:#1a1a1a;border:1px solid #444"></button>
+                    <button class="swatch" data-color="#22c55e" title="Green" style="background-color:#22c55e"></button>
+                    <button class="swatch" data-color="#3b82f6" title="Blue" style="background-color:#3b82f6"></button>
+                    <button class="swatch" data-color="#ec4899" title="Pink" style="background-color:#ec4899"></button>
+                    <button class="swatch" data-color="#d4af37" title="Gold" style="background-color:#d4af37"></button>
                 </div>
-                <div class="info-row mt-6">
-                    <span class="info-label">Finish:</span>
+                <div class="info-row" style="margin-top:8px">
+                    <span class="info-label">Surface Finish</span>
                     <select id="material-finish" class="glass-select-compact">
                         <option value="semi-gloss">Semi-Gloss</option>
-                        <option value="matte">Matte Filaments</option>
+                        <option value="matte">Matte</option>
                         <option value="silk">Silk / Metallic</option>
-                        <option value="translucent">Translucent / PETG</option>
+                        <option value="translucent">Translucent</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Build plate -->
-            <div class="control-section mt-12">
-                <h5 class="section-title-mini">Build Plate Grid</h5>
+            <div class="control-section">
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                    Build Plate
+                </h5>
                 <select id="build-plate-select" class="glass-select">
                     <option value="none">No Build Plate</option>
-                    <option value="bambu">Bambu Lab (256x256 mm)</option>
-                    <option value="prusa">Prusa i3 (250x210 mm)</option>
-                    <option value="ender">Ender 3 (220x220 mm)</option>
-                    <option value="voron">Voron v0.2 (120x120 mm)</option>
-                    <option value="large">Industrial (400x400 mm)</option>
+                    <option value="bambu">Bambu Lab (256×256 mm)</option>
+                    <option value="prusa">Prusa i3 (250×210 mm)</option>
+                    <option value="ender">Ender 3 (220×220 mm)</option>
+                    <option value="voron">Voron v0.2 (120×120 mm)</option>
+                    <option value="large">Industrial (400×400 mm)</option>
                 </select>
             </div>
 
-            <!-- Lighting control -->
-            <div class="control-section mt-12">
-                <h5 class="section-title-mini">Lighting Rig Preset</h5>
+            <div class="control-section">
+                <h5 class="section-title-mini">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    Lighting
+                </h5>
                 <div class="light-presets">
                     <button class="light-preset-btn active" data-preset="standard">Default</button>
                     <button class="light-preset-btn" data-preset="bright">Studio</button>
                     <button class="light-preset-btn" data-preset="neon">Neon</button>
                     <button class="light-preset-btn" data-preset="shadowy">Cinematic</button>
                 </div>
-                <div class="param-row-compact mt-6">
-                    <label>Intensity:</label>
+                <div class="param-row-compact" style="margin-top:10px">
+                    <span class="info-label" style="width:60px;font-size:11px">Intensity</span>
                     <input type="range" id="light-intensity" min="0.5" max="5.0" step="0.1" value="2.0">
-                    <span id="lbl-light-intensity" class="val-lbl">2.0x</span>
+                    <span id="lbl-light-intensity" class="val-lbl">2.0×</span>
                 </div>
             </div>
         </div>
 
-        <!-- ALWAYS VISIBLE DIAGNOSTICS & FOOTER -->
-        <div class="panel-header" style="border-top: 1px solid var(--border-color); border-bottom: none; background: var(--panel-header-bg);">
-            <h4 style="font-size: 11px; color: var(--text-secondary);">System Diagnostics</h4>
-        </div>
-        <div class="panel-content" style="flex: 0 0 auto; overflow: hidden; padding-top: 4px; padding-bottom: 4px;">
-            <div class="info-row">
-                <span class="info-label">Status</span>
+        <!-- DIAGNOSTICS (always visible) -->
+        <div class="diagnostics-bar">
+            <div class="diag-row">
                 <span id="status-badge" class="loading">Initializing</span>
+                <span id="render-time" class="mono diag-time">—</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Render Time</span>
-                <span id="render-time" class="mono">0ms</span>
-            </div>
-            <div class="info-row">
+            <div class="diag-row diag-row-secondary">
                 <span class="info-label">Polygons</span>
                 <span id="stats-poly" class="mono">0</span>
             </div>
         </div>
-        <div class="panel-footer">
-            <button id="view-reset" title="Reset Camera">⌂ Camera</button>
-            <button id="view-wireframe" title="Toggle Wireframe">▥ Wireframe</button>
-        </div>
     </aside>
 
-    <!-- Studio Library Browser Modal -->
+    <!-- STUDIO LIBRARY MODAL -->
     <div id="studio-library-modal" class="modal-overlay hidden">
-        <div class="modal-content glass large-modal">
+        <div class="modal-content large-modal">
             <div class="modal-header">
-                <h3>Select Model from Library</h3>
+                <h3>Select from Library</h3>
                 <button class="close-modal" onclick="document.getElementById('studio-library-modal').classList.add('hidden')">×</button>
             </div>
             <div class="modal-body">
-                <div class="search-bar glass mini">
+                <div class="search-bar mini">
                     <input type="text" id="studio-library-search" placeholder="Search models...">
                 </div>
-                <div id="studio-library-grid" class="template-grid small">
-                    <!-- Library items injected here -->
-                </div>
+                <div id="studio-library-grid" class="template-grid small"></div>
             </div>
         </div>
     </div>
