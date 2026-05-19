@@ -1,0 +1,166 @@
+/* ==========================================
+   PARAMETRIC ORGANIZER BOX WITH THROUGH-HOLE GRIPS
+   100% Robust Parametric Adjustments
+   ========================================== */
+
+$fn = 60; // Smoothness for rounded corners and grip features
+
+// --- Global Dimensions ---
+box_length      = 150;  // Total external length
+box_width       = 100;  // Total external width
+box_height      = 40;   // Total external height
+wall_thickness  = 2.0;  // Thickness of outer walls and bottom box floor
+corner_radius   = 8;    // Radius of outer corners (Automatically clamped if too large)
+
+// --- Dynamic Grid/Divider Settings ---
+rows            = 2;    // Number of compartments along Length
+cols            = 3;    // Number of compartments along Width
+divider_thick   = 1.6;  // Thickness of internal dividers
+divider_height_pct = 0.90; // Height of dividers as % of internal height
+
+// --- Lid & Through-Grip Settings ---
+lid_clearance   = 0.3;  // Tolerance gap between box lip and lid rim
+lid_lip_height  = 4.0;  // Height of the inner rim that inserts into the box
+lid_plate_thick = 3.0;  // Structural thickness of the main lid face
+
+grip_width      = 35;   // Width of each finger hole
+grip_length     = 14;   // Length/Thickness of each finger hole
+grip_spacing    = 22;   // Center-to-center distance between the two finger holes
+
+/* [Visualizer Toggle] */
+// "both" = Box and Lid side-by-side, "box" = Only Box, "lid" = Only Lid (flipped flat for printing)
+render_mode = "both"; 
+
+// --- Dynamic Constraint Handlers (Ensures code never breaks on extreme inputs) ---
+clamped_radius = min(corner_radius, min(box_length, box_width) / 2);
+box_inner_l    = max(5, box_length - (2 * wall_thickness));
+box_inner_w    = max(5, box_width - (2 * wall_thickness));
+box_inner_h    = max(5, box_height - wall_thickness);
+
+lid_inner_l    = max(2, box_inner_l - (2 * lid_clearance));
+lid_inner_w    = max(2, box_inner_w - (2 * lid_clearance));
+lid_inner_r    = max(0.1, clamped_radius - wall_thickness - lid_clearance);
+
+// --- Execution Core ---
+if (render_mode == "both") {
+    main_box();
+    // Placed side-by-side but perfectly flipped flat on the print bed surface (Z=0)
+    translate([0, box_width + 15, 0]) 
+        rotate([180, 0, 0]) 
+        translate([0, -box_width, -(lid_lip_height + lid_plate_thick)]) 
+        lid();
+} else if (render_mode == "box") {
+    main_box();
+} else if (render_mode == "lid") {
+    // Flips the lid completely flat onto its top face for support-less printing (Z=0)
+    rotate([180, 0, 0]) translate([0, 0, -(lid_lip_height + lid_plate_thick)]) lid();
+}
+
+// ==========================================
+// MODULES
+// ==========================================
+
+module rounded_cube(l, w, h, r) {
+    r_safe = min(r, min(l, w) / 2);
+    hull() {
+        translate([r_safe, r_safe, 0]) cylinder(r=r_safe, h=h);
+        translate([l - r_safe, r_safe, 0]) cylinder(r=r_safe, h=h);
+        translate([r_safe, w - r_safe, 0]) cylinder(r=r_safe, h=h);
+        translate([l - r_safe, w - r_safe, 0]) cylinder(r=r_safe, h=h);
+    }
+}
+
+module main_box() {
+    difference() {
+        // Outer Shell
+        rounded_cube(box_length, box_width, box_height, clamped_radius);
+        
+        // Main Internal Cavity
+        translate([wall_thickness, wall_thickness, wall_thickness])
+            rounded_cube(box_inner_l, box_inner_w, box_height, max(0.1, clamped_radius - wall_thickness));
+    }
+    
+    // Internal Dividers (Masked safely inside the rounded internal boundary)
+    inner_h_div = box_inner_h * divider_height_pct;
+    intersect_r = max(0.1, clamped_radius - wall_thickness);
+    
+    intersection() {
+        translate([wall_thickness, wall_thickness, wall_thickness])
+            rounded_cube(box_inner_l, box_inner_w, box_height, intersect_r);
+            
+        union() {
+            if (rows > 1) {
+                for (i = [1 : rows - 1]) {
+                    let(spacing = box_inner_l / rows)
+                    translate([wall_thickness + (i * spacing) - (divider_thick / 2), wall_thickness, wall_thickness])
+                        cube([divider_thick, box_inner_w, inner_h_div]);
+                }
+            }
+            if (cols > 1) {
+                for (j = [1 : cols - 1]) {
+                    let(spacing = box_inner_w / cols)
+                    translate([wall_thickness, wall_thickness + (j * spacing) - (divider_thick / 2), wall_thickness])
+                        cube([box_inner_l, divider_thick, inner_h_div]);
+                }
+            }
+        }
+    }
+}
+
+module single_finger_through_hole(total_h) {
+    // Printable through-hole grip with 45-degree internal chamfers on both sides
+    chamfer = 1.5; 
+    
+    hull() {
+        // Bottom profile
+        translate([-chamfer, -chamfer, -0.1])
+            rounded_cube(grip_width + 2*chamfer, grip_length + 2*chamfer, chamfer + 0.1, (grip_length + 2*chamfer)/2);
+        // Middle core profile
+        translate([0, 0, chamfer])
+            rounded_cube(grip_width, grip_length, total_h - 2*chamfer, grip_length/2);
+        // Top profile
+        translate([-chamfer, -chamfer, total_h - chamfer])
+            rounded_cube(grip_width + 2*chamfer, grip_length + 2*chamfer, chamfer + 0.1, (grip_length + 2*chamfer)/2);
+    }
+}
+
+module lid() {
+    total_lid_stack_h = lid_lip_height + lid_plate_thick;
+
+    difference() {
+        union() {
+            // 1. Alignment Lip (Z=0 to Z=lid_lip_height)
+            translate([wall_thickness + lid_clearance, wall_thickness + lid_clearance, 0]) {
+                difference() {
+                    rounded_cube(lid_inner_l, lid_inner_w, lid_lip_height, lid_inner_r);
+                    translate([wall_thickness, wall_thickness, -0.1])
+                        rounded_cube(lid_inner_l - 2*wall_thickness, lid_inner_w - 2*wall_thickness, lid_lip_height + 0.2, max(0.1, lid_inner_r - wall_thickness));
+                }
+            }
+            
+            // 2. Main Lid Plate with 45-degree Bevel (Stacked at Z=lid_lip_height)
+            translate([0, 0, lid_lip_height]) {
+                hull() {
+                    rounded_cube(box_length, box_width, lid_plate_thick/2, clamped_radius);
+                    translate([1, 1, lid_plate_thick - 0.1])
+                        rounded_cube(box_length - 2, box_width - 2, 0.1, max(0.1, clamped_radius - 1));
+                }
+            }
+        }
+        
+        // 3. Symmetric Clean Through-Hole Cuts (Pierces all the way through the total stack height)
+        let(
+            center_x = box_length / 2,
+            center_y = box_width / 2,
+            offset_x = grip_spacing / 2
+        ) {
+            // Left Cut
+            translate([center_x - offset_x - grip_width/2, center_y - grip_length/2, -0.5])
+                single_finger_through_hole(total_lid_stack_h + 1);
+            
+            // Right Cut
+            translate([center_x + offset_x - grip_width/2, center_y - grip_length/2, -0.5])
+                single_finger_through_hole(total_lid_stack_h + 1);
+        }
+    }
+}

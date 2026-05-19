@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParaForm | The Parametric 3D Platform</title>
+    <meta name="description" content="Generate high-quality 3D models with parametric controls. Real-time preview and STL export.">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <div id="app-loader">
+        <div class="loader-content">
+            <div class="loader-logo">
+                <span class="logo-icon">⬢</span>
+                <span class="logo-text">ParaForm</span>
+            </div>
+            <div class="cube-wrapper">
+                <div class="css-cube">
+                    <div class="side front"></div>
+                    <div class="side back"></div>
+                    <div class="side right"></div>
+                    <div class="side left"></div>
+                    <div class="side top"></div>
+                    <div class="side bottom"></div>
+                </div>
+            </div>
+            <div class="loader-status">
+                <div class="progress-container">
+                    <div id="loader-progress" class="progress-bar"></div>
+                </div>
+                <p id="loader-text">Initializing CAD Engine...</p>
+            </div>
+        </div>
+    </div>
+
+    <nav id="global-nav" class="glass">
+        <div class="nav-container">
+            <a href="#/" class="logo">
+                <span class="logo-icon">⬢</span>
+                <span class="logo-text">ParaForm</span>
+                <span id="editor-badge" class="badge mini hidden">Editor</span>
+            </a>
+            <div class="nav-links">
+                <a href="#/" class="nav-link">Home</a>
+                <a href="#/explore" class="nav-link">Explore</a>
+                <a href="#/manage" id="manage-link" class="nav-link hidden">Manage</a>
+            </div>
+            <div class="nav-actions">
+                <a href="#/auth" id="auth-btn" class="secondary-btn">Login</a>
+                <a href="#/create" class="primary-btn">Launch Studio</a>
+                <button id="mobile-menu-toggle" class="icon-btn mobile-only">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main id="view-router">
+        <!-- AUTH PAGE -->
+        <section id="view-auth" class="view hidden">
+            <div class="auth-container glass">
+                <div class="auth-header">
+                    <span class="logo-icon">⬢</span>
+                    <h2>Join ParaForm</h2>
+                    <p>Create an account to save your designs and share them with the community.</p>
+                </div>
+                <div class="auth-methods">
+                    <button id="github-login" class="primary-btn full-width">
+                        <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="Github" class="btn-img">
+                        Continue with GitHub
+                    </button>
+                    <div class="divider-text">or</div>
+                    <div class="email-login">
+                        <input type="email" id="magic-link-email" placeholder="Enter your email" class="glass-input">
+                        <button id="magic-link-btn" class="secondary-btn full-width">Send Magic Link</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LANDING PAGE -->
+        <section id="view-landing" class="view">
+            <!-- Hero Panel -->
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>3D Objects, <br><span class="accent-text">Now Programmatic.</span></h1>
+                    <p>Shift from rigid meshes to flexible formulas. Customize professional gadgets in your browser and download print-ready STL files instantly.</p>
+                    <div class="hero-actions">
+                        <a href="#/explore" class="primary-btn">Explore Templates</a>
+                        <a href="#features-section" class="outline-btn">How it Works</a>
+                    </div>
+                </div>
+                <div class="hero-visual glass">
+                    <div id="hero-viewport"></div>
+                    <div class="hero-demo-control">
+                        <label>Adjust Part Size</label>
+                        <input type="range" id="hero-slider" min="40" max="150" value="80">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Capability Grid -->
+            <div id="features-section" class="landing-section">
+                <h2 class="section-title">Why Programmatic CAD?</h2>
+                <div class="features-grid">
+                    <div class="feature-card glass">
+                        <div class="feature-icon">⬢</div>
+                        <h3>Parametric Core</h3>
+                        <p>Change simple sliders to customize thickness, scale, and layout. Watch meshes re-calculate in real time.</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <div class="feature-icon">⚡</div>
+                        <h3>WASM Compiler</h3>
+                        <p>Multi-threaded OpenSCAD compiler runs 100% locally in your browser. Zero latency, complete offline privacy.</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <div class="feature-icon">📤</div>
+                        <h3>Manifold Export</h3>
+                        <p>Generate print-ready STL meshes with flawless watertight manifolds. Compatible with all major slicers.</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <div class="feature-icon">⚙️</div>
+                        <h3>Direct SCAD Scripting</h3>
+                        <p>Write standard OpenSCAD code in the built-in editor. Instantly bind inputs to GUI sliders.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Architecture & Manifesto -->
+            <div class="landing-section double-column">
+                <div class="manifesto glass">
+                    <h2>The Manifesto</h2>
+                    <p>We believe the 3D asset world is stuck in the era of static, uneditable meshes. ParaForm was built to transition creators to <strong>flexible, mathematical formulas</strong>.</p>
+                    <p>By bringing the robust power of OpenSCAD to the browser via WebAssembly, we enable zero-overhead, highly customizable manufacturing files for everyone.</p>
+                </div>
+                <div class="tech-stack glass">
+                    <h3>Technical Stack</h3>
+                    <ul class="terminal-list">
+                        <li><span>OpenSCAD WASM</span><span>Multi-threaded C++ engine running locally.</span></li>
+                        <li><span>Three.js WebGL</span><span>Instant interactive viewport feedback.</span></li>
+                        <li><span>Supabase Engine</span><span>PostgreSQL storage with strict Row Level Security.</span></li>
+                        <li><span>Cloudflare CDN</span><span>Ultra-fast asset loading and caching.</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Workflow Steps -->
+            <div class="landing-section workflow-section glass">
+                <h2 class="section-title">The Three-Step Workflow</h2>
+                <div class="workflow-steps">
+                    <div class="step">
+                        <span class="step-num">01</span>
+                        <h4>Choose Template</h4>
+                        <p>Select from a library of functional, mathematically calculated models.</p>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">02</span>
+                        <h4>Flex Parameters</h4>
+                        <p>Drag simple sliders or modify source code blocks in real time.</p>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">03</span>
+                        <h4>Print Instantly</h4>
+                        <p>Export flawless manifold geometry and send directly to your slicer.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EXPLORE PAGE -->
+        <section id="view-explore" class="view hidden">
+            <header class="page-header">
+                <div class="header-main">
+                    <div>
+                        <h2>Explore Library</h2>
+                        <p>Discover community models and start customizing in the Studio.</p>
+                    </div>
+                    <button id="add-custom-model-btn" class="secondary-btn">
+                        <span class="icon">➕</span> Add Custom Model
+                    </button>
+                </div>
+                <div class="search-bar glass">
+                    <input type="text" id="template-search" placeholder="Search gadgets, categories, tags...">
+                    <div class="filters">
+                        <button class="filter-chip active">All</button>
+                        <button class="filter-chip">Tech</button>
+                        <button class="filter-chip">Home</button>
+                        <button class="filter-chip">EDC</button>
+                    </div>
+                </div>
+            </header>
+            <div id="template-grid" class="template-grid">
+                <!-- Template cards injected here -->
+            </div>
+        </section>
+
+        <!-- CUSTOM MODEL MODAL -->
+        <div id="custom-model-modal" class="modal-overlay hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h3>Add Custom Model</h3>
+                    <button class="close-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="upload-options">
+                        <div class="option-group">
+                            <label>Option 1: Paste OpenSCAD Code</label>
+                            <textarea id="modal-code-input" class="glass-input" rows="8" placeholder="// Paste your OpenSCAD code here..."></textarea>
+                        </div>
+                        <div class="divider-text">or</div>
+                        <div class="option-group">
+                            <label>Option 2: Upload .scad File</label>
+                            <div id="modal-drop-zone" class="drop-zone mini">
+                                <span class="icon">📁</span>
+                                <p>Drag & Drop or <span>Browse</span></p>
+                                <input type="file" id="modal-file-input" accept=".scad" hidden>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-cancel-btn" class="secondary-btn">Cancel</button>
+                    <button id="modal-create-btn" class="primary-btn">Create Model</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CREATE PAGE (Configurator) -->
+        <section id="view-create" class="view hidden">
+            <div id="configurator-container" class="configurator-layout">
+                <div id="viewport-container" class="full-viewport">
+                    <div id="viewport"></div>
+
+                    <!-- Viewport Floating Toolbar (Creality-style Workspace Tools) -->
+                    <div id="viewport-toolbar" class="viewport-toolbar glass">
+                        <button class="tool-btn active" id="tool-select" title="Selection Mode">
+                            <span class="tool-icon">⬈</span>
+                        </button>
+                        <button class="tool-btn" id="tool-translate" title="Move Model (T)">
+                            <span class="tool-icon">✥</span>
+                        </button>
+                        <button class="tool-btn" id="tool-rotate" title="Rotate Model (R)">
+                            <span class="tool-icon">⟳</span>
+                        </button>
+                        <button class="tool-btn" id="tool-scale" title="Scale Model (S)">
+                            <span class="tool-icon">⤢</span>
+                        </button>
+                        <button class="tool-btn" id="tool-layflat" title="Lay Flat on Bed">
+                            <span class="tool-icon">↧</span>
+                        </button>
+                        <div class="tool-divider"></div>
+                        <button class="tool-btn" id="tool-reset" title="Reset Transform">
+                            <span class="tool-icon">↺</span>
+                        </button>
+                        <div class="tool-divider"></div>
+                        <button class="tool-btn disabled" id="tool-undo" title="Undo Action (Ctrl+Z)" disabled>
+                            <span class="tool-icon">↶</span>
+                        </button>
+                        <button class="tool-btn disabled" id="tool-redo" title="Redo Action (Ctrl+Y)" disabled>
+                            <span class="tool-icon">↷</span>
+                        </button>
+                    </div>
+
+                    <!-- Floating Gizmo Details Panel -->
+                    <div id="gizmo-details-panel" class="gizmo-details-panel glass hidden">
+                        <header class="panel-header-mini">
+                            <span id="gizmo-panel-title">Rotate</span>
+                            <button id="gizmo-panel-close" title="Close Panel">✕</button>
+                        </header>
+                        <div id="gizmo-panel-body" class="panel-body-mini">
+                            <!-- Injected dynamically based on active tool -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="editor-top-bar" class="glass">
+                    <div class="editor-title">
+                        <a href="#/create" id="create-back-btn" class="back-link-icon" title="Exit Editor">✕</a>
+                        <h3 id="active-template-title">Untitled Project</h3>
+                    </div>
+                    <div class="editor-actions">
+                        <button id="studio-browse-btn" class="secondary-btn">Browse Library</button>
+                        <button id="save-btn" class="secondary-btn hidden">Save Project</button>
+                        <button id="export-stl" class="primary-btn">Export STL</button>
+                    </div>
+                </div>
+
+                <div id="loader-overlay" class="hidden">
+                    <div class="loader"></div>
+                    <p>Processing Mesh...</p>
+                </div>
+            </div>
+
+            <div id="create-selection" class="create-selection-overlay hidden">
+                <div class="selection-modal glass">
+                    <div class="selection-header">
+                        <h2>Welcome to ParaForm Studio</h2>
+                        <p>Select your starting environment</p>
+                    </div>
+                    <div class="selection-grid">
+                        <div class="selection-card glass" id="choice-existing">
+                            <div class="card-icon">📚</div>
+                            <h3>Studio Library</h3>
+                            <p>Browse official ParaForm models.</p>
+                            <button class="primary-btn">Browse</button>
+                        </div>
+                        <div class="selection-card glass" id="choice-custom">
+                            <div class="card-icon">⌨️</div>
+                            <h3>New Script</h3>
+                            <p>Start a blank Studio project.</p>
+                            <button class="secondary-btn">Open Editor</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MANAGE PAGE (Upload) -->
+        <section id="view-manage" class="view hidden">
+            <div class="manage-layout">
+                <header class="page-header">
+                    <h2>Admin: Manage Library</h2>
+                    <p>Upload new OpenSCAD templates and set their parametric configuration.</p>
+                </header>
+                
+                <div class="upload-grid">
+                    <div class="upload-form glass">
+                        <div class="form-group">
+                            <label>SCAD Source File</label>
+                            <div id="drop-zone" class="drop-zone">
+                                <span class="icon">📁</span>
+                                <p>Drag & Drop .scad file or <span>Browse</span></p>
+                                <input type="file" id="scad-file-input" accept=".scad" hidden>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Model Title</label>
+                                <input type="text" id="upload-title" placeholder="e.g. Rugged Camera Case" class="glass-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select id="upload-category" class="glass-select">
+                                    <option value="Tech">Tech</option>
+                                    <option value="Home">Home</option>
+                                    <option value="EDC">EDC</option>
+                                    <option value="Office">Office</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="upload-desc" placeholder="Describe the model and its parametric capabilities..." class="glass-input" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tags (comma separated)</label>
+                            <input type="text" id="upload-tags" placeholder="parametric, rpi, box, tool" class="glass-input">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Thumbnail URL (Optional)</label>
+                            <input type="text" id="upload-thumb" placeholder="https://..." class="glass-input">
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="publish-btn" class="primary-btn full-width">Publish to Library</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-preview glass">
+                        <div class="preview-header">
+                            <h4>3D Validation</h4>
+                            <span id="preview-status" class="badge">No file loaded</span>
+                        </div>
+                        <div id="upload-viewport-container">
+                            <div id="upload-viewport"></div>
+                            <div id="upload-diag-overlay" class="glass">
+                                <span id="upload-render-time">0ms</span>
+                            </div>
+                        </div>
+                        <div class="preview-actions">
+                            <button id="extract-params-btn" class="secondary-btn">Auto-Extract Parameters</button>
+                            <p class="hint">Will scan for // [type: label, min, max] style comments.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Global Floating Panels (Moved outside router for stability) -->
+    <aside id="config-panel" class="floating-panel left glass hidden-global">
+        <header class="config-header">
+            <div class="config-tabs">
+                <button class="tab-btn active" data-tab="params">Parameters</button>
+                <button class="tab-btn" data-tab="code">Source</button>
+            </div>
+        </header>
+
+        <div id="tab-content-params" class="tab-content">
+            <div id="parameters-container">
+                <!-- Parameters injected here -->
+            </div>
+        </div>
+
+        <div id="tab-content-code" class="tab-content hidden">
+            <div class="code-editor-wrapper">
+                <textarea id="code-editor" spellcheck="false" placeholder="// OpenSCAD code..."></textarea>
+                <div class="editor-actions">
+                    <button id="run-code-btn" class="primary-btn full-width">Compile & Run</button>
+                    <p class="hint">Press Ctrl + S to re-render</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <aside id="info-panel" class="floating-panel right glass hidden-global">
+        <header class="config-header">
+            <div class="config-tabs">
+                <button class="right-tab-btn active" data-right-tab="transform">Transform</button>
+                <button class="right-tab-btn" data-right-tab="env-mat">Env & Mat</button>
+            </div>
+        </header>
+
+        <!-- TRANSFORM TAB CONTENT -->
+        <div id="right-tab-transform" class="tab-content">
+            <div class="control-section">
+                <h5 class="section-title-mini">Move Model (mm)</h5>
+                <div class="param-row-compact">
+                    <label>X:</label>
+                    <input type="range" id="trans-move-x" min="-100" max="100" step="1" value="0">
+                    <span id="lbl-move-x" class="val-lbl">0</span>
+                </div>
+                <div class="param-row-compact">
+                    <label>Y:</label>
+                    <input type="range" id="trans-move-y" min="-100" max="100" step="1" value="0">
+                    <span id="lbl-move-y" class="val-lbl">0</span>
+                </div>
+                <div class="param-row-compact">
+                    <label>Z:</label>
+                    <input type="range" id="trans-move-z" min="-50" max="150" step="1" value="0">
+                    <span id="lbl-move-z" class="val-lbl">0</span>
+                </div>
+            </div>
+
+            <div class="control-section mt-12">
+                <h5 class="section-title-mini">Rotate Model (deg)</h5>
+                <div class="param-row-compact">
+                    <label>X:</label>
+                    <input type="range" id="trans-rot-x" min="-180" max="180" step="5" value="0">
+                    <span id="lbl-rot-x" class="val-lbl">0°</span>
+                </div>
+                <div class="param-row-compact">
+                    <label>Y:</label>
+                    <input type="range" id="trans-rot-y" min="-180" max="180" step="5" value="0">
+                    <span id="lbl-rot-y" class="val-lbl">0°</span>
+                </div>
+                <div class="param-row-compact">
+                    <label>Z:</label>
+                    <input type="range" id="trans-rot-z" min="-180" max="180" step="5" value="0">
+                    <span id="lbl-rot-z" class="val-lbl">0°</span>
+                </div>
+            </div>
+
+            <div class="control-section mt-12">
+                <h5 class="section-title-mini">Scale Model</h5>
+                <div class="param-row-compact">
+                    <label>S:</label>
+                    <input type="range" id="trans-scale" min="0.1" max="3.0" step="0.05" value="1.0">
+                    <span id="lbl-scale" class="val-lbl">1.0x</span>
+                </div>
+            </div>
+
+            <button id="btn-reset-transform" class="secondary-btn full-width mt-12">Reset Transform</button>
+        </div>
+
+        <!-- ENVIRONMENT & MATERIAL TAB CONTENT -->
+        <div id="right-tab-env-mat" class="tab-content hidden">
+            <!-- Filament colors -->
+            <div class="control-section">
+                <h5 class="section-title-mini">Model Material (PLA)</h5>
+                <div class="color-swatches">
+                    <button class="swatch active" data-color="#6366f1" title="PLA Purple (Default)" style="background-color: #6366f1;"></button>
+                    <button class="swatch" data-color="#ffffff" title="PLA White" style="background-color: #ffffff;"></button>
+                    <button class="swatch" data-color="#ff5500" title="PLA Orange" style="background-color: #ff5500;"></button>
+                    <button class="swatch" data-color="#111111" title="PLA Charcoal Black" style="background-color: #111111; border: 1px solid #333;"></button>
+                    <button class="swatch" data-color="#00ff66" title="PLA Neon Green" style="background-color: #00ff66;"></button>
+                    <button class="swatch" data-color="#0066ff" title="PLA Translucent Blue" style="background-color: #0066ff; opacity: 0.8;"></button>
+                    <button class="swatch" data-color="#ff1493" title="PLA Pink" style="background-color: #ff1493;"></button>
+                    <button class="swatch" data-color="#d4af37" title="Silk Gold" style="background-color: #d4af37;"></button>
+                </div>
+                <div class="info-row mt-6">
+                    <span class="info-label">Finish:</span>
+                    <select id="material-finish" class="glass-select-compact">
+                        <option value="semi-gloss">Semi-Gloss</option>
+                        <option value="matte">Matte Filaments</option>
+                        <option value="silk">Silk / Metallic</option>
+                        <option value="translucent">Translucent / PETG</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Build plate -->
+            <div class="control-section mt-12">
+                <h5 class="section-title-mini">Build Plate Grid</h5>
+                <select id="build-plate-select" class="glass-select">
+                    <option value="none">No Build Plate</option>
+                    <option value="bambu">Bambu Lab (256x256 mm)</option>
+                    <option value="prusa">Prusa i3 (250x210 mm)</option>
+                    <option value="ender">Ender 3 (220x220 mm)</option>
+                    <option value="voron">Voron v0.2 (120x120 mm)</option>
+                    <option value="large">Industrial (400x400 mm)</option>
+                </select>
+            </div>
+
+            <!-- Lighting control -->
+            <div class="control-section mt-12">
+                <h5 class="section-title-mini">Lighting Rig Preset</h5>
+                <div class="light-presets">
+                    <button class="light-preset-btn active" data-preset="standard">Default</button>
+                    <button class="light-preset-btn" data-preset="bright">Studio</button>
+                    <button class="light-preset-btn" data-preset="neon">Neon</button>
+                    <button class="light-preset-btn" data-preset="shadowy">Cinematic</button>
+                </div>
+                <div class="param-row-compact mt-6">
+                    <label>Intensity:</label>
+                    <input type="range" id="light-intensity" min="0.5" max="5.0" step="0.1" value="2.0">
+                    <span id="lbl-light-intensity" class="val-lbl">2.0x</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALWAYS VISIBLE DIAGNOSTICS & FOOTER -->
+        <div class="panel-header" style="border-top: 1px solid var(--border-color); border-bottom: none; background: var(--panel-header-bg);">
+            <h4 style="font-size: 11px; color: var(--text-secondary);">System Diagnostics</h4>
+        </div>
+        <div class="panel-content" style="flex: 0 0 auto; overflow: hidden; padding-top: 4px; padding-bottom: 4px;">
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span id="status-badge" class="loading">Initializing</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Render Time</span>
+                <span id="render-time" class="mono">0ms</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Polygons</span>
+                <span id="stats-poly" class="mono">0</span>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button id="view-reset" title="Reset Camera">⌂ Camera</button>
+            <button id="view-wireframe" title="Toggle Wireframe">▥ Wireframe</button>
+        </div>
+    </aside>
+
+    <!-- Studio Library Browser Modal -->
+    <div id="studio-library-modal" class="modal-overlay hidden">
+        <div class="modal-content glass large-modal">
+            <div class="modal-header">
+                <h3>Select Model from Library</h3>
+                <button class="close-modal" onclick="document.getElementById('studio-library-modal').classList.add('hidden')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-bar glass mini">
+                    <input type="text" id="studio-library-search" placeholder="Search models...">
+                </div>
+                <div id="studio-library-grid" class="template-grid small">
+                    <!-- Library items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>

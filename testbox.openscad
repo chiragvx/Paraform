@@ -1,0 +1,81 @@
+// ==========================================================
+// STABLE PARAMETRIC BOX WITH LID
+// ==========================================================
+
+/* [Global Dimensions] */
+box_length = 100;    
+box_width = 100;     
+box_height = 50;     
+wall_thickness = 2;   
+
+/* [Lid Settings] */
+lid_lip_height = 3;   
+clearance = 0.3;      
+handle_size = 15;     
+
+/* [View Settings] */
+// Use "both" to see both parts, "box" for base, "lid" for lid
+part_to_show = "both"; // [both, box, lid]
+
+$fn = 64;
+
+// Small value to prevent "coincident face" glitches
+eps = 0.01; 
+
+// ==========================================================
+// MODULES
+// ==========================================================
+
+module box_base() {
+    difference() {
+        // Main outer shell
+        cube([box_length, box_width, box_height]);
+        
+        // Hollow interior 
+        // We move it slightly down (-eps) and make it taller (+2*eps) 
+        // so it definitely punches through the top.
+        translate([wall_thickness, wall_thickness, wall_thickness])
+            cube([
+                box_length - (wall_thickness * 2), 
+                box_width - (wall_thickness * 2), 
+                box_height + eps 
+            ]);
+    }
+}
+
+module box_lid() {
+    union() {
+        // The top plate
+        cube([box_length, box_width, wall_thickness]);
+        
+        // The "Plug"
+        translate([wall_thickness + clearance, wall_thickness + clearance, -lid_lip_height])
+            cube([
+                box_length - (wall_thickness * 2) - (clearance * 2), 
+                box_width - (wall_thickness * 2) - (clearance * 2), 
+                lid_lip_height
+            ]);
+            
+        // Handle
+        translate([box_length/2, box_width/2, wall_thickness])
+            cylinder(h = 4, d = handle_size);
+    }
+}
+
+// ==========================================================
+// RENDERING LOGIC
+// ==========================================================
+
+if (part_to_show == "box" || part_to_show == "both") {
+    box_base();
+}
+
+if (part_to_show == "lid" || part_to_show == "both") {
+    if (part_to_show == "both") {
+        // Move lid to the side so it doesn't overlap the box
+        translate([box_length + 20, 0, 0]) 
+            box_lid();
+    } else {
+        box_lid();
+    }
+}

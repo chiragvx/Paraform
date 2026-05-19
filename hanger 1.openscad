@@ -1,0 +1,75 @@
+/* [Dimensions] */
+hanger_width = 320;
+hanger_height = 80;
+thickness = 5;
+beam_width = 10;
+
+hook_height = 55;
+hook_radius = 20;
+
+$fn = 32;
+
+// ------------------------------------
+// MAIN
+// ------------------------------------
+
+union() {
+    hanger_body();
+    hanger_hook();
+}
+
+// ------------------------------------
+// BODY
+// ------------------------------------
+
+module hanger_body() {
+
+    difference() {
+
+        // Outer triangle
+        hull() {
+
+            translate([0,0,0])
+                cylinder(h=thickness, r=beam_width);
+
+            translate([hanger_width,0,0])
+                cylinder(h=thickness, r=beam_width);
+
+            translate([hanger_width/2,hanger_height,0])
+                cylinder(h=thickness, r=beam_width);
+        }
+
+        // Inner cutout
+        translate([0,0,-0.1])
+        hull() {
+
+            translate([25,15,0])
+                cylinder(h=thickness+0.2, r=beam_width);
+
+            translate([hanger_width-25,15,0])
+                cylinder(h=thickness+0.2, r=beam_width);
+
+            translate([hanger_width/2,hanger_height-20,0])
+                cylinder(h=thickness+0.2, r=beam_width);
+        }
+    }
+}
+
+// ------------------------------------
+// HOOK
+// ------------------------------------
+
+module hanger_hook() {
+
+    center_x = hanger_width/2;
+
+    // Stem
+    translate([center_x - beam_width/2, hanger_height-5, 0])
+        cube([beam_width, hook_height, thickness]);
+
+    // Curved top hook
+    translate([center_x, hanger_height + hook_height, 0])
+        rotate_extrude(angle=270)
+            translate([hook_radius,0,0])
+                square([beam_width, thickness]);
+}
