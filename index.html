@@ -39,7 +39,6 @@
                 <a href="#/manage" id="manage-link" class="nav-link hidden">Manage</a>
             </div>
             <div class="nav-actions">
-                <a href="#/auth" id="auth-btn" class="secondary-btn">Login</a>
                 <a href="#/create" class="primary-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     Launch Studio
@@ -299,26 +298,6 @@
                     </div>
                 </div>
 
-                <div id="editor-top-bar">
-                    <div class="editor-title">
-                        <h3 id="active-template-title">Untitled Project</h3>
-                    </div>
-                    <div class="editor-actions">
-                        <button id="studio-browse-btn" class="secondary-btn">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                            Library
-                        </button>
-                        <button id="save-btn" class="secondary-btn hidden">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                            Save
-                        </button>
-                        <button id="export-stl" class="primary-btn">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Export STL
-                        </button>
-                    </div>
-                </div>
-
                 <div id="loader-overlay" class="hidden">
                     <div class="loader"></div>
                     <p>Compiling mesh...</p>
@@ -446,7 +425,7 @@
             <div class="code-editor-wrapper">
                 <textarea id="code-editor" spellcheck="false" placeholder="// Write OpenSCAD here...
 // Use // [range: Label, min, max] to bind a parameter to a slider"></textarea>
-                <div class="editor-actions">
+                <div class="code-editor-actions">
                     <button id="run-code-btn" class="primary-btn full-width">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Compile & Run

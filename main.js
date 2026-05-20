@@ -20,6 +20,7 @@ let currentState = {
     view: 'landing',
     isMovingSlider: false,
     editMode: 'params', // 'params' or 'code'
+    projectTitle: 'Untitled Project',
     activeGizmoTool: 'select', // 'select', 'translate', 'rotate', 'scale'
     isSelected: true, // If the active model is highlighted / selected
     isCtrlPressed: false, // Tracks if control key is pressed for rotation snapping override
@@ -30,7 +31,7 @@ let currentState = {
         scale: 1.0,
         materialColor: '#6366f1',
         materialFinish: 'semi-gloss',
-        buildPlate: 'none',
+        buildPlate: 'ender',
         lightPreset: 'standard',
         lightIntensity: 2.0
     }
@@ -2073,17 +2074,47 @@ const routes = {
     '/auth': 'view-auth'
 };
 
+function getProjectTitle() {
+    return currentState.projectTitle?.trim() || currentState.template?.title?.trim() || 'Untitled Project';
+}
+
+function syncProjectTitleUI() {
+    const nextTitle = getProjectTitle();
+    const titleInput = document.getElementById('nav-project-title');
+    if (titleInput && titleInput.value !== nextTitle) {
+        titleInput.value = nextTitle;
+    }
+}
+
+function bindProjectTitleInput() {
+    const titleInput = document.getElementById('nav-project-title');
+    if (!titleInput) return;
+
+    titleInput.oninput = () => {
+        currentState.projectTitle = titleInput.value;
+        if (currentState.template) currentState.template.title = titleInput.value;
+    };
+
+    titleInput.onblur = () => {
+        const normalizedTitle = titleInput.value.trim() || 'Untitled Project';
+        currentState.projectTitle = normalizedTitle;
+        if (currentState.template) currentState.template.title = normalizedTitle;
+        titleInput.value = normalizedTitle;
+    };
+}
+
+let closeEditorMenusHandler = null;
+
 function handleRouting() {
     let hash = window.location.hash.slice(1) || '/';
     if (hash !== '/' && !hash.startsWith('/')) hash = '/' + hash;
     
-    const viewId = routes[hash] || 'view-landing';
-    
-    // Redirect logged-in users away from auth
-    if (hash === '/auth' && currentState.user) {
-        window.location.hash = '#/create';
+    if (hash === '/auth') {
+        window.location.hash = '#/';
         return;
     }
+
+    const viewId = routes[hash] || 'view-landing';
 
     // Hide all views
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
@@ -2129,7 +2160,11 @@ async function initApp() {
     
     // 3. Routing System
     const handleRoute = () => {
-        const hash = window.location.hash.slice(1) || '/';
+        let hash = window.location.hash.slice(1) || '/';
+        if (hash === '/auth') {
+            window.location.hash = '#/';
+            return;
+        }
         currentState.view = hash;
         
         // Hide all views
@@ -2149,6 +2184,11 @@ async function initApp() {
         const navLinks = document.querySelector('.nav-links');
         const navActions = document.querySelector('.nav-actions');
 
+        if (closeEditorMenusHandler) {
+            document.removeEventListener('click', closeEditorMenusHandler);
+            closeEditorMenusHandler = null;
+        }
+
         if (isEditor) {
             // --- STUDIO NAVBAR VARIANT ---
             if (editorBadge) {
@@ -2160,7 +2200,9 @@ async function initApp() {
             if (navLinks) {
                 navLinks.classList.remove('hidden');
                 navLinks.innerHTML = `
-                    <div class="menu-bar">
+                    <div class="editor-nav-composer">
+                        <input id="nav-project-title" class="editor-project-name" type="text" placeholder="Untitled Project">
+                        <div class="menu-bar">
                         <div class="menu-item">
                             <button class="menu-trigger">File ▾</button>
                             <div class="dropdown-content">
@@ -2185,8 +2227,11 @@ async function initApp() {
                                 <a href="#" id="menu-show-diags">📋 Show Diagnostics</a>
                             </div>
                         </div>
+                        </div>
                     </div>
                 `;
+                syncProjectTitleUI();
+                bindProjectTitleInput();
 
                 // Bind Dropdown Toggle for Tap / Click (Desktop and Mobile)
                 const menuTriggers = navLinks.querySelectorAll('.menu-trigger');
@@ -2210,8 +2255,8 @@ async function initApp() {
                 const closeAllMenus = () => {
                     navLinks.querySelectorAll('.menu-item').forEach(item => item.classList.remove('open'));
                 };
-                document.removeEventListener('click', closeAllMenus);
-                document.addEventListener('click', closeAllMenus);
+                closeEditorMenusHandler = closeAllMenus;
+                document.addEventListener('click', closeEditorMenusHandler);
 
                 // Bind Dropdown items click handlers
                 const openModelBtn = document.getElementById('menu-open-model');
@@ -2219,7 +2264,7 @@ async function initApp() {
                     openModelBtn.onclick = (e) => {
                         e.preventDefault();
                         closeAllMenus();
-                        showStudioLibrary();
+                        openStudioLibrary();
                     };
                 }
 
@@ -2248,8 +2293,7 @@ async function initApp() {
                     exportStlBtn.onclick = (e) => {
                         e.preventDefault();
                         closeAllMenus();
-                        const exportBtn = document.getElementById('export-stl');
-                        if (exportBtn) exportBtn.click();
+                        exportCurrentModel();
                     };
                 }
 
@@ -2311,19 +2355,15 @@ async function initApp() {
             }
 
             if (navActions) {
-                // If user is logged in, append the "Save Project" action
-                let saveBtnHtml = '';
-                if (currentState.user) {
-                    saveBtnHtml = `<button id="nav-save-btn" class="primary-btn" style="margin-right: 8px;">Save Project</button>`;
-                }
-
-                // Render Studio Action list
-                const authText = currentState.user ? 'Logout' : 'Login';
-                const authHref = currentState.user ? '#' : '#/auth';
-                
                 navActions.innerHTML = `
-                    ${saveBtnHtml}
-                    <a href="${authHref}" id="auth-btn" class="secondary-btn">${authText}</a>
+                    <button id="studio-browse-btn" class="secondary-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Library
+                    </button>
+                    <button id="export-stl" class="primary-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export STL
+                    </button>
                     <button id="mobile-menu-toggle" class="icon-btn mobile-only">
                         <span></span>
                         <span></span>
@@ -2331,22 +2371,11 @@ async function initApp() {
                     </button>
                 `;
 
-                // Re-bind actions
-                const authBtn = document.getElementById('auth-btn');
-                if (currentState.user && authBtn) {
-                    authBtn.onclick = (e) => {
-                        e.preventDefault();
-                        supabase.auth.signOut();
-                    };
-                }
+                const studioBrowseBtn = document.getElementById('studio-browse-btn');
+                if (studioBrowseBtn) studioBrowseBtn.onclick = openStudioLibrary;
 
-                const navSaveBtn = document.getElementById('nav-save-btn');
-                if (navSaveBtn) {
-                    navSaveBtn.onclick = () => {
-                        const saveBtn = document.getElementById('menu-save-design');
-                        if (saveBtn) saveBtn.click();
-                    };
-                }
+                const exportBtn = document.getElementById('export-stl');
+                if (exportBtn) exportBtn.onclick = exportCurrentModel;
 
                 // Re-bind mobile menu toggle
                 const mobileToggle = document.getElementById('mobile-menu-toggle');
@@ -2375,11 +2404,7 @@ async function initApp() {
             }
 
             if (navActions) {
-                const authText = currentState.user ? 'Logout' : 'Login';
-                const authHref = currentState.user ? '#' : '#/auth';
-                
                 navActions.innerHTML = `
-                    <a href="${authHref}" id="auth-btn" class="secondary-btn">${authText}</a>
                     <a href="#/create" class="primary-btn">Launch Studio</a>
                     <button id="mobile-menu-toggle" class="icon-btn mobile-only">
                         <span></span>
@@ -2387,15 +2412,6 @@ async function initApp() {
                         <span></span>
                     </button>
                 `;
-
-                // Re-bind actions
-                const authBtn = document.getElementById('auth-btn');
-                if (currentState.user && authBtn) {
-                    authBtn.onclick = (e) => {
-                        e.preventDefault();
-                        supabase.auth.signOut();
-                    };
-                }
 
                 // Re-bind mobile menu toggle
                 const mobileToggle = document.getElementById('mobile-menu-toggle');
@@ -2956,6 +2972,7 @@ const pool = new CADWorkerPool();
 
 function selectTemplate(template, autoExtract = false) {
     currentState.template = template;
+    currentState.projectTitle = template.title || 'Untitled Project';
     currentState.params = {};
     
     // Auto-extract parameters for custom code
@@ -2968,7 +2985,7 @@ function selectTemplate(template, autoExtract = false) {
         template.ui_parameters.forEach(p => currentState.params[p.key] = p.default);
     }
     
-    document.getElementById('active-template-title').innerText = template.title;
+    syncProjectTitleUI();
     const descEl = document.getElementById('active-template-desc');
     if (descEl) descEl.innerText = template.description || '';
     
@@ -2980,6 +2997,9 @@ function selectTemplate(template, autoExtract = false) {
     renderParameters();
     
     if (!mainViewport) mainViewport = createRenderer('viewport');
+    syncViewportStateToUI();
+    drawBuildPlate();
+    updateLightingSettings();
     
     // Clear and initialize parametric history stack
     undoHistory = [];
@@ -3043,10 +3063,14 @@ function initModal() {
 
 function showCreateChoice() {
     currentState.template = null;
+    currentState.projectTitle = 'Untitled Project';
     document.getElementById('create-selection').classList.remove('hidden');
     
     // Ensure viewport is ready in background
     if (!mainViewport) mainViewport = createRenderer('viewport');
+    syncViewportStateToUI();
+    drawBuildPlate();
+    updateLightingSettings();
     
     // Init choice listeners
     document.getElementById('choice-existing').onclick = () => {
@@ -3094,9 +3118,6 @@ function openStudioLibrary() {
                     <span class="card-meta">ID: ${template.id.toUpperCase()}</span>
                     <h5>${template.title}</h5>
                     <p class="card-desc">${template.description || 'Custom parametric script'}</p>
-                    <div class="card-action-overlay">
-                        <span>➔ LOAD MODEL</span>
-                    </div>
                 </div>
             `;
             card.onclick = () => {
@@ -3840,6 +3861,22 @@ function syncViewportStateToUI() {
     if (scaleRange) scaleRange.value = state.scale;
     if (lblScale) lblScale.innerText = `${state.scale}x`;
 
+    const finishSelect = document.getElementById('material-finish');
+    if (finishSelect) finishSelect.value = state.materialFinish;
+
+    const plateSelect = document.getElementById('build-plate-select');
+    if (plateSelect) plateSelect.value = state.buildPlate;
+
+    const intensityRange = document.getElementById('light-intensity');
+    const lblIntensity = document.getElementById('lbl-light-intensity');
+    if (intensityRange) intensityRange.value = state.lightIntensity;
+    if (lblIntensity) lblIntensity.innerText = `${state.lightIntensity}x`;
+
+    const presetBtns = document.querySelectorAll('.light-presets .light-preset-btn');
+    presetBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === state.lightPreset);
+    });
+
     // 2. Sync mini details floating panel inputs
     const gizInputX = document.getElementById('gizmo-input-x');
     const gizInputY = document.getElementById('gizmo-input-y');
@@ -4397,7 +4434,8 @@ function initViewportToolbar() {
 }
 
 // Event Handlers
-document.getElementById('export-stl').onclick = () => {
+function exportCurrentModel() {
+    if (!currentState.template) return;
     pool.requestRender({ 
         jobId: 9999, 
         sourceCode: `// Export\n$fn=64;\n${currentState.template.source}`, 
@@ -4407,7 +4445,7 @@ document.getElementById('export-stl').onclick = () => {
     }, (data) => {
         if (data.ok) alert('Export Ready (check console for buffer)');
     });
-};
+}
 
 
 document.getElementById('view-reset').onclick = () => mainViewport?.controls.reset();
@@ -4678,9 +4716,9 @@ function updateUser(user) {
     // Dispatch hashchange to force global handleRoute() to redraw the correct context-based navbar instantly
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
-    // Handle initial redirect from auth page
-    if (user && window.location.hash === '#/auth') {
-        window.location.hash = '#/create';
+    // Hide unfinished auth route
+    if (window.location.hash === '#/auth') {
+        window.location.hash = '#/';
     }
 }
 
