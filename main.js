@@ -47,6 +47,19 @@ let isUndoingRedoing = false;
 
 const DEFAULT_TEMPLATES = [
     {
+        id: 'blank_canvas',
+        title: 'Blank Canvas',
+        description: 'Start from scratch. Write manual OpenSCAD code or use AI Chat to build custom designs.',
+        ui_parameters: [],
+        source: `// Blank Canvas
+// Describe what you want to build in the AI Chat, or write OpenSCAD code here.
+
+cube([20, 20, 20], center=true);`,
+        localPreview: (params, material) => {
+            return new THREE.BoxGeometry(20, 20, 20);
+        }
+    },
+    {
         id: 'rugged_box_v1',
         title: 'Rugged Utility Box',
         description: 'A durable, parameterized box with SD card slots.',
@@ -2857,13 +2870,21 @@ function renderTemplateGrid(filterText = '') {
             window.location.hash = '#/create';
         };
         const img = card.querySelector('img');
-        img.onerror = () => {
+        if (!t.thumbnail_url) {
             img.style.display = 'none';
             const fallback = document.createElement('div');
             fallback.className = 'thumbnail-fallback';
-            fallback.innerHTML = '<span>3D</span>';
+            fallback.innerHTML = '<span>CAD</span>';
             img.parentNode.insertBefore(fallback, img);
-        };
+        } else {
+            img.onerror = () => {
+                img.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'thumbnail-fallback';
+                fallback.innerHTML = '<span>3D</span>';
+                img.parentNode.insertBefore(fallback, img);
+            };
+        }
         
         grid.appendChild(card);
     });
@@ -4342,6 +4363,10 @@ function generateActiveThumbnail() {
 function saveHistoryState() {
     if (isUndoingRedoing) return;
     
+    if (currentState.template) {
+        currentState.source = currentState.template.source;
+    }
+    
     const snapshot = JSON.stringify({
         params: currentState.params,
         viewportState: currentState.viewportState,
@@ -4405,6 +4430,14 @@ function restoreStateFromSnapshot(snapshotString) {
     currentState.viewportState = JSON.parse(JSON.stringify(snapshot.viewportState));
     if (snapshot.source !== undefined) {
         currentState.source = snapshot.source;
+        if (currentState.template) {
+            currentState.template.source = snapshot.source;
+            const codeEditor = document.getElementById('code-editor');
+            if (codeEditor) {
+                codeEditor.value = snapshot.source;
+            }
+            currentState.template.ui_parameters = parseParametersFromSource(snapshot.source);
+        }
     }
     
     // Re-render parameters panel
@@ -5120,7 +5153,7 @@ function renderChatHistory() {
         return;
     }
     
-    aiChatHistory.forEach(msg => {
+    aiChatHistory.forEach((msg, msgIndex) => {
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant')}`;
         
@@ -5132,17 +5165,68 @@ function renderChatHistory() {
         }
         
         bubble.innerHTML = `<div class="bubble-text">${formattedText}</div>`;
+        
+        if (msg.role === 'assistant' && msg.previousState) {
+            const undoBtn = document.createElement('button');
+            undoBtn.className = 'chat-undo-btn glass';
+            undoBtn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-top: 8px; padding: 4px 10px; border-radius: var(--radius); font-size: 11px; font-family: var(--font-main); color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); transition: all 150ms ease;';
+            undoBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: scaleX(-1);"><path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> Undo Edit`;
+            undoBtn.onclick = () => window.revertToMessageState(msgIndex);
+            
+            // Hover effect
+            undoBtn.onmouseenter = () => {
+                undoBtn.style.color = 'var(--text-primary)';
+                undoBtn.style.borderColor = 'var(--accent-bright)';
+                undoBtn.style.background = 'var(--accent-subtle)';
+            };
+            undoBtn.onmouseleave = () => {
+                undoBtn.style.color = 'var(--text-secondary)';
+                undoBtn.style.borderColor = 'var(--border-color)';
+                undoBtn.style.background = 'rgba(255,255,255,0.03)';
+            };
+            bubble.appendChild(undoBtn);
+        }
+        
         container.appendChild(bubble);
     });
     
     container.scrollTop = container.scrollHeight;
 }
 
-function appendChatMessage(role, content) {
-    aiChatHistory.push({ role, content });
+function appendChatMessage(role, content, previousState = null) {
+    aiChatHistory.push({ role, content, previousState });
     saveChatHistory();
     renderChatHistory();
 }
+
+window.revertToMessageState = function(index) {
+    const msg = aiChatHistory[index];
+    if (!msg || !msg.previousState) return;
+    
+    const state = msg.previousState;
+    if (!currentState.template) return;
+    
+    // Restore source code
+    currentState.template.source = state.source;
+    currentState.source = state.source;
+    
+    // Disable/Delete localPreview if it existed to ensure correct Worker re-rendering
+    delete currentState.template.localPreview;
+    
+    const editor = document.getElementById('code-editor');
+    if (editor) editor.value = state.source;
+    
+    // Restore parameters
+    currentState.template.ui_parameters = JSON.parse(JSON.stringify(state.ui_parameters));
+    currentState.params = JSON.parse(JSON.stringify(state.params));
+    
+    // Re-render parameters and trigger compilation
+    renderParameters();
+    triggerGeneration(true);
+    
+    // Append a friendly system message to the chat
+    appendChatMessage('system', `Reverted changes to state before prompt: "${aiChatHistory[index - 1]?.content || 'previous edit'}"`);
+};
 
 function initAIAssistant() {
     const generateBtn = document.getElementById('ai-generate-btn');
@@ -5189,6 +5273,12 @@ function initAIAssistant() {
         promptInput.value = '';
         generateBtn.disabled = true;
         
+        const prePromptState = currentState.template ? {
+            source: currentState.template.source,
+            params: JSON.parse(JSON.stringify(currentState.params)),
+            ui_parameters: currentState.template.ui_parameters ? JSON.parse(JSON.stringify(currentState.template.ui_parameters)) : []
+        } : null;
+        
         appendChatMessage('user', prompt);
         
         // Show loading bubble
@@ -5203,7 +5293,7 @@ function initAIAssistant() {
         }
         
         try {
-            await runAIGenerationPipeline(prompt);
+            await runAIGenerationPipeline(prompt, prePromptState);
         } catch (err) {
             appendChatMessage('system', `❌ ERROR: ${err.message}`);
             console.error('AI pipeline error:', err);
@@ -5218,7 +5308,7 @@ function initAIAssistant() {
     initAISettingsControls();
 }
 
-async function runAIGenerationPipeline(prompt) {
+async function runAIGenerationPipeline(prompt, prePromptState = null) {
     const provider = localStorage.getItem('paraform_ai_provider') || 'local';
     const apiKey = localStorage.getItem('paraform_ai_key') || '';
     const customUrl = localStorage.getItem('paraform_custom_url') || '';
@@ -5273,7 +5363,7 @@ async function runAIGenerationPipeline(prompt) {
             updatedSource = `// Parametric Box generated by Local AI Agent\nbox_width = 90;       // [number, Box Width, 40, 150, 1]\nbox_depth = 70;       // [number, Box Depth, 40, 150, 1]\nbox_height = 40;      // [number, Box Height, 15, 100, 1]\nwall_thickness = 2;   // [number, Wall Thickness, 1.2, 4, 0.1]\n\ndifference() {\n    cube([box_width, box_depth, box_height], center=true);\n    translate([0, 0, wall_thickness]) \n        cube([box_width - wall_thickness*2, box_depth - wall_thickness*2, box_height], center=true);\n}\n`;
         }
         
-        appendChatMessage('assistant', `**Success.** ${changesSummary}`);
+        appendChatMessage('assistant', `**Success.** ${changesSummary}`, prePromptState);
         applyNewOpenSCADSource(updatedSource);
         return;
     }
@@ -5460,12 +5550,15 @@ RULES:
         throw new Error('AI response did not contain openscad_code.');
     }
 
-    appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`);
+    appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`, prePromptState);
     applyNewOpenSCADSource(data.openscad_code);
 }
 
 function applyNewOpenSCADSource(newSource) {
     if (!currentState.template) return;
+    
+    // Disable obsolete local preview to ensure slider changes compile via worker
+    delete currentState.template.localPreview;
     
     // 1. Write to code editor textarea
     const codeEditor = document.getElementById('code-editor');
