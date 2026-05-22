@@ -1,35 +1,34 @@
 # ParaForm UI Design System
-## High-Contrast Dark Terminal Aesthetic
+## Premium Dynamic Glassmorphism Aesthetic (v2)
 
-This document defines the core tokens, design guidelines, components list, and interactive patterns for the **ParaForm UI Design System**. It serves as the single source of truth for maintainability, ensuring that future pages and layouts preserve the high-contrast, ultra-compact terminal atmosphere.
+This document defines the core tokens, design guidelines, components, and interactive patterns for the **ParaForm UI Design System v2**. It serves as the single source of truth for maintainability, ensuring that future pages and layouts preserve the modern, glass-like, immersive 3D utility look.
 
 ---
 
 ## 📐 Layout Architecture
 
-To maximize screen utility in a 3D modeling environment, ParaForm uses a fully-docked modular workspace rather than floating overlapping containers. 
+To maximize screen utility in a 3D modeling environment, ParaForm uses a docked modular workspace combined with floating glassmorphism panels to give a futuristic, professional desktop environment.
 
 ### Landing Page Alignment Grid
-To keep the public brand onboarding space visually cohesive and clean:
+To keep the public brand onboarding space visually cohesive, clean, and stunning:
 * The Landing Page container has a maximum column boundary locked at `1200px` and centered with `margin: 0 auto;`.
-* Both the primary `.hero` panel and all supplementary `.landing-section` blocks (including features grids, manifestos, and workflow panels) are bound to a strict horizontal padding limit of `16px`. This guarantees that all vertical gutters and borders align perfectly with grid coordinates on all monitors.
+* Both the primary `.hero` panel and all supplementary `.landing-section` blocks (including features grids, manifestos, and workflow panels) are bound to a strict horizontal padding limit of `16px`. This guarantees that all vertical gutters and borders align perfectly.
 
 ### Desktop Grid Layout
-On viewport widths above `768px`, the studio docks panels flush with the screen edges:
+On viewport widths above `768px`, the studio docks panels flush with the screen edges or floats them elegantly:
 
 ```mermaid
 graph TD
-    classDef main fill:#000000,stroke:#00ff66,stroke-width:2px,color:#ffffff;
-    classDef panel fill:#0c0c0c,stroke:#333333,stroke-width:1px,color:#aaaaaa;
-    classDef view fill:#050505,stroke:#333333,stroke-width:1px,color:#ffffff;
+    classDef main fill:#16161d,stroke:#4b9eff,stroke-width:2px,color:#ffffff;
+    classDef panel fill:#16161d,stroke:rgba(255,255,255,0.07),stroke-width:1px,color:#eeeef5;
+    classDef view fill:#0c0c10,stroke:rgba(255,255,255,0.07),stroke-width:1px,color:#ffffff;
 
-    GlobalNav[Global Navbar: height 48px] --> StudioContainer[Studio Workspace]
+    GlobalNav[Global Navbar: height 52px] --> StudioContainer[Studio Workspace]
     
     subgraph Studio Container [Studio Workspace Container]
-        LeftPanel[Left Panel: width 320px, docked]:::panel
-        TopBar[Editor Top Bar: height 40px, docked]:::panel
-        Viewport[3D Viewport: absolute center]:::view
-        RightPanel[Right Panel: width 240px, docked]:::panel
+        LeftPanel[Left Panel: width 340px, glassmorphic]:::panel
+        Viewport[3D Viewport: absolute center background]:::view
+        RightPanel[Right Panel: width 240px, floating panel]:::panel
     end
 
     class GlobalNav main;
@@ -40,91 +39,92 @@ On viewports below `768px`, columns collapse into a vertical stack to optimize i
 
 ```mermaid
 graph TD
-    classDef mobile fill:#000000,stroke:#333333,stroke-width:1px,color:#ffffff;
-    classDef scroll fill:#0c0c0c,stroke:#333333,stroke-width:1px,color:#aaaaaa;
+    classDef mobile fill:#0c0c10,stroke:rgba(255,255,255,0.07),stroke-width:1px,color:#ffffff;
+    classDef scroll fill:#16161d,stroke:rgba(255,255,255,0.07),stroke-width:1px,color:#eeeef5;
 
-    GlobalNav[Global Navbar: height 48px] --> MobileLayout[Stacked Mobile Layout]
+    GlobalNav[Global Navbar: height 52px] --> MobileLayout[Stacked Mobile Layout]
 
     subgraph MobileLayout
         Viewport[3D Viewport: height 45vh]:::mobile
-        TopBar[Editor Top Bar: height 40px]:::mobile
         LeftPanel[Left Panel: scrolls inline]:::scroll
         RightPanel[Right Panel: scrolls inline]:::scroll
     end
 ```
-### Floating Panels Route Isolation
-To prevent WebGL rendering layer clipping and maximize OpenSCAD WASM compiler state stability, the main sidebars (`#config-panel` and `#info-panel`) exist outside the router's `#view-router` container. 
-
-To prevent them from displaying on non-editor routes (like the Landing Page or Explore Library):
-* They are tagged with the `.hidden-global` utility class which sets `display: none !important` by default.
-* When the router transitions to the Studio workspace (`#/create`), the `body.in-editor` state is activated, which overrides the hidden rule with `display: flex !important`, bringing the sidebar docks into view synchronously.
 
 ---
 
 ## 🎨 Design System Tokens
 
-Design system tokens are mapped to CSS custom variables in [style.css](file:///c:/Users/Chirag/Documents/3d_play/style.css#L1-L26). When writing styles, **always** refer to these custom tokens:
+Design system tokens are mapped to CSS custom variables in `style.css`. When writing styles, **always** refer to these custom tokens:
 
 | Token | CSS Value | Application |
 | :--- | :--- | :--- |
-| `--bg-color` | `#000000` | Canvas base, main page background |
-| `--panel-bg` | `#0c0c0c` | Workspace sidebar body |
-| `--panel-header-bg` | `#141414` | Tab row & top bar headers |
-| `--accent-color` | `#00ff66` | Primary active states, compilation indicators |
-| `--accent-dim` | `#00aa44` | Secondary indicators, inactive range tracks |
-| `--text-primary` | `#ffffff` | Primary text, titles, numeric manual inputs |
-| `--text-secondary` | `#aaaaaa` | Secondary labels, descriptions |
-| `--text-muted` | `#666666` | Developer notes, code comments, hints |
-| `--border-color` | `#333333` | Standard structural borders |
-| `--border-active` | `#00ff66` | Focused inputs, hovered cards, active badges |
-| `--border-focus` | `#ffffff` | Absolute focus/selection borders |
-| `--font-main` | `'JetBrains Mono', monospace` | Main body copy |
-| `--border-radius` | `0px` | Strict rigid block style |
+| `--bg-color` | `#0c0c10` | Canvas base, main page background |
+| `--panel-bg` | `#16161d` | Workspace sidebar body |
+| `--panel-header-bg` | `#1e1e28` | Tab row & top bar headers |
+| `--surface-elevated`| `#262632` | Glassmorphic floating containers |
+| `--surface-hover` | `#2c2c3a` | Hover states on lists or items |
+| `--surface-input` | `#111118` | Form field interior backgrounds |
+| `--accent-color` | `#4b9eff` | Brand primary color (royal blue) |
+| `--accent-bright` | `#74b5ff` | Bright highlighted state (sky blue) |
+| `--accent-dim` | `#1d6fd1` | Subdued highlight state |
+| `--accent-subtle` | `rgba(75, 158, 255, 0.1)` | Light background highlight |
+| `--accent-glow` | `rgba(75, 158, 255, 0.25)` | Shadow focus and indicator glow |
+| `--text-primary` | `#eeeef5` | Primary text, titles, numeric manual inputs |
+| `--text-secondary` | `#8888a8` | Secondary labels, descriptions |
+| `--text-muted` | `#4a4a60` | Developer notes, code comments, hints |
+| `--border-color` | `rgba(255, 255, 255, 0.07)` | Standard structural borders |
+| `--border-strong` | `rgba(255, 255, 255, 0.12)` | Active or high-contrast borders |
+| `--font-main` | `'Outfit', sans-serif` | Main body typography |
+| `--font-mono` | `'JetBrains Mono', monospace`| Source code, system outputs, numeric readouts |
+| `--border-radius` | `var(--radius)` (5px) | Rounded corners style |
 
 > [!IMPORTANT]
-> **MINIMUM FONT SIZE BOUND**: Never declare `font-size` smaller than `12px` (including headers, captions, badges, or numeric inputs). This is critical for legibility in dense high-contrast layouts.
+> **MINIMUM FONT SIZE BOUND**: Never declare `font-size` smaller than `11px` (including headers, captions, badges, or numeric inputs). This is critical for legibility in dense layouts.
 >
-> **SHADOWS & BLUR BAN**: Do not add `box-shadow`, `text-shadow`, or `backdrop-filter: blur(...)` to any class or inline styling. This is strictly prohibited to preserve the raw CLI aesthetic.
+> **GLASSMORPHISM EFFECTS**: Floating panels and major dialog boxes must utilize the `.glass` class to gain standard translucent slate backgrounds, subtle solid border edges, and beautiful backdrop blurs (`backdrop-filter: blur(16px)`).
 
 ---
 
 ## 📦 Component Specifications & Code Snippets
 
-### 1. Unified Snap Buttons
-Buttons use pure outline or solid styles with instant visual inversion on hover. **Do not use transitions/easings.**
+### 1. Unified Glassmorphic Buttons
+Buttons feature rounded corners, smooth transitions (`150ms var(--ease)`), and soft drop shadows/glows.
 
 ```html
-<!-- Primary action button (Solid neon terminal green) -->
+<!-- Primary action button (Vibrant blue with a subtle glow) -->
 <button class="primary-btn">Export STL</button>
 
-<!-- Secondary action button (Monochrome border) -->
+<!-- Secondary action button (Monochrome elevated surface) -->
 <button class="secondary-btn">Save Project</button>
 
-<!-- Outline indicator button (Bordered neon green) -->
+<!-- Outline indicator button (Transparent bordered blue) -->
 <button class="outline-btn">Browse Library</button>
 ```
 
 ```css
 .primary-btn {
     background: var(--accent-color);
-    color: #000000;
+    color: #ffffff;
     border: 1px solid var(--accent-color);
-    font-size: 12px;
-    font-weight: bold;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-main);
     cursor: pointer;
-    border-radius: 0px;
+    border-radius: var(--radius);
+    transition: all var(--transition);
+    box-shadow: 0 4px 12px var(--accent-glow);
 }
 .primary-btn:hover {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+    box-shadow: 0 4px 18px rgba(75, 158, 255, 0.4);
+    transform: translateY(-1px);
 }
 ```
 
 ### 2. Form & Select Controls
-Forms require absolute high-contrast fields to stand out on dark panels:
+Forms require glassmorphic inputs to remain cohesive in a semi-transparent atmosphere:
 
 ```html
 <!-- Standard text/code parameter input -->
@@ -148,118 +148,23 @@ Inputs sit alongside range sliders for instant numeric adjustment.
 <input type="range" min="40" max="150" step="1" value="80">
 ```
 
-```css
-.manual-input {
-    width: 64px;
-    background: #111111;
-    border: 1px solid var(--border-color);
-    color: var(--accent-color);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    text-align: right;
-    padding: 2px 4px;
-    outline: none;
-}
-.manual-input:focus {
-    border-color: var(--border-active);
-}
-```
-
-### 4. Sliders (Terminal Range Dial)
-To optimize touch and drag accuracy, the slider has an expanded vertical interactive height of `32px` and uses a `16px` tactile square thumb.
+### 4. Sliders (Tactile Modern Range Track)
+To optimize touch and drag accuracy, the slider has an expanded vertical interactive height of `32px` and uses a `14px` tactile round thumb with a subtle outline.
 
 ```css
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    background: transparent;
-    margin: 0;
-    padding: 10px 0;               /* Vertically expands the interactive area */
-    height: 32px;                  /* Direct target size expansion */
-    cursor: pointer;
-}
-
-input[type="range"]::-webkit-slider-runnable-track {
-    height: 4px;
-    background: #111111;
-    border: 1px solid var(--border-color);
-}
-
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    height: 16px;                  /* Increased size for touch accuracy */
-    width: 16px;                   /* Increased size for touch accuracy */
+    height: 14px;
+    width: 14px;
     background: var(--accent-color);
-    border: 1px solid #000000;
-    margin-top: -6px;              /* Center aligned on 4px track */
+    border: 2px solid #ffffff;
+    margin-top: -5px;
     cursor: pointer;
-    border-radius: 0px;            /* STRICT RIGID SQUARE THUMB */
-}
-
-/* Firefox Support */
-input[type="range"]::-moz-range-track {
-    height: 4px;
-    background: #111111;
-    border: 1px solid var(--border-color);
-}
-
-input[type="range"]::-moz-range-thumb {
-    height: 16px;
-    width: 16px;
-    background: var(--accent-color);
-    border: 1px solid #000000;
-    cursor: pointer;
-    border-radius: 0px;
+    border-radius: var(--radius-full);
 }
 ```
 
-### 5. Boolean Toggles (Solid Check-slider)
-Uses quick-snapping box blocks instead of round pills.
-
-```html
-<label class="switch">
-    <input type="checkbox" checked>
-    <span class="slider-round"></span>
-</label>
-```
-
-```css
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 32px;
-    height: 16px;
-}
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider-round {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: #111111;
-    border: 1px solid var(--border-color);
-    border-radius: 0px;
-}
-.slider-round:before {
-    position: absolute;
-    content: "";
-    height: 10px;
-    width: 10px;
-    left: 2px;
-    bottom: 2px;
-    background-color: #666666;
-    border-radius: 0px;
-}
-input:checked + .slider-round {
-    background-color: #002208;
-    border-color: var(--accent-color);
-}
-input:checked + .slider-round:before {
-    transform: translateX(16px);
-    background-color: var(--accent-color);
-}
-```
-
-### 6. Status Diagnostics Badges
+### 5. Status Diagnostics Badges
 Colored markers representing background CAD parser and rendering status.
 
 ```html
@@ -268,37 +173,12 @@ Colored markers representing background CAD parser and rendering status.
 <span id="status-badge" class="error">Compilation Failure</span>
 ```
 
-### 7. Context-Based Navbar Variants
-The global navbar (`#global-nav`) dynamically renders specialized links, dropdown submenus, and action triggers based on the active routing workspace context to prevent button redundancy.
-
-* **Studio Mode Variant (`#/create`)**:
-  * **Pure Icon Branding**: Displays strictly the scaled `20px` hex-brand icon (`⬢`) on the left (hiding the logo text and editor badges) to maximize active workspace area and provide a sleek, pro desktop aesthetic.
-  * Replaces navigation links with a **Desktop-Style Menu Bar** containing context-sensitive dropdown actions:
-    * **File ▾**:
-      * `📁 Open Model` -> Triggers the Studio library modal.
-      * `💾 Save Design` -> Local storage cache saving (source and active parameters).
-      * `📤 Export STL` -> Compiles and triggers immediate STL mesh download.
-      * `Exit Studio` -> Safely exit to catalog.
-    * **View ▾**:
-      * `🎥 Reset Camera` -> Resets Three.js orbital limits.
-      * `🕸️ Toggle Wireframe` -> Switches renderer wireframe mode.
-    * **Settings ▾**:
-      * `🚀 Performance Mode` -> Toggles Turbo low-fn drag resolution.
-      * `📋 Show Diagnostics` -> Jumps viewport bounds focus to diagnostic metrics.
-  * **Left-Docking Alignment**: Docks the dropdown menu bar directly to the left, flush against the brand logo with a clean `24px` horizontal gap to emulate classic native desktop applications (e.g. Blender, VS Code), pushing action controls to the far right margin.
-  * Hides the redundant `Launch Studio` button.
-  * Appends a dynamic `Save Project` button in action items if the user is authenticated.
-
-* **Website Mode Variant (All other pages)**:
-  * Restores primary web links: `Home`, `Explore`, and `Manage` (for authenticated admins).
-  * Restores standard branding elements, including the brand text `ParaForm` next to the hex icon.
-  * Displays the standard `Launch Studio` call-to-action prominently.
-
-### 8. Studio Library Selector Components
-To ensure high visual quality and functional robustness in the model selection process:
-* **Tactile Mini Cards (`.mini-card`)**: Fully customized outline cards featuring parameter count badges, muted terminal system ID indicators, truncated descriptions, and an active loading hover overlay (`➔ LOAD MODEL`) that triggers instant WebGL template switching.
-* **Scrollable Lock Panels**: Large selection dialogs use custom vertical scroll locks (`overflow-y: auto;` bound to modal heights) and are styled with blocky high-contrast terminal scrollbars to prevent viewport spillages.
-* **Command Bar Inputs**: Search inputs are styled as custom square text field commands in standard terminal format.
+### 6. Conversational Chat Bot GUI
+The AI Tab is designed as a modern messaging chatbot:
+* **Scrollable Chat Container (`#ai-chat-history`)**: Messages are displayed sequentially with smooth scrolls.
+* **User Chat Bubbles**: Right-aligned, colored with the primary accent background and white text.
+* **Assistant Chat Bubbles**: Left-aligned, colored with elevated glassmorphic surface and light text.
+* **Action Prompt Chips (`.ai-chip`)**: Pill-shaped action triggers positioned just above the input to prompt standard edits (e.g. "Mounting Holes"). Emojis have been removed for a professional interface.
 
 ---
 
@@ -306,12 +186,12 @@ To ensure high visual quality and functional robustness in the model selection p
 Please read these instructions before modifying the codebase:
 
 > [!WARNING]
-> **1. BORDER RADII RULE**: Do not use `border-radius` larger than `2px` for normal interfaces, and strictly use `0px` (square corners) on primary panels, buttons, selects, and dialog overlays.
+> **1. BORDER RADII RULE**: Ensure you leverage the predefined border radii variables (`var(--radius-sm)`, `var(--radius)`, `var(--radius-lg)`). Avoid hardcoded `0px` or extreme values unless explicitly requested.
 > 
-> **2. TRANSITIONS & DAMPING**: Never apply cubic-bezier animations or long `transition: all 0.3s` rules. A retro terminal system must react instantly. Hover, click, and display states should swap *instantly* (`transition: none;`).
+> **2. TRANSITIONS & DAMPING**: Utilize pre-declared `var(--transition)` and `var(--transition-fast)` to provide micro-animations and responsive hover/focus visual feedback.
 > 
-> **3. SCROLLBAR INTEGRITY**: Avoid standard operating system scrollbars which disrupt dark themes. Utilize the custom scrollbars declared in [style.css:L114](file:///c:/Users/Chirag/Documents/3d_play/style.css#L114-L125).
+> **3. SCROLLBAR INTEGRITY**: Avoid standard operating system scrollbars which disrupt the dark slate theme. Utilize the custom scrollbars declared in `style.css`.
 > 
-> **4. NO FLOATING GAPS**: Keep sidebars aligned flush with the navbar and screen edges inside the configurator screen. Do not inject margin pads between docked elements.
+> **4. GLASSMORPHISM DEPTH**: Apply `.glass` to modals, popups, and panels to achieve maximum visual depth and a state-of-the-art UI atmosphere.
 > 
-> **5. COMPREHENSIVE RESPONSIVENESS**: Every layout must support mobile devices down to `320px` width. Avoid vertical container clipping by using flex-wrap or horizontal swipe containers (`overflow-x: auto; scrollbar-width: none;`) for filter sets. Always stack multi-column rows into single-column grids on screens `<= 768px`, and enforce min-heights on the code editor workspace wrappers (`380px`) to prevent functional collapse.
+> **5. COMPREHENSIVE RESPONSIVENESS**: Every layout must support mobile devices down to `320px` width. Enforce robust flex wraps and scrollable horizontal lanes where needed.
