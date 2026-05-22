@@ -2444,7 +2444,7 @@ async function initApp() {
         // Re-bind link click mobile close
         if (navLinks) {
             navLinks.querySelectorAll('a').forEach(link => {
-                link.onclick = () => navLinks.classList.remove('mobile-active');
+                link.addEventListener('click', () => navLinks.classList.remove('mobile-active'));
             });
         }
 
