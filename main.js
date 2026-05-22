@@ -5153,6 +5153,17 @@ function initAIAssistant() {
     loadChatHistory();
     renderChatHistory();
     
+    // Bind "New Conversation" clear button
+    const clearBtn = document.getElementById('ai-clear-chat-btn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (aiChatHistory.length === 0) return;
+            aiChatHistory = [];
+            saveChatHistory();
+            renderChatHistory();
+        };
+    }
+    
     // Bind quick action chips
     const chips = document.querySelectorAll('.ai-chip');
     chips.forEach(chip => {
