@@ -5549,7 +5549,7 @@ function initAISettingsControls() {
         if (systemPromptInput) localStorage.setItem('paraform_ai_system_prompt', systemPromptInput.value.trim());
         
         modal.classList.add('hidden');
-        writeAILog(`AI Settings updated. Active Provider: ${providerSelect.value.toUpperCase()}`, 'success');
+        appendChatMessage('system', `AI Settings updated. Active Provider: ${providerSelect.value.toUpperCase()}`);
     };
     
     // Close button click
