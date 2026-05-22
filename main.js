@@ -2227,6 +2227,7 @@ async function initApp() {
                             <div class="dropdown-content">
                                 <a href="#" id="menu-perf-mode">🚀 Performance Mode</a>
                                 <a href="#" id="menu-show-diags">📋 Show Diagnostics</a>
+                                <a href="#" id="menu-ai-settings">🤖 AI Settings</a>
                             </div>
                         </div>
                         </div>
@@ -2352,6 +2353,15 @@ async function initApp() {
                                 rightPanel.style.borderColor = 'var(--border-color)';
                             }, 1000);
                         }
+                    };
+                }
+
+                const aiSettingsBtn = document.getElementById('menu-ai-settings');
+                if (aiSettingsBtn) {
+                    aiSettingsBtn.onclick = (e) => {
+                        e.preventDefault();
+                        closeAllMenus();
+                        openAISettingsModal();
                     };
                 }
             }
@@ -3216,6 +3226,7 @@ function switchTab(tabId) {
     
     document.getElementById('tab-content-params').classList.toggle('hidden', tabId !== 'params');
     document.getElementById('tab-content-code').classList.toggle('hidden', tabId !== 'code');
+    document.getElementById('tab-content-ai').classList.toggle('hidden', tabId !== 'ai');
 }
 
 function renderParameters() {
@@ -5055,7 +5066,10 @@ async function startApp() {
     // 2. Init App Logic (Supabase, Routing)
     await initApp();
     
-    // 3. Complete Loading (No pre-render to save memory)
+    // 3. Init AI Assistant Controllers
+    initAIAssistant();
+    
+    // 4. Complete Loading (No pre-render to save memory)
     updateLoader(100, 'Ready.');
     const elapsed = Date.now() - startTime;
     const wait = Math.max(0, 1500 - elapsed);
@@ -5067,3 +5081,510 @@ async function startApp() {
 
 // Start the sequence
 startApp();
+
+// ── Universal AI Assistant Controllers & Pipeline ────────────────
+
+// Helper sleep
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+let aiChatHistory = [];
+
+function loadChatHistory() {
+    try {
+        const stored = localStorage.getItem('paraform_ai_chat_history');
+        if (stored) {
+            aiChatHistory = JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error('Failed to load chat history', e);
+    }
+}
+
+function saveChatHistory() {
+    localStorage.setItem('paraform_ai_chat_history', JSON.stringify(aiChatHistory));
+}
+
+function renderChatHistory() {
+    const container = document.getElementById('ai-chat-history');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (aiChatHistory.length === 0) {
+        container.innerHTML = `
+            <div class="chat-bubble system">
+                <div class="bubble-icon">✨</div>
+                <div class="bubble-text">Hi! I'm your ParaForm AI Assistant. Describe what you'd like to build or modify.</div>
+            </div>
+        `;
+        return;
+    }
+    
+    aiChatHistory.forEach(msg => {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant')}`;
+        
+        let formattedText = msg.content;
+        
+        if (msg.role === 'assistant') {
+            // Simple markdown-ish bolding for changes
+            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+        
+        bubble.innerHTML = `<div class="bubble-text">${formattedText}</div>`;
+        container.appendChild(bubble);
+    });
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendChatMessage(role, content) {
+    aiChatHistory.push({ role, content });
+    saveChatHistory();
+    renderChatHistory();
+}
+
+function initAIAssistant() {
+    const generateBtn = document.getElementById('ai-generate-btn');
+    const promptInput = document.getElementById('ai-prompt-input');
+    
+    if (!generateBtn || !promptInput) return;
+    
+    loadChatHistory();
+    renderChatHistory();
+    
+    // Bind quick action chips
+    const chips = document.querySelectorAll('.ai-chip');
+    chips.forEach(chip => {
+        chip.onclick = () => {
+            promptInput.value = chip.dataset.prompt;
+            generateBtn.click();
+        };
+    });
+    
+    // Enter key to send
+    promptInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            generateBtn.click();
+        }
+    });
+    
+    // Bind Generate button
+    generateBtn.onclick = async () => {
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+        
+        promptInput.value = '';
+        generateBtn.disabled = true;
+        
+        appendChatMessage('user', prompt);
+        
+        // Show loading bubble
+        const container = document.getElementById('ai-chat-history');
+        if (container) {
+            const loadingBubble = document.createElement('div');
+            loadingBubble.id = 'ai-loading-bubble';
+            loadingBubble.className = 'chat-bubble system';
+            loadingBubble.innerHTML = '<div class="bubble-text">Thinking... ⚙️</div>';
+            container.appendChild(loadingBubble);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        try {
+            await runAIGenerationPipeline(prompt);
+        } catch (err) {
+            appendChatMessage('system', `❌ ERROR: ${err.message}`);
+            console.error('AI pipeline error:', err);
+        } finally {
+            generateBtn.disabled = false;
+            const loadingBubble = document.getElementById('ai-loading-bubble');
+            if (loadingBubble) loadingBubble.remove();
+        }
+    };
+
+    // Initialize AI Settings UI controls
+    initAISettingsControls();
+}
+
+async function runAIGenerationPipeline(prompt) {
+    const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+    const apiKey = localStorage.getItem('paraform_ai_key') || '';
+    const customUrl = localStorage.getItem('paraform_custom_url') || '';
+    const customModel = localStorage.getItem('paraform_custom_model') || '';
+
+    // Filter chat history for API payloads (excluding system status messages)
+    const apiMessages = aiChatHistory.filter(m => m.role === 'user' || m.role === 'assistant');
+
+    // Handle Local Agent Mode (Zero external API dependencies)
+    if (provider === 'local') {
+        await sleep(500);
+        
+        const currentSource = currentState.template ? currentState.template.source : '';
+        let updatedSource = currentSource;
+        
+        const lowerPrompt = prompt.toLowerCase();
+        let changesSummary = '';
+        
+        if (lowerPrompt.includes('hole') || lowerPrompt.includes('mounting')) {
+            changesSummary = 'Injected standard clearance mounting hole modules at the four corners.';
+            await sleep(400);
+            if (currentSource.includes('difference()')) {
+                updatedSource = currentSource.replace('difference() {', `difference() {\n    // AI Added mounting holes\n    hole_offset = 6;  // [number, Mounting Hole Offset, 3, 15, 0.5]\n    hole_diameter = 4; // [number, Mounting Hole Diameter, 2, 8, 0.5]\n    \n    // Subtract cylinders at four corners\n    translate([box_width/2 - hole_offset, box_depth/2 - hole_offset, -box_height/2 - 1]) cylinder(d=hole_diameter, h=box_height+2, $fn=32);\n    translate([-box_width/2 + hole_offset, box_depth/2 - hole_offset, -box_height/2 - 1]) cylinder(d=hole_diameter, h=box_height+2, $fn=32);\n    translate([box_width/2 - hole_offset, -box_depth/2 + hole_offset, -box_height/2 - 1]) cylinder(d=hole_diameter, h=box_height+2, $fn=32);\n    translate([-box_width/2 + hole_offset, -box_depth/2 + hole_offset, -box_height/2 - 1]) cylinder(d=hole_diameter, h=box_height+2, $fn=32);\n`);
+            } else {
+                updatedSource = `// Wrapped with AI Mounting Holes\ndifference() {\n    union() {\n        ${currentSource}\n    }\n    \n    hole_offset = 6;  // [number, Mounting Hole Offset, 3, 15, 0.5]\n    hole_diameter = 4; // [number, Mounting Hole Diameter, 2, 8, 0.5]\n    \n    // Corner mounting holes\n    translate([35, 25, -50]) cylinder(d=hole_diameter, h=100, $fn=32);\n    translate([-35, 25, -50]) cylinder(d=hole_diameter, h=100, $fn=32);\n    translate([35, -25, -50]) cylinder(d=hole_diameter, h=100, $fn=32);\n    translate([-35, -25, -50]) cylinder(d=hole_diameter, h=100, $fn=32);\n}`;
+            }
+        } else if (lowerPrompt.includes('fillet') || lowerPrompt.includes('round') || lowerPrompt.includes('bevel')) {
+            changesSummary = 'Applied edge fillet modules using Minkowski rounding.';
+            await sleep(400);
+            if (currentSource.includes('cube([box_width, box_depth, box_height], center=true);')) {
+                const helperModule = `\nmodule rounded_cube(x, y, z, r) {\n    translate([-x/2, -y/2, -z/2])\n    minkowski() {\n        translate([r, r, r]) cube([x - 2*r, y - 2*r, z - 2*r]);\n        sphere(r, $fn=16);\n    }\n}\n`;
+                updatedSource = helperModule + "\n" + currentSource.replace('cube([box_width, box_depth, box_height], center=true);', `rounded_cube(box_width, box_depth, box_height, fillet_radius);\n    fillet_radius = 3; // [number, Fillet Radius, 1, 8, 0.5]`);
+            } else {
+                updatedSource = `\nfillet_radius = 2; // [number, Fillet Radius, 0.5, 5, 0.1]\nminkowski() {\n    union() {\n        ${currentSource}\n    }\n    sphere(fillet_radius, $fn=12);\n}`;
+            }
+        } else if (lowerPrompt.includes('vent') || lowerPrompt.includes('slot') || lowerPrompt.includes('grill')) {
+            changesSummary = 'Injected a linear ventilation slots grid.';
+            await sleep(400);
+            if (currentSource.includes('difference()')) {
+                updatedSource = currentSource.replace('difference() {', `difference() {\n    // AI Added ventilation slots\n    vent_width = 3.5;   // [number, Vent Slot Width, 1, 8, 0.5]\n    vent_length = 35;  // [number, Vent Slot Length, 10, 80, 1]\n    vent_spacing = 8; // [number, Vent Spacing, 4, 15, 0.5]\n    \n    // Linear slot arrays\n    for (x = [-3:3]) {\n        translate([x * vent_spacing, 0, -box_height/2 - 1])\n            cube([vent_width, vent_length, box_height+2], center=true);\n    }\n`);
+            } else {
+                updatedSource = `\ndifference() {\n    union() {\n        ${currentSource}\n    }\n    \n    vent_width = 3;   // [number, Vent Slot Width, 1, 8, 0.5]\n    vent_spacing = 6; // [number, Vent Spacing, 4, 15, 0.5]\n    \n    for (x = [-4:4]) {\n        translate([x * vent_spacing, 0, -50])\n            cube([vent_width, 40, 100], center=true);\n    }\n}`;
+            }
+        } else if (lowerPrompt.includes('emboss') || lowerPrompt.includes('text') || lowerPrompt.includes('engrave')) {
+            changesSummary = 'Added linear extruded text branding module on the surface.';
+            await sleep(400);
+            const textModule = `\n// AI Extruded Text\nemboss_text = "ParaForm"; // [string, Embossed Text]\ntext_size = 8;            // [number, Text Size, 4, 20, 1]\ntext_depth = 1.5;         // [number, Text Depth, 0.5, 4, 0.1]\n\ntranslate([0, 0, box_height/2 - text_depth])\n    linear_extrude(height=text_depth + 1)\n        text(emboss_text, size=text_size, font="Liberation Sans:style=Bold", halign="center", valign="center");\n`;
+            updatedSource = currentSource + "\n" + textModule;
+        } else {
+            changesSummary = 'Created a new default parametric rugged utility organizer box.';
+            await sleep(400);
+            updatedSource = `// Parametric Box generated by Local AI Agent\nbox_width = 90;       // [number, Box Width, 40, 150, 1]\nbox_depth = 70;       // [number, Box Depth, 40, 150, 1]\nbox_height = 40;      // [number, Box Height, 15, 100, 1]\nwall_thickness = 2;   // [number, Wall Thickness, 1.2, 4, 0.1]\n\ndifference() {\n    cube([box_width, box_depth, box_height], center=true);\n    translate([0, 0, wall_thickness]) \n        cube([box_width - wall_thickness*2, box_depth - wall_thickness*2, box_height], center=true);\n}\n`;
+        }
+        
+        appendChatMessage('assistant', `**Success.** ${changesSummary}`);
+        applyNewOpenSCADSource(updatedSource);
+        return;
+    }
+
+    // ── Universal API Direct Pipeline ────────────────
+    if (!apiKey) {
+        throw new Error(`API Key for ${provider.toUpperCase()} is required. Please set it in AI Settings.`);
+    }
+
+    const currentSource = currentState.template ? currentState.template.source : '';
+    const customSystemPrompt = localStorage.getItem('paraform_ai_system_prompt') || '';
+
+    let systemPrompt = `You are ParaForm AI, an expert parametric 3D CAD designer specialized in producing clean, functional OpenSCAD model files.
+Your task is to take the user's natural language request and modify the provided OpenSCAD source code accordingly.
+
+RULES:
+1. Always retain or enhance existing parametric parameters at the top of the file.
+2. If the user asks for a new parameter, define it using the customizer format:
+   key = value; // [type, Label, min, max, step]
+   Supported types: 'number', 'integer', 'string', 'boolean', 'enum'.
+3. Maintain clean geometry. Make sure subtracted shapes (holes, slots) extend slightly past the surfaces they cut through to avoid zero-thickness rendering artifacts.
+4. Keep the orientation Z-up, millimeter scale.
+5. Return ONLY valid OpenSCAD code. Do not wrap it in markdown codeblocks. Specifically, you must output a JSON object containing two fields:
+   - "changes": "A short 1-sentence summary of what geometric features were changed/added."
+   - "openscad_code": "The complete, revised, working OpenSCAD script, with no markdown styling around it."
+6. Ensure no compile errors will occur. No external font imports or unsupported OpenSCAD features.`;
+
+    if (customSystemPrompt.trim()) {
+        systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS & BEST PRACTICES:\n${customSystemPrompt.trim()}`;
+    }
+
+    systemPrompt += `\n\nCurrent OpenSCAD Source Code:\n-------------------------------------------\n${currentSource}\n-------------------------------------------`;
+
+    let responseText = '';
+
+    // Route request to appropriate API
+    if (provider === 'gemini') {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        
+        const contents = [];
+        // Optional system instruction
+        const systemInstruction = { role: 'system', parts: [{text: systemPrompt}] };
+        
+        apiMessages.forEach(msg => {
+            contents.push({
+                role: msg.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: msg.content }]
+            });
+        });
+        
+        const payload = {
+            systemInstruction,
+            contents,
+            generationConfig: {
+                responseMimeType: 'application/json'
+            }
+        };
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Gemini API call failed');
+        }
+        
+        const result = await response.json();
+        responseText = result.candidates[0].content.parts[0].text;
+
+    } else if (provider === 'openai') {
+        const url = 'https://api.openai.com/v1/chat/completions';
+        
+        const messages = [{ role: 'system', content: systemPrompt }];
+        apiMessages.forEach(msg => {
+            messages.push({ role: msg.role, content: msg.content });
+        });
+        
+        const payload = {
+            model: 'gpt-4o-mini',
+            messages: messages,
+            response_format: { type: 'json_object' }
+        };
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'OpenAI API call failed');
+        }
+        
+        const result = await response.json();
+        responseText = result.choices[0].message.content;
+
+    } else if (provider === 'anthropic') {
+        const url = 'https://api.anthropic.com/v1/messages';
+        
+        const messages = [];
+        apiMessages.forEach(msg => {
+            messages.push({ role: msg.role, content: msg.content });
+        });
+        
+        const payload = {
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages: messages
+        };
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-danger-out-of-band-requests-enabled': 'true'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Claude API call failed (CORS blocked. Please use OpenRouter/Custom instead)');
+        }
+        
+        const result = await response.json();
+        responseText = result.content[0].text;
+
+    } else if (provider === 'custom') {
+        const targetUrl = customUrl ? (customUrl.endsWith('/') ? customUrl + 'chat/completions' : customUrl + '/chat/completions') : '';
+        if (!targetUrl) {
+            throw new Error('Custom Base URL must be configured in Settings.');
+        }
+        const targetModel = customModel || 'deepseek-chat';
+        
+        const messages = [{ role: 'system', content: systemPrompt }];
+        apiMessages.forEach(msg => {
+            messages.push({ role: msg.role, content: msg.content });
+        });
+        
+        const payload = {
+            model: targetModel,
+            messages: messages
+        };
+        
+        const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Custom API call failed with status ${response.status}`);
+        }
+        
+        const result = await response.json();
+        responseText = result.choices[0].message.content;
+    }
+
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (e) {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            data = JSON.parse(jsonMatch[0]);
+        } else {
+            throw new Error('Could not extract JSON content from AI response.');
+        }
+    }
+
+    if (!data.openscad_code) {
+        throw new Error('AI response did not contain openscad_code.');
+    }
+
+    appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`);
+    applyNewOpenSCADSource(data.openscad_code);
+}
+
+function applyNewOpenSCADSource(newSource) {
+    if (!currentState.template) return;
+    
+    // 1. Write to code editor textarea
+    const codeEditor = document.getElementById('code-editor');
+    if (codeEditor) codeEditor.value = newSource;
+    
+    currentState.template.source = newSource;
+    
+    // 2. Extract new parameters
+    const newParams = parseParametersFromSource(newSource);
+    currentState.template.ui_parameters = newParams;
+    
+    // 3. Preserve variable values where keys match
+    const oldParams = { ...currentState.params };
+    currentState.params = {};
+    newParams.forEach(p => {
+        currentState.params[p.key] = oldParams[p.key] ?? p.default;
+    });
+    
+    // 4. Update configurator UI sliders
+    renderParameters();
+    
+    // 5. Trigger WebWorker background compilation
+    triggerGeneration(true);
+    
+    console.log('WASM compilation and WebGL viewport re-rendering triggered.');
+}
+
+// ── AI Settings Modal Management ────────────────
+
+function initAISettingsControls() {
+    const modal = document.getElementById('ai-settings-modal');
+    const closeBtn = document.getElementById('ai-settings-close');
+    const saveBtn = document.getElementById('ai-settings-save');
+    const providerSelect = document.getElementById('ai-provider-select');
+    const customFields = document.getElementById('ai-custom-fields');
+    const keyFieldRow = document.getElementById('ai-key-field-row');
+    const keyInput = document.getElementById('ai-key-input');
+    const keyToggle = document.getElementById('ai-key-toggle-visibility');
+    
+    if (!modal || !closeBtn || !saveBtn || !providerSelect) return;
+    
+    // Handle provider selection visibility toggling
+    providerSelect.onchange = () => {
+        const val = providerSelect.value;
+        
+        // Toggle Custom Base URL / Model ID fields
+        customFields.classList.toggle('hidden', val !== 'custom');
+        
+        // Toggle API Key field row
+        keyFieldRow.classList.toggle('hidden', val === 'local');
+        
+        // Label dynamic adjustment
+        const keyLabel = document.getElementById('ai-key-label');
+        if (keyLabel) {
+            if (val === 'gemini') keyLabel.innerText = 'Gemini API Key';
+            else if (val === 'openai') keyLabel.innerText = 'OpenAI API Key';
+            else if (val === 'anthropic') keyLabel.innerText = 'Anthropic API Key';
+            else keyLabel.innerText = 'API Key';
+        }
+    };
+    
+    // Handle password eye toggling
+    if (keyToggle && keyInput) {
+        keyToggle.onclick = () => {
+            const isPassword = keyInput.type === 'password';
+            keyInput.type = isPassword ? 'text' : 'password';
+            keyToggle.innerText = isPassword ? '🔒' : '👁️';
+        };
+    }
+    
+    // Save button click
+    saveBtn.onclick = () => {
+        localStorage.setItem('paraform_ai_provider', providerSelect.value);
+        localStorage.setItem('paraform_ai_key', keyInput.value.trim());
+        
+        const urlInput = document.getElementById('ai-custom-url-input');
+        const modelInput = document.getElementById('ai-custom-model-input');
+        const systemPromptInput = document.getElementById('ai-system-prompt-input');
+        if (urlInput) localStorage.setItem('paraform_custom_url', urlInput.value.trim());
+        if (modelInput) localStorage.setItem('paraform_custom_model', modelInput.value.trim());
+        if (systemPromptInput) localStorage.setItem('paraform_ai_system_prompt', systemPromptInput.value.trim());
+        
+        modal.classList.add('hidden');
+        writeAILog(`AI Settings updated. Active Provider: ${providerSelect.value.toUpperCase()}`, 'success');
+    };
+    
+    // Close button click
+    closeBtn.onclick = () => {
+        modal.classList.add('hidden');
+    };
+}
+
+function openAISettingsModal() {
+    const modal = document.getElementById('ai-settings-modal');
+    const providerSelect = document.getElementById('ai-provider-select');
+    const customFields = document.getElementById('ai-custom-fields');
+    const keyFieldRow = document.getElementById('ai-key-field-row');
+    const keyInput = document.getElementById('ai-key-input');
+    const urlInput = document.getElementById('ai-custom-url-input');
+    const modelInput = document.getElementById('ai-custom-model-input');
+    const systemPromptInput = document.getElementById('ai-system-prompt-input');
+    
+    if (!modal) return;
+    
+    // Load persisted configurations
+    const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+    const key = localStorage.getItem('paraform_ai_key') || '';
+    const customUrl = localStorage.getItem('paraform_custom_url') || '';
+    const customModel = localStorage.getItem('paraform_custom_model') || '';
+    const customSystemPrompt = localStorage.getItem('paraform_ai_system_prompt') || '';
+    
+    if (providerSelect) providerSelect.value = provider;
+    if (keyInput) keyInput.value = key;
+    if (urlInput) urlInput.value = customUrl;
+    if (modelInput) modelInput.value = customModel;
+    if (systemPromptInput) systemPromptInput.value = customSystemPrompt;
+    
+    // Toggle field visibility matching loaded configuration
+    if (customFields) customFields.classList.toggle('hidden', provider !== 'custom');
+    if (keyFieldRow) keyFieldRow.classList.toggle('hidden', provider === 'local');
+    
+    const keyLabel = document.getElementById('ai-key-label');
+    if (keyLabel && providerSelect) {
+        if (provider === 'gemini') keyLabel.innerText = 'Gemini API Key';
+        else if (provider === 'openai') keyLabel.innerText = 'OpenAI API Key';
+        else if (provider === 'anthropic') keyLabel.innerText = 'Anthropic API Key';
+        else keyLabel.innerText = 'API Key';
+    }
+    
+    // Display Modal overlay
+    modal.classList.remove('hidden');
+}
+

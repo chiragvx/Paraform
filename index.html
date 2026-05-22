@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body class="dark-theme">
     <div id="app-loader">
@@ -75,6 +75,8 @@
 
         <!-- LANDING PAGE -->
         <section id="view-landing" class="view">
+            <div class="bg-mesh"></div>
+            <div class="bg-mesh mesh-2"></div>
             <div class="hero">
                 <div class="hero-content">
                     <div class="hero-badge">
@@ -414,6 +416,10 @@
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     Script
                 </button>
+                <button class="tab-btn" data-tab="ai">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    AI Assistant
+                </button>
             </div>
         </header>
 
@@ -431,6 +437,38 @@
                         Compile & Run
                     </button>
                     <p class="hint">Ctrl + S to re-compile</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content-ai" class="tab-content hidden">
+            <div class="ai-chat-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+                
+                <!-- Chat History / Messages -->
+                <div id="ai-chat-history" class="ai-chat-history" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px;">
+                    <!-- Messages will be injected here by JS -->
+                </div>
+
+                <!-- Input Area (Sticky Bottom) -->
+                <div class="ai-chat-input-area" style="padding: 12px; background: var(--surface-elevated); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+                    
+                    <!-- Chips section -->
+                    <div class="ai-chips-scroll" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;">
+                        <button class="ai-chip" data-prompt="Add 4mm corner mounting holes">Mounting Holes</button>
+                        <button class="ai-chip" data-prompt="Fillet the outer vertical edges by 3mm">Fillet Edges</button>
+                        <button class="ai-chip" data-prompt="Add a linear grid of ventilation slots on the base">Ventilation Grid</button>
+                        <button class="ai-chip" data-prompt="Engrave 'ParaForm' text on the top surface">Emboss Text</button>
+                    </div>
+
+                    <div class="ai-input-box" style="display: flex; gap: 8px; align-items: flex-end;">
+                        <button id="ai-clear-chat-btn" class="icon-btn" style="height: 42px; width: 42px; border-radius: var(--radius-lg); flex-shrink: 0;" title="Start New Conversation">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                        <textarea id="ai-prompt-input" spellcheck="false" class="glass-input" style="flex: 1; height: 42px; min-height: 42px; max-height: 120px; resize: none; padding: 10px 12px; border-radius: var(--radius-lg); font-family: var(--font-main);" placeholder="Message AI Assistant..."></textarea>
+                        <button id="ai-generate-btn" class="primary-btn" style="height: 42px; width: 42px; border-radius: var(--radius-lg); padding: 0; flex-shrink: 0;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -614,6 +652,66 @@
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     STL &amp; 3MF recompile at full quality ($fn=64). OBJ &amp; glTF export instantly from the current viewport.
                 </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🤖 AI Assistant Settings</h3>
+                <button class="close-modal" id="ai-settings-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="ai-settings-grid">
+                    <!-- Provider Selection -->
+                    <div class="ai-settings-row">
+                        <label for="ai-provider-select">AI Engine / Provider</label>
+                        <select id="ai-provider-select" class="glass-select">
+                            <option value="local">Local Context-Aware Agent (No API Key)</option>
+                            <option value="gemini">Google Gemini (Recommended)</option>
+                            <option value="openai">OpenAI (GPT-4o/GPT-4o-mini)</option>
+                            <option value="anthropic">Anthropic Claude (Direct/Proxy)</option>
+                            <option value="custom">Custom (DeepSeek / OpenRouter / Ollama / LM Studio)</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom API Endpoint Fields (Conditionally shown) -->
+                    <div id="ai-custom-fields" class="hidden">
+                        <div class="ai-settings-row" style="margin-bottom: 12px;">
+                            <label for="ai-custom-url-input">API Base URL</label>
+                            <input type="text" id="ai-custom-url-input" class="manual-input" style="width: 100%; text-align: left; background: var(--surface-input); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; height: 34px;" placeholder="e.g. https://api.deepseek.com/v1 or http://localhost:11434/v1">
+                        </div>
+                        <div class="ai-settings-row">
+                            <label for="ai-custom-model-input">Model ID</label>
+                            <input type="text" id="ai-custom-model-input" class="manual-input" style="width: 100%; text-align: left; background: var(--surface-input); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; height: 34px;" placeholder="e.g. deepseek-coder or llama3">
+                        </div>
+                    </div>
+
+                    <!-- API Key Field -->
+                    <div id="ai-key-field-row" class="ai-settings-row hidden">
+                        <label for="ai-key-input" id="ai-key-label">API Key</label>
+                        <div class="ai-key-input-container">
+                            <input type="password" id="ai-key-input" placeholder="Enter your provider API Key">
+                            <button id="ai-key-toggle-visibility" class="ai-toggle-visibility-btn" type="button" title="Toggle Visibility">
+                                👁️
+                            </button>
+                        </div>
+                        <p class="ai-settings-help">
+                            Stored locally in your browser. Never shared. Direct connection from client to endpoint.
+                        </p>
+                    </div>
+
+                    <!-- Hidden System Instructions -->
+                    <div class="ai-settings-row">
+                        <label for="ai-system-prompt-input">Custom System Instructions</label>
+                        <textarea id="ai-system-prompt-input" spellcheck="false" class="manual-input" style="width: 100%; text-align: left; background: var(--surface-input); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; height: 100px; resize: vertical; font-family: var(--font-mono); font-size: 12px;" placeholder="Add custom instructions, best practices, or specific parametric constraints to guide the AI's output..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="ai-settings-save" class="primary-btn">Save Settings</button>
             </div>
         </div>
     </div>
