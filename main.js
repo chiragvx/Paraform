@@ -2,8 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils';
 import { supabase } from './lib/supabase';
+import { fetchCatalog, fetchScadSource, saveProject, listProjects } from './lib/catalog.js';
 import { Evaluator, Operation, Brush, ADDITION, SUBTRACTION } from 'three-bvh-csg';
 
 const csgEvaluator = new Evaluator();
@@ -2145,12 +2148,11 @@ async function initApp() {
         updateUser(null);
     }
 
-    // 2. Fetch Templates
+    // 2. Fetch Templates (bucket catalog → DEFAULT_TEMPLATES fallback)
     try {
-        const isPlaceholder = supabase.supabaseUrl?.includes('your-project-id');
-        if (!isPlaceholder) await fetchTemplates();
-        else currentState.templates = DEFAULT_TEMPLATES;
+        await fetchTemplates();
     } catch (e) {
+        console.warn('[ParaForm] Template fetch failed, using defaults:', e.message);
         currentState.templates = DEFAULT_TEMPLATES;
     }
     
@@ -2208,7 +2210,7 @@ async function initApp() {
                             <div class="dropdown-content">
                                 <a href="#" id="menu-open-model">📁 Open Model</a>
                                 <a href="#" id="menu-save-design">💾 Save Design</a>
-                                <a href="#" id="menu-export-stl">📤 Export STL</a>
+                                <a href="#" id="menu-export-stl">📤 Export…</a>
                                 <hr class="menu-divider">
                                 <a href="#/explore">🚪 Exit Studio</a>
                             </div>
@@ -2273,18 +2275,18 @@ async function initApp() {
                     saveDesignBtn.onclick = (e) => {
                         e.preventDefault();
                         closeAllMenus();
-                        
-                        // Execute Save
                         if (!currentState.template) return;
-                        const editorEl = document.getElementById('code-editor');
-                        const source = editorEl ? editorEl.value : currentState.template.source;
-                        const savedState = {
-                            templateSlug: currentState.template.slug,
-                            source: source,
-                            parameters: currentState.params
-                        };
-                        localStorage.setItem('paraform_studio_saved_state', JSON.stringify(savedState));
-                        alert('💾 Project Saved Locally! WASM source and parameters cached successfully.');
+                        const source = document.getElementById('code-editor')?.value
+                            || currentState.template.source || '';
+                        const project = saveProject({
+                            id: currentState.template.id,
+                            title: currentState.projectTitle || currentState.template.title,
+                            templateId: currentState.template.id,
+                            source,
+                            params: { ...currentState.params }
+                        });
+                        const ts = new Date(project.savedAt).toLocaleTimeString();
+                        alert(`💾 "${project.title}" saved locally at ${ts}.`);
                     };
                 }
 
@@ -2293,7 +2295,7 @@ async function initApp() {
                     exportStlBtn.onclick = (e) => {
                         e.preventDefault();
                         closeAllMenus();
-                        exportCurrentModel();
+                        openExportModal();
                     };
                 }
 
@@ -2362,7 +2364,7 @@ async function initApp() {
                     </button>
                     <button id="export-stl" class="primary-btn">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Export STL
+                        Export
                     </button>
                     <button id="mobile-menu-toggle" class="icon-btn mobile-only">
                         <span></span>
@@ -2375,7 +2377,7 @@ async function initApp() {
                 if (studioBrowseBtn) studioBrowseBtn.onclick = openStudioLibrary;
 
                 const exportBtn = document.getElementById('export-stl');
-                if (exportBtn) exportBtn.onclick = exportCurrentModel;
+                if (exportBtn) exportBtn.onclick = openExportModal;
 
                 // Re-bind mobile menu toggle
                 const mobileToggle = document.getElementById('mobile-menu-toggle');
@@ -2494,16 +2496,15 @@ async function loginWithMagicLink() {
 }
 
 async function fetchTemplates() {
-    const { data, error } = await supabase.from('base_templates').select('*').eq('is_published', true);
-    if (error || !data || data.length === 0) {
-        currentState.templates = DEFAULT_TEMPLATES;
+    // Try the public bucket catalog first
+    const remote = await fetchCatalog();
+    if (remote.length > 0) {
+        // Merge: bucket templates come first, then any DEFAULT_TEMPLATES not already present
+        const remoteIds = new Set(remote.map(t => t.id));
+        const extras = DEFAULT_TEMPLATES.filter(t => !remoteIds.has(t.id));
+        currentState.templates = [...remote, ...extras];
     } else {
-        currentState.templates = data.map(t => ({
-            id: t.slug,
-            db_id: t.id,
-            title: t.title,
-            ...t.config_payload
-        }));
+        currentState.templates = DEFAULT_TEMPLATES;
     }
 }
 
@@ -2841,8 +2842,8 @@ function renderTemplateGrid(filterText = '') {
                 <p>${t.description || 'Parametric Gadget'}</p>
             </div>
         `;
-        card.onclick = () => {
-            selectTemplate(t);
+        card.onclick = async () => {
+            await selectTemplate(t);
             window.location.hash = '#/create';
         };
         const img = card.querySelector('img');
@@ -2970,42 +2971,62 @@ const pool = new CADWorkerPool();
 
 
 
-function selectTemplate(template, autoExtract = false) {
+async function selectTemplate(template, autoExtract = false) {
+    // Fetch SCAD source from bucket (or cache) if not already inline
+    if (!template.source) {
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const loaderText = loaderOverlay?.querySelector('p');
+        if (loaderOverlay) {
+            loaderOverlay.classList.remove('hidden');
+            if (loaderText) loaderText.textContent = 'Loading model…';
+        }
+        try {
+            const source = await fetchScadSource(template);
+            template = { ...template, source };
+        } catch (e) {
+            if (loaderOverlay) loaderOverlay.classList.add('hidden');
+            console.error('[ParaForm] Failed to load model source:', e);
+            alert(`Could not load model: ${e.message}`);
+            return;
+        }
+        if (loaderOverlay) loaderOverlay.classList.add('hidden');
+    }
+
     currentState.template = template;
     currentState.projectTitle = template.title || 'Untitled Project';
     currentState.params = {};
-    
+
     // Auto-extract parameters for custom code
     if (autoExtract && template.source) {
         template.ui_parameters = parseParametersFromSource(template.source);
     }
-    
+
     // Support custom templates or templates with no params
     if (template.ui_parameters) {
         template.ui_parameters.forEach(p => currentState.params[p.key] = p.default);
     }
-    
+
     syncProjectTitleUI();
     const descEl = document.getElementById('active-template-desc');
     if (descEl) descEl.innerText = template.description || '';
-    
+
     // Sync code editor
     const editor = document.getElementById('code-editor');
     if (editor) editor.value = template.source || '';
-    
+
     showConfigurator();
     renderParameters();
-    
+
     if (!mainViewport) mainViewport = createRenderer('viewport');
     syncViewportStateToUI();
     drawBuildPlate();
     updateLightingSettings();
-    
+
     // Clear and initialize parametric history stack
     undoHistory = [];
     redoHistory = [];
     saveHistoryState();
-    
+
     triggerGeneration();
 }
 
@@ -3043,7 +3064,7 @@ function initModal() {
         }
     };
 
-    createBtn.onclick = () => {
+    createBtn.onclick = async () => {
         const source = document.getElementById('modal-code-input').value;
         if (!source.trim()) return alert('Please enter code or upload a file.');
         
@@ -3056,7 +3077,7 @@ function initModal() {
         };
         
         hide();
-        selectTemplate(customTemplate, true);
+        await selectTemplate(customTemplate, true);
         window.location.hash = '#/create';
     };
 }
@@ -3120,9 +3141,9 @@ function openStudioLibrary() {
                     <p class="card-desc">${template.description || 'Custom parametric script'}</p>
                 </div>
             `;
-            card.onclick = () => {
-                selectTemplate(template);
+            card.onclick = async () => {
                 modal.classList.add('hidden');
+                await selectTemplate(template);
             };
             grid.appendChild(card);
         });
@@ -3132,7 +3153,7 @@ function openStudioLibrary() {
     searchInput.oninput = (e) => renderItems(e.target.value);
 }
 
-function startCustomCode() {
+async function startCustomCode() {
     const customTemplate = {
         id: 'custom_' + Date.now(),
         title: 'New Custom Model',
@@ -3141,7 +3162,7 @@ function startCustomCode() {
         source: `// New Custom Model\n\ndifference() {\n    cube(40, center=true);\n    sphere(25);\n}`
     };
     
-    selectTemplate(customTemplate);
+    await selectTemplate(customTemplate);
     switchTab('code');
 }
 
@@ -3379,11 +3400,14 @@ render_quality = "high";
             partOverrides = "GENERATE_CASE=0; GENERATE_MUSIC_CYLINDER=0; GENERATE_MID_GEAR=0; GENERATE_CRANK_GEAR=1; GENERATE_CRANK=1; GENERATE_PULLEY=0;";
         }
 
+        // Declarations go AFTER baseSource so they override any existing
+        // variable declarations in the file (OpenSCAD: last assignment wins).
         const source = `// ParaForm Modular: ${part}
+${baseSource}
+// -- ParaForm parameter overrides --
 ${declarations}
 TURBO_MODE = ${isFinal ? 0 : 1};
 ${partOverrides}
-${baseSource}
 ${performanceOverrides}`;
 
         pool.requestRender({ 
@@ -4434,17 +4458,195 @@ function initViewportToolbar() {
 }
 
 // Event Handlers
-function exportCurrentModel() {
+// ── Export Format Catalog ────────────────────────────────────────────────────
+// Add new formats here — the modal renders them automatically.
+const EXPORT_FORMATS = [
+    {
+        id: 'stl',
+        label: 'STL',
+        ext: 'stl',
+        mime: 'model/stl',
+        name: 'Stereolithography',
+        desc: 'Universal slicer format. Compatible with Bambu, Prusa, Ender, and every major slicer.',
+        tags: ['3D Printing', 'Manifold'],
+        engine: 'worker',   // recompiles via OpenSCAD WASM at full quality
+    },
+    {
+        id: '3mf',
+        label: '3MF',
+        ext: '3mf',
+        mime: 'model/3mf',
+        name: '3D Manufacturing Format',
+        desc: 'Modern format with rich metadata. Native to Bambu Studio and Orca Slicer.',
+        tags: ['3D Printing', 'Modern'],
+        engine: 'worker',
+    },
+    {
+        id: 'obj',
+        label: 'OBJ',
+        ext: 'obj',
+        mime: 'model/obj',
+        name: 'Wavefront Object',
+        desc: 'Widely supported in Blender, Maya, Cinema 4D and general 3D applications.',
+        tags: ['3D Modeling', 'Instant'],
+        engine: 'threejs-obj',   // exported from current Three.js scene
+    },
+    {
+        id: 'gltf',
+        label: 'glTF',
+        ext: 'gltf',
+        mime: 'model/gltf+json',
+        name: 'GL Transmission Format',
+        desc: 'Web-standard format for AR, VR, and real-time 3D previews.',
+        tags: ['Web / AR', 'Instant'],
+        engine: 'threejs-gltf',
+    },
+];
+
+// ── Download Helper ──────────────────────────────────────────────────────────
+function triggerDownload(data, filename, mimeType) {
+    const blob = new Blob([data], { type: mimeType });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// ── Export Modal ─────────────────────────────────────────────────────────────
+function openExportModal() {
     if (!currentState.template) return;
-    pool.requestRender({ 
-        jobId: 9999, 
-        sourceCode: `// Export\n$fn=64;\n${currentState.template.source}`, 
-        format: 'stl',
-        isFinal: true,
-        context: 'export'
-    }, (data) => {
-        if (data.ok) alert('Export Ready (check console for buffer)');
+
+    const modal    = document.getElementById('export-modal');
+    const list     = document.getElementById('export-format-list');
+    const closeBtn = document.getElementById('export-modal-close');
+    const subtitle = document.getElementById('export-modal-subtitle');
+
+    subtitle.textContent = currentState.projectTitle || currentState.template.title || 'Untitled';
+
+    // Build format rows
+    list.innerHTML = '';
+    EXPORT_FORMATS.forEach(fmt => {
+        const row = document.createElement('button');
+        row.className = 'export-format-row';
+        row.dataset.fmt = fmt.id;
+        row.innerHTML = `
+            <div class="export-format-badge">
+                <span class="fmt-label">${fmt.label}</span>
+                <span class="fmt-ext">.${fmt.ext}</span>
+            </div>
+            <div class="export-format-info">
+                <span class="fmt-name">${fmt.name}</span>
+                <span class="fmt-desc">${fmt.desc}</span>
+                <div class="export-format-tags">
+                    ${fmt.tags.map(t => `<span class="export-format-tag">${t}</span>`).join('')}
+                </div>
+            </div>
+            <div class="export-format-action" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </div>`;
+
+        row.onclick = () => runExport(fmt, row);
+        list.appendChild(row);
     });
+
+    modal.classList.remove('hidden');
+    closeBtn.onclick = () => modal.classList.add('hidden');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+}
+
+// ── Run a single format export ───────────────────────────────────────────────
+function runExport(fmt, rowEl) {
+    const filename = `${(currentState.projectTitle || 'paraform_model').replace(/\s+/g, '_')}.${fmt.ext}`;
+
+    // Mark row as busy
+    rowEl.classList.add('exporting');
+    rowEl.querySelector('.export-format-action').innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+        </svg>`;
+
+    const markDone = () => {
+        rowEl.classList.remove('exporting');
+        rowEl.classList.add('done');
+        rowEl.querySelector('.export-format-action').innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>`;
+    };
+
+    const markError = (msg) => {
+        rowEl.classList.remove('exporting');
+        console.error('[Export] Failed:', msg);
+        alert(`Export failed: ${msg}`);
+    };
+
+    if (fmt.engine === 'worker') {
+        // Recompile at full quality via OpenSCAD WASM
+        const declarations = (currentState.template.ui_parameters || [])
+            .map(p => {
+                const val = currentState.params[p.key] ?? p.default;
+                if (p.type === 'boolean') {
+                    return `${p.key} = ${val ? 1 : 0};`;
+                } else if (p.type === 'enum' && p.key === 'FOR_PRINT') {
+                    return `FOR_PRINT = ${val === 'PrintPlate' ? 1 : 0};`;
+                } else if (typeof val === 'string') {
+                    return `${p.key} = "${val}";`;
+                } else {
+                    return `${p.key} = ${val ?? 0};`;
+                }
+            }).join('\n');
+
+        const source = `${currentState.template.source}
+// ParaForm Export — full quality
+${declarations}
+$fn = 64;
+$preview = false;`;
+
+        pool.requestRender({
+            jobId: Date.now(),
+            sourceCode: source,
+            format: fmt.ext,
+            isFinal: true,
+            context: 'export'
+        }, (data) => {
+            if (data.ok) {
+                triggerDownload(data.buffer, filename, fmt.mime);
+                markDone();
+            } else {
+                markError(data.error || 'Unknown error');
+                rowEl.classList.remove('exporting');
+            }
+        });
+
+    } else if (fmt.engine === 'threejs-obj') {
+        if (!mainViewport?.mesh) return markError('No model loaded in viewport.');
+        try {
+            const exporter = new OBJExporter();
+            const obj = exporter.parse(mainViewport.mesh);
+            triggerDownload(obj, filename, fmt.mime);
+            markDone();
+        } catch (e) { markError(e.message); }
+
+    } else if (fmt.engine === 'threejs-gltf') {
+        if (!mainViewport?.mesh) return markError('No model loaded in viewport.');
+        const exporter = new GLTFExporter();
+        exporter.parse(mainViewport.mesh, (gltf) => {
+            const json = JSON.stringify(gltf, null, 2);
+            triggerDownload(json, filename, fmt.mime);
+            markDone();
+        }, (err) => markError(err.message));
+    }
 }
 
 
@@ -4552,38 +4754,107 @@ function extractParameters() {
 }
 
 function parseParametersFromSource(source) {
-    // Simple Regex for OpenSCAD Customizer parameters
-    // Matches: key = 10; // [type: label, min, max, step]
-    // Or just: key = 10;
+    // Understands both ParaForm syntax and standard OpenSCAD Customizer syntax:
+    //
+    //   key = value;                          → inferred type, auto label + range
+    //   key = value;  // Plain comment        → comment used as label
+    //   key = value;  // [type, Label, min, max, step]  → full ParaForm config
+    //   /* [Group Name] */                    → section header (ignored)
+    //   /* [Hidden] */                        → all vars until next section are skipped
+
     const lines = source.split('\n');
     const params = [];
-    
-    lines.forEach(line => {
-        const match = line.match(/^(\w+)\s*=\s*([^;]+);(?:\s*\/\/\s*\[(.*)\])?/);
-        if (match) {
-            const [_, key, defaultVal, configStr] = match;
-            const param = { key, default: parseSCADValue(defaultVal), label: key, type: 'number' };
-            
-            if (configStr) {
-                const parts = configStr.split(',').map(s => s.trim());
-                param.type = parts[0] || 'number';
-                param.label = parts[1] || key;
+    let inHiddenSection = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        // ── Section headers ────────────────────────────────────────────────
+        const sectionMatch = trimmed.match(/^\/\*\s*\[(.+?)\]\s*\*\//);
+        if (sectionMatch) {
+            inHiddenSection = /^hidden$/i.test(sectionMatch[1].trim());
+            continue;
+        }
+
+        // Skip everything in a [Hidden] section
+        if (inHiddenSection) continue;
+
+        // ── Parameter line ─────────────────────────────────────────────────
+        // Matches:  key = value;          (optional trailing // comment)
+        const match = line.match(/^(\w+)\s*=\s*([^;]+);(?:\s*\/\/\s*(.*))?/);
+        if (!match) continue;
+
+        const [, key, rawVal, comment] = match;
+
+        // Skip OpenSCAD special variables ($fn, $fs, $fa, $preview …)
+        if (key.startsWith('$')) continue;
+
+        const defaultVal = parseSCADValue(rawVal.trim());
+
+        const param = {
+            key,
+            default: defaultVal,
+            label: scadKeyToLabel(key),   // snake_case → "Title Case"
+            type: 'number',
+        };
+
+        // ── Decode trailing comment ────────────────────────────────────────
+        if (comment) {
+            const configMatch = comment.trim().match(/^\[([^\]]*)\]$/);
+            if (configMatch) {
+                // ParaForm format: [type, Label, min, max, step]
+                const parts = configMatch[1].split(',').map(s => s.trim());
+                param.type  = parts[0] || 'number';
+                if (parts[1]) param.label = parts[1];
                 if (param.type === 'number' || param.type === 'integer') {
-                    param.min = parseFloat(parts[2]) || 0;
-                    param.max = parseFloat(parts[3]) || 100;
-                    param.step = parseFloat(parts[4]) || 1;
+                    if (parts[2]) param.min  = parseFloat(parts[2]);
+                    if (parts[3]) param.max  = parseFloat(parts[3]);
+                    if (parts[4]) param.step = parseFloat(parts[4]);
                 }
             } else {
-                // Infer type
-                const trimmedVal = defaultVal.trim();
-                if (trimmedVal === 'true' || trimmedVal === 'false') param.type = 'boolean';
-                else if (trimmedVal.includes('"')) param.type = 'string';
-                else if (!isNaN(parseFloat(trimmedVal))) param.type = 'number';
+                // Plain comment → use as the human-readable label
+                const clean = comment.trim();
+                if (clean) param.label = clean.replace(/^\w/, c => c.toUpperCase());
             }
-            params.push(param);
         }
-    });
+
+        // ── Infer type from default value ──────────────────────────────────
+        if (param.type === 'number') {
+            if (typeof defaultVal === 'boolean') {
+                param.type = 'boolean';
+            } else if (typeof defaultVal === 'string') {
+                param.type = 'string';
+            } else {
+                const n = Number(defaultVal);
+                if (!isNaN(n) && Number.isInteger(n)) param.type = 'integer';
+            }
+        }
+
+        // ── Infer min / max / step if not already set ──────────────────────
+        if ((param.type === 'number' || param.type === 'integer') &&
+            param.min === undefined && param.max === undefined) {
+            const v = Number(defaultVal);
+            if (!isNaN(v)) {
+                param.min  = 0;
+                // Give a generous ceiling: 3× default, at least 20
+                param.max  = Math.max(Math.ceil(v * 3 / 5) * 5, 20);
+                param.step = (param.type === 'integer' || Number.isInteger(v)) ? 1 : 0.1;
+            }
+        }
+
+        params.push(param);
+    }
+
     return params;
+}
+
+/** Convert snake_case / camelCase variable names to "Title Case" labels */
+function scadKeyToLabel(key) {
+    return key
+        .replace(/_/g, ' ')                        // underscores → spaces
+        .replace(/([a-z])([A-Z])/g, '$1 $2')       // camelCase → spaces
+        .replace(/\b\w/g, c => c.toUpperCase())    // capitalise each word
+        .trim();
 }
 
 function parseSCADValue(val) {

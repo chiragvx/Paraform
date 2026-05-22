@@ -596,6 +596,28 @@
         </div>
     </div>
 
+    <!-- EXPORT MODAL -->
+    <div id="export-modal" class="modal-overlay hidden">
+        <div class="modal-content export-modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3>Export Model</h3>
+                    <p id="export-modal-subtitle" class="export-subtitle">Select a format to download</p>
+                </div>
+                <button class="close-modal" id="export-modal-close">×</button>
+            </div>
+            <div class="modal-body export-modal-body">
+                <div id="export-format-list" class="export-format-list">
+                    <!-- Populated by JS -->
+                </div>
+                <p class="export-note">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    STL &amp; 3MF recompile at full quality ($fn=64). OBJ &amp; glTF export instantly from the current viewport.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/main.js"></script>
 </body>
 </html>

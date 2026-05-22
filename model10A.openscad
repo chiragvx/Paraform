@@ -1,0 +1,134 @@
+/* [Main Dimensions] */
+stand_width = 70;      // Total width of the stand
+base_length = 130;     // Total length of the base
+part_thickness = 4.5;  // Thickness of the structural plates
+
+/* [Hinges & Tolerances] */
+pin_diameter = 2.1;    // Diameter for the hinge hole (2.1mm fits 1.75mm filament well)
+hinge_outer = 6.0;     // Outer diameter of the hinge knuckles
+clearance = 0.4;       // Tolerance gap between moving parts
+
+/* [Backrest & Strut] */
+backrest_length = 110; 
+strut_length = 85;     
+lip_height = 12;       // Front lip to catch the phone
+
+/* [Notches] */
+notch_count = 7;
+notch_spacing = 8;
+notch_width = 4;
+notch_depth = 2.5;
+
+/* [Layout] */
+// Layout parts flat for printing
+print_layout = true; 
+
+/* [Hidden] */
+wall = 8; // width of the side rails
+$fn = 60; // smooth cylinders
+
+// --- MAIN RENDER ---
+if (print_layout) {
+    translate([0, 0, 0]) base();
+    translate([stand_width + 10, 0, 0]) backrest();
+    translate([(stand_width + 10)*2, 0, 0]) strut();
+} else {
+    // Assembly view (for visualization, not printing)
+    base();
+    // Rough visualization of assembled angles
+    translate([stand_width/2, wall + hinge_outer/2, hinge_outer/2]) 
+        rotate([45, 0, 0]) translate([-stand_width/2, -(wall + hinge_outer/2), -hinge_outer/2]) backrest();
+}
+
+// --- MODULES ---
+
+module base() {
+    difference() {
+        // Main base body
+        cube([stand_width, base_length, part_thickness]);
+        
+        // Inner cutout
+        translate([wall, wall + hinge_outer, -1])
+            cube([stand_width - 2*wall, base_length - (2*wall) - hinge_outer, part_thickness + 2]);
+            
+        // Cutouts for the adjustment notches
+        for (i = [0 : notch_count - 1]) {
+            translate([wall - 1, base_length - wall - 15 - (i * notch_spacing), part_thickness - notch_depth])
+                cube([stand_width - (2*wall) + 2, notch_width, notch_depth + 1]);
+        }
+    }
+    
+    // Front Hinge knuckles (Outer pair)
+    translate([0, wall + hinge_outer/2, hinge_outer/2])
+        rotate([0, 90, 0])
+            difference() {
+                cylinder(h = wall, d = hinge_outer);
+                translate([0, 0, -1]) cylinder(h = wall + 2, d = pin_diameter);
+            }
+            
+    translate([stand_width - wall, wall + hinge_outer/2, hinge_outer/2])
+        rotate([0, 90, 0])
+            difference() {
+                cylinder(h = wall, d = hinge_outer);
+                translate([0, 0, -1]) cylinder(h = wall + 2, d = pin_diameter);
+            }
+}
+
+module backrest() {
+    difference() {
+        union() {
+            // Main plate
+            cube([stand_width - (2*clearance), backrest_length, part_thickness]);
+            // Bottom lip
+            translate([0, 0, 0]) cube([stand_width - (2*clearance), part_thickness, lip_height]);
+            
+            // Bottom Hinge (Inner single knuckle)
+            translate([stand_width/2 - (stand_width/2 - wall - clearance), hinge_outer/2, hinge_outer/2])
+                rotate([0, 90, 0])
+                    cylinder(h = stand_width - (2*wall) - (2*clearance), d = hinge_outer);
+                    
+            // Top Hinge (Outer pair for the strut)
+            translate([0, backrest_length - hinge_outer/2, hinge_outer/2])
+                rotate([0, 90, 0])
+                    cylinder(h = wall, d = hinge_outer);
+            translate([stand_width - (2*clearance) - wall, backrest_length - hinge_outer/2, hinge_outer/2])
+                rotate([0, 90, 0])
+                    cylinder(h = wall, d = hinge_outer);
+        }
+        
+        // Pin hole for bottom hinge
+        translate([-1, hinge_outer/2, hinge_outer/2])
+            rotate([0, 90, 0])
+                cylinder(h = stand_width + 2, d = pin_diameter);
+                
+        // Pin hole for top hinge
+        translate([-1, backrest_length - hinge_outer/2, hinge_outer/2])
+            rotate([0, 90, 0])
+                cylinder(h = stand_width + 2, d = pin_diameter);
+    }
+}
+
+module strut() {
+    strut_w = stand_width - (2*wall) - (4*clearance);
+    
+    difference() {
+        union() {
+            // Main strut body
+            translate([0, 0, 0]) cube([strut_w, strut_length, part_thickness]);
+            
+            // Top Hinge (Inner single knuckle)
+            translate([0, strut_length - hinge_outer/2, hinge_outer/2])
+                rotate([0, 90, 0])
+                    cylinder(h = strut_w, d = hinge_outer);
+        }
+        
+        // Inner cutout for the strut to make it a frame (optional, saves plastic)
+        translate([wall, wall, -1])
+            cube([strut_w - 2*wall, strut_length - (2*wall) - hinge_outer, part_thickness + 2]);
+            
+        // Pin hole for top hinge
+        translate([-1, strut_length - hinge_outer/2, hinge_outer/2])
+            rotate([0, 90, 0])
+                cylinder(h = strut_w + 2, d = pin_diameter);
+    }
+}
