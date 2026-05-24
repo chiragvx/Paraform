@@ -32,17 +32,35 @@ let currentState = {
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0 },
         scale: 1.0,
-        materialColor: '#6366f1',
+        materialColor: '#c8bdb2',
         materialFinish: 'semi-gloss',
         buildPlate: 'ender',
         lightPreset: 'standard',
         lightIntensity: 2.0
-    }
+    },
+    // Multi-part fields (populated when template has parts[])
+    activePart: null,       // string | null — null = model-level view
+    globalParams: {},       // { [key]: value } for global_parameters
+    partParams: {},         // { [partId]: { [key]: value } }
+    partVisibility: {},     // { [partId]: boolean }
+    partMeshes: {},         // { [partId]: THREE.Mesh } inside the partGroup
 };
 
 let undoHistory = [];
 let redoHistory = [];
 let isUndoingRedoing = false;
+
+function isMultiPart() {
+    return !!(currentState.template?.parts?.length);
+}
+
+// Format a single parameter as an OpenSCAD variable declaration
+function formatParamDecl(param, value) {
+    if (param.type === 'boolean') return `${param.key} = ${value ? 1 : 0};`;
+    if (param.type === 'enum' && param.key === 'FOR_PRINT') return `FOR_PRINT = ${value === 'PrintPlate' ? 1 : 0};`;
+    if (typeof value === 'string') return `${param.key} = "${value}";`;
+    return `${param.key} = ${value ?? 0};`;
+}
 
 
 const DEFAULT_TEMPLATES = [
@@ -2078,6 +2096,101 @@ cfg = [
 mode = "demo";
 case("rpi3", cfg, mode);
 `
+    },
+    // ── Multi-Part Demo Template ─────────────────────────────────────────────
+    {
+        id: 'shelf_bracket_v1',
+        title: 'Shelf Bracket Assembly',
+        description: 'A 3-part wall shelf bracket: wall plate, horizontal arm, and diagonal brace. Each part prints flat and bolts together.',
+        global_parameters: [
+            { key: 'material_thickness', label: 'Material Thickness', type: 'number', min: 3, max: 8, step: 0.5, default: 5, unit: 'mm' },
+            { key: 'bolt_hole_d', label: 'Bolt Hole Diameter', type: 'number', min: 2, max: 6, step: 0.5, default: 4, unit: 'mm' },
+            { key: 'fillet_r', label: 'Corner Fillet', type: 'number', min: 0, max: 5, step: 0.5, default: 2, unit: 'mm' },
+        ],
+        parts: [
+            {
+                id: 'wall_plate',
+                name: 'Wall Plate',
+                color: '#3b82f6',
+                ui_parameters: [
+                    { key: 'plate_w', label: 'Width', type: 'number', min: 40, max: 120, step: 1, default: 80, unit: 'mm' },
+                    { key: 'plate_h', label: 'Height', type: 'number', min: 60, max: 150, step: 1, default: 100, unit: 'mm' },
+                    { key: 'screw_count', label: 'Wall Screws', type: 'integer', min: 2, max: 4, step: 1, default: 3 },
+                ],
+                source: `// Wall Plate — mounts to the wall
+// Globals: material_thickness, bolt_hole_d
+// Locals:  plate_w, plate_h, screw_count
+difference() {
+    cube([plate_w, material_thickness, plate_h]);
+    // Wall screw holes evenly spaced
+    for (i = [1 : 1 : screw_count]) {
+        x = plate_w * i / (screw_count + 1);
+        translate([x, -1, plate_h * 0.25]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+        translate([x, -1, plate_h * 0.75]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    }
+    // Arm bolt holes (2x at bottom)
+    translate([plate_w*0.25, -1, material_thickness*2]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    translate([plate_w*0.75, -1, material_thickness*2]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+}`,
+                localPreview: (globalParams, partParams) => {
+                    const { material_thickness } = globalParams;
+                    const { plate_w = 80, plate_h = 100 } = partParams;
+                    return new THREE.BoxGeometry(plate_w, material_thickness, plate_h);
+                }
+            },
+            {
+                id: 'arm',
+                name: 'Horizontal Arm',
+                color: '#22c55e',
+                ui_parameters: [
+                    { key: 'arm_length', label: 'Arm Length', type: 'number', min: 60, max: 200, step: 5, default: 120, unit: 'mm' },
+                    { key: 'arm_width', label: 'Arm Width', type: 'number', min: 30, max: 80, step: 1, default: 50, unit: 'mm' },
+                ],
+                source: `// Horizontal Arm — extends from wall plate
+// Globals: material_thickness, bolt_hole_d
+// Locals:  arm_length, arm_width
+difference() {
+    cube([arm_length, arm_width, material_thickness]);
+    // Wall-side bolt holes
+    translate([material_thickness*2, arm_width*0.25, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    translate([material_thickness*2, arm_width*0.75, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    // Brace bolt holes (near tip)
+    translate([arm_length - material_thickness*3, arm_width*0.5, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+}`,
+                localPreview: (globalParams, partParams) => {
+                    const { material_thickness } = globalParams;
+                    const { arm_length = 120, arm_width = 50 } = partParams;
+                    const g = new THREE.BoxGeometry(arm_length, arm_width, material_thickness);
+                    g.translate(arm_length / 2, 0, 0);
+                    return g;
+                }
+            },
+            {
+                id: 'brace',
+                name: 'Diagonal Brace',
+                color: '#f97316',
+                ui_parameters: [
+                    { key: 'brace_width', label: 'Brace Width', type: 'number', min: 20, max: 60, step: 1, default: 35, unit: 'mm' },
+                ],
+                source: `// Diagonal Brace — triangular support
+// Globals: material_thickness, bolt_hole_d
+// Locals:  brace_width
+linear_extrude(height=material_thickness)
+    polygon(points=[[0,0],[120,0],[0,100]]);`,
+                localPreview: (globalParams, partParams) => {
+                    const { material_thickness } = globalParams;
+                    const { brace_width = 35 } = partParams;
+                    const geoms = [];
+                    const bar1 = new THREE.BoxGeometry(material_thickness, brace_width, 100);
+                    bar1.translate(0, 0, 50);
+                    geoms.push(bar1);
+                    const bar2 = new THREE.BoxGeometry(120, brace_width, material_thickness);
+                    bar2.translate(60, 0, 0);
+                    geoms.push(bar2);
+                    return BufferGeometryUtils.mergeGeometries(geoms);
+                }
+            }
+        ]
     }
 ];
 
@@ -2221,26 +2334,26 @@ async function initApp() {
                         <div class="menu-item">
                             <button class="menu-trigger">File ▾</button>
                             <div class="dropdown-content">
-                                <a href="#" id="menu-open-model">📁 Open Model</a>
-                                <a href="#" id="menu-save-design">💾 Save Design</a>
-                                <a href="#" id="menu-export-stl">📤 Export…</a>
+                                <a href="#" id="menu-open-model"><span class="material-symbols-outlined">folder_open</span> Open Model</a>
+                                <a href="#" id="menu-save-design"><span class="material-symbols-outlined">save</span> Save Design</a>
+                                <a href="#" id="menu-export-stl"><span class="material-symbols-outlined">upload_file</span> Export…</a>
                                 <hr class="menu-divider">
-                                <a href="#/explore">🚪 Exit Studio</a>
+                                <a href="#/explore"><span class="material-symbols-outlined">exit_to_app</span> Exit Studio</a>
                             </div>
                         </div>
                         <div class="menu-item">
                             <button class="menu-trigger">View ▾</button>
                             <div class="dropdown-content">
-                                <a href="#" id="menu-reset-camera">🎥 Reset Camera</a>
-                                <a href="#" id="menu-toggle-wireframe">🕸️ Toggle Wireframe</a>
+                                <a href="#" id="menu-reset-camera"><span class="material-symbols-outlined">center_focus_strong</span> Reset Camera</a>
+                                <a href="#" id="menu-toggle-wireframe"><span class="material-symbols-outlined">grid_on</span> Toggle Wireframe</a>
                             </div>
                         </div>
                         <div class="menu-item">
                             <button class="menu-trigger">Settings ▾</button>
                             <div class="dropdown-content">
-                                <a href="#" id="menu-perf-mode">🚀 Performance Mode</a>
-                                <a href="#" id="menu-show-diags">📋 Show Diagnostics</a>
-                                <a href="#" id="menu-ai-settings">🤖 AI Settings</a>
+                                <a href="#" id="menu-perf-mode"><span class="material-symbols-outlined">bolt</span> Performance Mode</a>
+                                <a href="#" id="menu-show-diags"><span class="material-symbols-outlined">analytics</span> Show Diagnostics</a>
+                                <a href="#" id="menu-ai-settings"><span class="material-symbols-outlined">smart_toy</span> AI Settings</a>
                             </div>
                         </div>
                         </div>
@@ -2300,7 +2413,7 @@ async function initApp() {
                             params: { ...currentState.params }
                         });
                         const ts = new Date(project.savedAt).toLocaleTimeString();
-                        alert(`💾 "${project.title}" saved locally at ${ts}.`);
+                        alert(`"${project.title}" saved locally at ${ts}.`);
                     };
                 }
 
@@ -2328,8 +2441,8 @@ async function initApp() {
                     toggleWireBtn.onclick = (e) => {
                         e.preventDefault();
                         closeAllMenus();
-                        const wireBtn = document.getElementById('view-wireframe');
-                        if (wireBtn) wireBtn.click();
+                        const next = displayMode === 'shaded' ? 'wireframe' : 'shaded';
+                        applyDisplayMode(next);
                     };
                 }
 
@@ -2534,6 +2647,7 @@ async function fetchTemplates() {
 // --- RENDERERS ---
 let mainViewport = null;
 let heroViewport = null;
+let displayMode = 'shaded'; // 'shaded' | 'shaded-edges' | 'wireframe' | 'wireframe-edges'
 
 function createRenderer(containerId) {
     const container = document.getElementById(containerId);
@@ -2548,27 +2662,30 @@ function createRenderer(containerId) {
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // Lighting Setup
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
+    // Professional warm-dark scene background
+    scene.background = new THREE.Color(0x0d0b09);
+
+    // Lighting Setup — warm key + cool fill for professional CAD contrast
+    const hemiLight = new THREE.HemisphereLight(0xfff5e8, 0x1a140a, 1.4);
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    dirLight.position.set(100, 200, 50);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    dirLight.position.set(100, 200, 80);
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight(0x90b0d0, 1.5);
-    fillLight.position.set(-100, -50, -50);
+    const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.9);
+    fillLight.position.set(-80, 40, -100);
     scene.add(fillLight);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     camera.position.set(80, 80, 80);
 
-    // Ground Grid
-    const grid = new THREE.GridHelper(400, 40, 0x6366f1, 0x334155);
+    // Ground Grid — warm neutral tones
+    const grid = new THREE.GridHelper(400, 40, 0x3a3028, 0x211d17);
     grid.position.y = -0.1; // Prevent Z-fighting
-    grid.material.opacity = 0.2;
+    grid.material.opacity = 0.55;
     grid.material.transparent = true;
     scene.add(grid);
 
@@ -2578,11 +2695,11 @@ function createRenderer(containerId) {
     axes.material.transparent = true;
     scene.add(axes);
 
-    // Premium Material
-    const material = new THREE.MeshStandardMaterial({ 
-        color: 0x6366f1, 
-        metalness: 0.2, 
-        roughness: 0.3,
+    // Professional CAD material — warm clay/stone neutral
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xc8bdb2,
+        metalness: 0.02,
+        roughness: 0.65,
         side: THREE.DoubleSide // Ensure inner faces of parametric models are visible
     });
     
@@ -2999,12 +3116,16 @@ class CADWorkerPool {
 }
 
 const pool = new CADWorkerPool();
+// Per-task counter for multi-part renders — ensures each part gets a unique pool key
+// (starting high so it never collides with the small integers in currentState.jobId)
+let _multiPartTaskCounter = 999999;
 
 
 
 async function selectTemplate(template, autoExtract = false) {
-    // Fetch SCAD source from bucket (or cache) if not already inline
-    if (!template.source) {
+    // Fetch SCAD source from bucket (or cache) if not already inline.
+    // Multi-part templates store source inside parts[], not template.source — skip fetch.
+    if (!template.source && !template.parts?.length) {
         const loaderOverlay = document.getElementById('loader-overlay');
         const loaderText = loaderOverlay?.querySelector('p');
         if (loaderOverlay) {
@@ -3027,23 +3148,30 @@ async function selectTemplate(template, autoExtract = false) {
     currentState.projectTitle = template.title || 'Untitled Project';
     currentState.params = {};
 
-    // Auto-extract parameters for custom code
-    if (autoExtract && template.source) {
-        template.ui_parameters = parseParametersFromSource(template.source);
-    }
-
-    // Support custom templates or templates with no params
-    if (template.ui_parameters) {
-        template.ui_parameters.forEach(p => currentState.params[p.key] = p.default);
+    if (template.parts?.length) {
+        // ── Multi-part mode ─────────────────────────────────
+        initMultiPartState(template);
+    } else {
+        // ── Single-part mode ─────────────────────────────────
+        // Auto-extract parameters for custom code
+        if (autoExtract && template.source) {
+            template.ui_parameters = parseParametersFromSource(template.source);
+        }
+        // Support custom templates or templates with no params
+        if (template.ui_parameters) {
+            template.ui_parameters.forEach(p => currentState.params[p.key] = p.default);
+        }
+        const editor = document.getElementById('code-editor');
+        if (editor) {
+            editor.value = template.source || '';
+            editor.removeAttribute('readonly');
+            editor.style.opacity = '1';
+        }
     }
 
     syncProjectTitleUI();
     const descEl = document.getElementById('active-template-desc');
     if (descEl) descEl.innerText = template.description || '';
-
-    // Sync code editor
-    const editor = document.getElementById('code-editor');
-    if (editor) editor.value = template.source || '';
 
     showConfigurator();
     renderParameters();
@@ -3163,7 +3291,7 @@ function openStudioLibrary() {
             const paramCount = template.ui_parameters ? template.ui_parameters.length : 0;
             card.innerHTML = `
                 <div class="card-thumb-mini">
-                    ${template.thumbnail_url ? `<img src="${template.thumbnail_url}" alt="${template.title}">` : '<div class="thumb-placeholder">⬢</div>'}
+                    ${template.thumbnail_url ? `<img src="${template.thumbnail_url}" alt="${template.title}">` : '<div class="thumb-placeholder"><span class="material-symbols-outlined">hexagon</span></div>'}
                     <span class="card-param-badge">${paramCount} PARAMS</span>
                 </div>
                 <div class="card-info-mini">
@@ -3207,21 +3335,26 @@ function initTabs() {
     const runBtn = document.getElementById('run-code-btn');
     if (runBtn) {
         runBtn.onclick = () => {
-            if (currentState.template) {
+            if (!currentState.template) return;
+
+            if (isMultiPart() && currentState.activePart) {
+                // Multi-part: save to the active part's source
+                const part = currentState.template.parts.find(p => p.id === currentState.activePart);
+                if (part) {
+                    part.source = document.getElementById('code-editor').value;
+                    triggerGeneration(true);
+                }
+            } else if (!isMultiPart()) {
+                // Single-part: existing behavior
                 const newSource = document.getElementById('code-editor').value;
                 currentState.template.source = newSource;
-                
-                // Re-extract parameters if source changed
                 const newParams = parseParametersFromSource(newSource);
                 currentState.template.ui_parameters = newParams;
-                
-                // Update params state while preserving existing values where possible
                 const oldParams = { ...currentState.params };
                 currentState.params = {};
                 newParams.forEach(p => {
                     currentState.params[p.key] = oldParams[p.key] ?? p.default;
                 });
-
                 renderParameters();
                 triggerGeneration(true);
             }
@@ -3239,21 +3372,32 @@ function initTabs() {
 
 function switchTab(tabId) {
     currentState.editMode = tabId;
-    
-    // Update UI
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
     });
-    
+
     document.getElementById('tab-content-params').classList.toggle('hidden', tabId !== 'params');
+    document.getElementById('tab-content-layers').classList.toggle('hidden', tabId !== 'layers');
     document.getElementById('tab-content-code').classList.toggle('hidden', tabId !== 'code');
     document.getElementById('tab-content-ai').classList.toggle('hidden', tabId !== 'ai');
+
+    if (tabId === 'params') renderParameters();
+    if (tabId === 'layers') renderLayersTab();
+    if (tabId === 'code' && isMultiPart()) syncCodeEditorToActivePart();
 }
 
 function renderParameters() {
+    if (isMultiPart()) { renderParametersMultiPart(); return; }
+
     const container = document.getElementById('parameters-container');
     container.innerHTML = '';
-    
+
+    if (!currentState.template?.ui_parameters?.length) {
+        container.innerHTML = '<div style="padding:20px 16px;font-size:12px;color:var(--text-muted);text-align:center">No parameters defined.<br>Switch to Script tab to add some.</div>';
+        return;
+    }
+
     currentState.template.ui_parameters.forEach(param => {
         const group = document.createElement('div');
         group.className = `parameter-group type-${param.type}`;
@@ -3273,7 +3417,7 @@ function renderParameters() {
                 <input type="range" min="${param.min}" max="${param.max}" step="${param.step}" value="${currentState.params[param.key]}">
             `;
         } else if (param.type === 'enum') {
-            const options = param.options.map(opt => `<option value="${opt}" ${currentState.params[param.key] === opt ? 'selected' : ''}>${opt}</option>`).join('');
+            const options = (param.options || []).map(opt => `<option value="${opt}" ${currentState.params[param.key] === opt ? 'selected' : ''}>${opt}</option>`).join('');
             inputHtml = `
                 <div class="param-label"><span>${param.label}</span></div>
                 <select class="glass-select">${options}</select>
@@ -3333,6 +3477,387 @@ function renderParameters() {
     });
 }
 
+// ── Multi-Part: Layers Tab ───────────────────────────────────────────────────
+
+function renderLayersTab() {
+    const container = document.getElementById('tab-content-layers');
+    if (!container) return;
+
+    if (!isMultiPart()) {
+        container.innerHTML = `
+            <div class="layers-empty-state">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <div>This is a single-part model.</div>
+                <div style="margin-top:6px;font-size:11px">Select a multi-part template from the library, or use the AI to split your design into separate print parts.</div>
+            </div>`;
+        return;
+    }
+
+    const template = currentState.template;
+    const globalCount = template.global_parameters?.length || 0;
+
+    container.innerHTML = `
+        <div class="layers-toolbar">
+            <span class="layers-toolbar-title">Parts</span>
+            <button class="add-part-btn" id="add-part-btn">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Part
+            </button>
+        </div>
+        <div class="parts-list" id="parts-list"></div>
+        ${globalCount > 0 ? `
+        <div class="global-params-section">
+            <div class="global-params-header" id="global-params-toggle">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                Global Parameters
+                <span class="global-params-count">${globalCount}</span>
+            </div>
+            <div class="global-params-body" id="global-params-body"></div>
+        </div>` : ''}`;
+
+    renderPartsList();
+    if (globalCount > 0) renderGlobalParamsInline();
+    bindLayersTabEvents();
+}
+
+function renderPartsList() {
+    const list = document.getElementById('parts-list');
+    if (!list || !currentState.template?.parts) return;
+
+    list.innerHTML = '';
+    currentState.template.parts.forEach(part => {
+        const isActive = currentState.activePart === part.id;
+        const isVisible = currentState.partVisibility[part.id] !== false;
+        const row = document.createElement('div');
+        row.className = `part-row${isActive ? ' active' : ''}`;
+        row.dataset.partId = part.id;
+        row.innerHTML = `
+            <div class="part-color-dot" style="background:${part.color || '#888'}"></div>
+            <span class="part-name">${part.name || part.id}</span>
+            <button class="part-vis-btn${isVisible ? '' : ' hidden-part'}" data-part-id="${part.id}" title="${isVisible ? 'Hide part' : 'Show part'}">
+                ${isVisible
+                    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+            </button>
+            <button class="part-delete-btn" data-part-id="${part.id}" title="Remove part">×</button>`;
+        list.appendChild(row);
+    });
+}
+
+function renderGlobalParamsInline() {
+    const body = document.getElementById('global-params-body');
+    if (!body || !currentState.template?.global_parameters?.length) return;
+    body.innerHTML = '';
+    currentState.template.global_parameters.forEach(param => {
+        const val = currentState.globalParams[param.key] ?? param.default;
+        const group = buildParamGroup(param, val, (newVal, isFinal) => {
+            currentState.globalParams[param.key] = newVal;
+            debouncedGenerate(isFinal);
+        });
+        body.appendChild(group);
+    });
+}
+
+function bindLayersTabEvents() {
+    // Part row click → set active part
+    document.querySelectorAll('.part-row').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.part-vis-btn') || e.target.closest('.part-delete-btn')) return;
+            setActivePart(row.dataset.partId);
+        });
+    });
+
+    // Visibility toggle
+    document.querySelectorAll('.part-vis-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePartVisibility(btn.dataset.partId);
+        });
+    });
+
+    // Delete part
+    document.querySelectorAll('.part-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deletePartById(btn.dataset.partId);
+        });
+    });
+
+    // Add Part button
+    const addBtn = document.getElementById('add-part-btn');
+    if (addBtn) addBtn.onclick = addNewPart;
+
+    // Global params toggle
+    const toggle = document.getElementById('global-params-toggle');
+    const body = document.getElementById('global-params-body');
+    if (toggle && body) {
+        toggle.onclick = () => {
+            const open = body.classList.toggle('open');
+            toggle.classList.toggle('open', open);
+        };
+    }
+}
+
+function setActivePart(partId) {
+    currentState.activePart = partId;
+
+    // Refresh layers list highlight
+    document.querySelectorAll('.part-row').forEach(row => {
+        row.classList.toggle('active', row.dataset.partId === partId);
+    });
+
+    // Highlight active mesh in viewport
+    updatePartHighlight();
+
+    // Re-render Parameters tab
+    if (currentState.editMode === 'params') renderParametersMultiPart();
+
+    // Sync code editor if Script tab is open
+    if (currentState.editMode === 'code') syncCodeEditorToActivePart();
+}
+
+function togglePartVisibility(partId) {
+    const isVisible = currentState.partVisibility[partId] !== false;
+    currentState.partVisibility[partId] = !isVisible;
+
+    // Update mesh visibility
+    if (mainViewport?.partMeshes?.[partId]) {
+        mainViewport.partMeshes[partId].visible = !isVisible;
+    }
+
+    // Re-render layers list to update eye icon
+    renderPartsList();
+    bindLayersTabEvents();
+}
+
+function deletePartById(partId) {
+    const template = currentState.template;
+    if (!template?.parts) return;
+    if (template.parts.length <= 1) { alert('A model must have at least one part.'); return; }
+    template.parts = template.parts.filter(p => p.id !== partId);
+    delete currentState.partParams[partId];
+    delete currentState.partVisibility[partId];
+    delete currentState.partMeshes[partId];
+    if (currentState.activePart === partId) currentState.activePart = template.parts[0]?.id || null;
+    renderLayersTab();
+    renderParametersMultiPart();
+    triggerGeneration(true);
+}
+
+function addNewPart() {
+    const template = currentState.template;
+    if (!template?.parts) return;
+    const newId = `part_${Date.now()}`;
+    const colors = ['#a78bfa', '#fb923c', '#34d399', '#f472b6', '#38bdf8'];
+    const color = colors[template.parts.length % colors.length];
+    const newPart = {
+        id: newId,
+        name: `Part ${template.parts.length + 1}`,
+        color,
+        ui_parameters: [],
+        source: `// ${newId}\ncube([20, 20, 20], center=true);`
+    };
+    template.parts.push(newPart);
+    currentState.partParams[newId] = {};
+    currentState.partVisibility[newId] = true;
+    renderLayersTab();
+    setActivePart(newId);
+    switchTab('code');
+}
+
+function updatePartHighlight() {
+    if (!mainViewport?.partMeshes) return;
+    Object.entries(mainViewport.partMeshes).forEach(([partId, mesh]) => {
+        if (!mesh?.material) return;
+        const part = currentState.template?.parts?.find(p => p.id === partId);
+        const baseColor = part?.color || '#c8bdb2';
+        if (partId === currentState.activePart) {
+            mesh.material.emissive = new THREE.Color(baseColor).multiplyScalar(0.18);
+        } else {
+            mesh.material.emissive = new THREE.Color(0x000000);
+        }
+    });
+}
+
+function renderParametersMultiPart() {
+    const container = document.getElementById('parameters-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const template = currentState.template;
+    if (!template) return;
+
+    if (!currentState.activePart) {
+        // Model-level view: show global params + hint
+        if (template.global_parameters?.length) {
+            const label = document.createElement('div');
+            label.className = 'params-section-label';
+            label.textContent = 'Global Parameters';
+            container.appendChild(label);
+            template.global_parameters.forEach(param => {
+                const val = currentState.globalParams[param.key] ?? param.default;
+                container.appendChild(buildParamGroup(param, val, (newVal, isFinal) => {
+                    currentState.globalParams[param.key] = newVal;
+                    debouncedGenerate(isFinal);
+                }));
+            });
+        }
+
+        const hint = document.createElement('div');
+        hint.style.cssText = 'padding:16px;font-size:12px;color:var(--text-muted);text-align:center;border-top:1px solid var(--border-subtle);margin-top:8px';
+        hint.textContent = 'Select a part in the Layers tab to edit its parameters.';
+        container.appendChild(hint);
+        return;
+    }
+
+    const part = template.parts?.find(p => p.id === currentState.activePart);
+    if (!part) return;
+
+    // Breadcrumb header
+    const header = document.createElement('div');
+    header.className = 'part-params-header';
+    header.innerHTML = `
+        <span class="part-params-back" title="Back to model view">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </span>
+        <div class="part-params-color-dot" style="background:${part.color || '#888'}"></div>
+        <span class="part-params-name">${part.name}</span>`;
+    header.onclick = () => { currentState.activePart = null; renderParametersMultiPart(); renderPartsList(); bindLayersTabEvents(); };
+    container.appendChild(header);
+
+    // Part-specific params
+    if (part.ui_parameters?.length) {
+        const label = document.createElement('div');
+        label.className = 'params-section-label';
+        label.textContent = 'Part Parameters';
+        container.appendChild(label);
+        part.ui_parameters.forEach(param => {
+            const val = currentState.partParams[part.id]?.[param.key] ?? param.default;
+            container.appendChild(buildParamGroup(param, val, (newVal, isFinal) => {
+                if (!currentState.partParams[part.id]) currentState.partParams[part.id] = {};
+                currentState.partParams[part.id][param.key] = newVal;
+                debouncedGenerate(isFinal);
+            }));
+        });
+    } else {
+        const noParams = document.createElement('div');
+        noParams.style.cssText = 'padding:12px 16px;font-size:12px;color:var(--text-muted)';
+        noParams.textContent = 'No part-specific parameters. Switch to Script tab to add some.';
+        container.appendChild(noParams);
+    }
+
+    // Global params (collapsible)
+    if (template.global_parameters?.length) {
+        const label = document.createElement('div');
+        label.className = 'params-section-label';
+        label.textContent = 'Global Parameters';
+        container.appendChild(label);
+        template.global_parameters.forEach(param => {
+            const val = currentState.globalParams[param.key] ?? param.default;
+            container.appendChild(buildParamGroup(param, val, (newVal, isFinal) => {
+                currentState.globalParams[param.key] = newVal;
+                debouncedGenerate(isFinal);
+            }));
+        });
+    }
+}
+
+// Reusable parameter group builder (used by both single-part and multi-part)
+function buildParamGroup(param, currentValue, onChange) {
+    const group = document.createElement('div');
+    group.className = `parameter-group type-${param.type}`;
+
+    let inputHtml = '';
+    if (param.type === 'number' || param.type === 'integer') {
+        const unit = param.unit ? `<span class="param-unit">${param.unit}</span>` : '';
+        inputHtml = `
+            <div class="param-label">
+                <span>${param.label}</span>
+                <div class="param-value-wrap">
+                    <input type="number" class="manual-input" value="${currentValue}" step="${param.step || 1}">${unit}
+                </div>
+            </div>
+            <input type="range" min="${param.min ?? 0}" max="${param.max ?? 100}" step="${param.step || 1}" value="${currentValue}">`;
+    } else if (param.type === 'enum') {
+        const opts = (param.options || []).map(o => `<option value="${o}" ${currentValue === o ? 'selected' : ''}>${o}</option>`).join('');
+        inputHtml = `<div class="param-label"><span>${param.label}</span></div><select class="glass-select">${opts}</select>`;
+    } else if (param.type === 'boolean') {
+        inputHtml = `<div class="param-label"><span>${param.label}</span><label class="switch"><input type="checkbox" ${currentValue ? 'checked' : ''}><span class="slider-round"></span></label></div>`;
+    } else if (param.type === 'string') {
+        inputHtml = `<div class="param-label"><span>${param.label}</span></div><input type="text" class="glass-input" value="${currentValue || ''}">`;
+    }
+
+    group.innerHTML = inputHtml;
+
+    if (param.type === 'number' || param.type === 'integer') {
+        const range = group.querySelector('input[type="range"]');
+        const manual = group.querySelector('input[type="number"]');
+        const update = (val, isFinal) => {
+            const v = parseFloat(val);
+            range.value = v; manual.value = v;
+            onChange(v, isFinal);
+        };
+        range.oninput = e => { currentState.isMovingSlider = true; update(e.target.value, false); };
+        range.onchange = e => { currentState.isMovingSlider = false; update(e.target.value, true); };
+        manual.onchange = e => update(e.target.value, true);
+    } else if (param.type === 'enum') {
+        group.querySelector('select').onchange = e => onChange(e.target.value, true);
+    } else if (param.type === 'boolean') {
+        group.querySelector('input[type="checkbox"]').onchange = e => onChange(e.target.checked, true);
+    } else if (param.type === 'string') {
+        group.querySelector('input[type="text"]').onchange = e => onChange(e.target.value, true);
+    }
+
+    return group;
+}
+
+function syncCodeEditorToActivePart() {
+    const editor = document.getElementById('code-editor');
+    if (!editor || !isMultiPart()) return;
+
+    if (!currentState.activePart) {
+        // Read-only combined view
+        const template = currentState.template;
+        const globalDecls = (template.global_parameters || []).map(p =>
+            `// ${p.label}\n${p.key} = ${currentState.globalParams[p.key] ?? p.default};`
+        ).join('\n');
+        const partsSource = (template.parts || []).map(part =>
+            `// ═══ PART: ${part.name} ═══\n${part.source || ''}`
+        ).join('\n\n');
+        editor.value = `// ═══ GLOBAL PARAMETERS (read-only — select a part to edit) ═══\n${globalDecls}\n\n${partsSource}`;
+        editor.setAttribute('readonly', 'true');
+        editor.style.opacity = '0.55';
+    } else {
+        const part = currentState.template.parts?.find(p => p.id === currentState.activePart);
+        if (part) {
+            editor.value = part.source || '';
+            editor.removeAttribute('readonly');
+            editor.style.opacity = '1';
+        }
+    }
+}
+
+// ── Multi-Part: State Init ───────────────────────────────────────────────────
+
+function initMultiPartState(template) {
+    currentState.activePart = null;
+    currentState.globalParams = {};
+    currentState.partParams = {};
+    currentState.partVisibility = {};
+    currentState.partMeshes = {};
+
+    (template.global_parameters || []).forEach(p => {
+        currentState.globalParams[p.key] = p.default;
+    });
+    (template.parts || []).forEach(part => {
+        currentState.partParams[part.id] = {};
+        currentState.partVisibility[part.id] = true;
+        (part.ui_parameters || []).forEach(p => {
+            currentState.partParams[part.id][p.key] = p.default;
+        });
+    });
+}
+
 let debounceTimeout;
 function debouncedGenerate(isFinal = false) {
     clearTimeout(debounceTimeout);
@@ -3345,16 +3870,21 @@ function debouncedGenerate(isFinal = false) {
 function triggerGeneration(isFinalRequested = null) {
     currentState.jobId++;
     currentState.isGenerating = true;
-    
+
     const badge = document.getElementById('status-badge');
     badge.innerText = 'Rendering...';
     badge.className = 'loading';
-    
+
     const startTime = performance.now();
-    const isTurbo = currentState.params.PERFORMANCE_MODE !== false;
-    
-    // Respect requested finality, otherwise use state
     const isFinal = isFinalRequested !== null ? isFinalRequested : !currentState.isMovingSlider;
+
+    // Route multi-part templates to separate pipeline
+    if (isMultiPart()) {
+        triggerGenerationMultiPart(startTime, isFinal);
+        return;
+    }
+
+    const isTurbo = currentState.params.PERFORMANCE_MODE !== false;
 
     // LOCAL PREVIEW ENGINE (Polysolid style)
     if (!isFinal && currentState.template.localPreview) {
@@ -3458,6 +3988,7 @@ ${performanceOverrides}`;
                 partGeometries.set(part, geom);
             } else if (data.error && !data.error.includes('Terminated')) {
                 console.error(`Part ${part} failed:`, data.error);
+                if (window._aiApplyPending) window._aiRenderError = data.error;
             }
 
             pendingParts--;
@@ -3475,8 +4006,16 @@ function finalizeModularRender(geometries, startTime, isFinal) {
     if (geometries.size === 0) {
         badge.innerText = 'Render Failed';
         badge.className = 'error';
+        if (window._aiApplyPending && window._aiRenderError) {
+            const shortErr = window._aiRenderError.split('\n').slice(0, 5).join('\n');
+            appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> <strong>Compile error in AI code:</strong><pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
+        }
+        window._aiApplyPending = false;
+        window._aiRenderError = null;
         return;
     }
+    window._aiApplyPending = false;
+    window._aiRenderError = null;
 
     const mergedGeom = BufferGeometryUtils.mergeGeometries(Array.from(geometries.values()));
     updateViewportMesh(mergedGeom);
@@ -3494,6 +4033,152 @@ function finalizeModularRender(geometries, startTime, isFinal) {
         // Wait 500ms for final render loop updates and position settles, then capture thumbnail
         setTimeout(generateActiveThumbnail, 500);
     }
+}
+
+// ── Multi-Part Compilation Pipeline ─────────────────────────────────────────
+
+function buildPartSource(partId, isFinal) {
+    const template = currentState.template;
+    const part = template.parts.find(p => p.id === partId);
+    if (!part) return '';
+
+    const globalDecls = (template.global_parameters || []).map(p =>
+        formatParamDecl(p, currentState.globalParams[p.key] ?? p.default)
+    ).join('\n');
+
+    const partDecls = (part.ui_parameters || []).map(p =>
+        formatParamDecl(p, currentState.partParams[partId]?.[p.key] ?? p.default)
+    ).join('\n');
+
+    const fnVal = isFinal ? 64 : 12;
+    return `// ParaForm — Part: ${part.name}\n$fn = ${fnVal};\n${globalDecls}\n${partDecls}\n${part.source || ''}`;
+}
+
+function triggerGenerationMultiPart(startTime, isFinal) {
+    const template = currentState.template;
+    if (!template?.parts?.length) return;
+
+    // Clear old part group from scene
+    if (mainViewport?.currentMesh?.userData?.isPartGroup) {
+        if (mainViewport.transformControls) mainViewport.transformControls.detach();
+        mainViewport.scene.remove(mainViewport.currentMesh);
+        mainViewport.currentMesh = null;
+    }
+    mainViewport.partMeshes = {};
+
+    const visibleParts = template.parts.filter(p => currentState.partVisibility[p.id] !== false);
+    if (visibleParts.length === 0) {
+        document.getElementById('status-badge').innerText = 'No visible parts';
+        document.getElementById('status-badge').className = '';
+        currentState.isGenerating = false;
+        return;
+    }
+
+    let pending = visibleParts.length;
+    const partGeometries = new Map(); // partId → { geom, color }
+    // Capture generation ID so stale callbacks can be detected
+    const capturedJobId = currentState.jobId;
+
+    visibleParts.forEach(part => {
+        // Fast preview via localPreview if dragging slider
+        if (!isFinal && part.localPreview) {
+            try {
+                const geom = part.localPreview(
+                    currentState.globalParams,
+                    currentState.partParams[part.id] || {},
+                    mainViewport?.material
+                );
+                partGeometries.set(part.id, { geom, color: part.color });
+                if (--pending === 0) finalizeMultiPartRender(partGeometries, startTime, isFinal);
+                return;
+            } catch (e) { /* fall through to WASM */ }
+        }
+
+        // Full WASM compilation — each part gets a unique pool task ID so their
+        // callbacks don't overwrite each other in the pool's callbacks Map.
+        const taskId = ++_multiPartTaskCounter;
+        const source = buildPartSource(part.id, isFinal);
+        pool.requestRender({
+            jobId: taskId,
+            partId: part.id,
+            sourceCode: source,
+            format: 'stl',
+            isFinal: true, // always keep in queue; stale check via capturedJobId
+            context: 'main'
+        }, (data) => {
+            if (capturedJobId !== currentState.jobId) return; // stale generation
+            if (data.ok) {
+                const geom = new STLLoader().parse(data.buffer);
+                partGeometries.set(part.id, { geom, color: part.color });
+            } else if (data.error && !data.error.includes('Terminated')) {
+                console.error(`[Multi-Part] Part "${part.name}" failed:`, data.error);
+            }
+            if (--pending === 0) finalizeMultiPartRender(partGeometries, startTime, isFinal);
+        });
+    });
+}
+
+function finalizeMultiPartRender(partGeometries, startTime, isFinal) {
+    document.getElementById('loader-overlay').classList.add('hidden');
+    const badge = document.getElementById('status-badge');
+
+    if (partGeometries.size === 0) {
+        badge.innerText = 'Render Failed'; badge.className = 'error';
+        currentState.isGenerating = false;
+        return;
+    }
+
+    // Build a group containing one mesh per part
+    const group = new THREE.Group();
+    group.userData.isPartGroup = true;
+    let totalPolys = 0;
+
+    partGeometries.forEach(({ geom, color }, partId) => {
+        geom.computeVertexNormals();
+        const mat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color || '#c8bdb2'),
+            roughness: 0.35, metalness: 0.15,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.userData.partId = partId;
+        group.add(mesh);
+        mainViewport.partMeshes[partId] = mesh;
+        totalPolys += geom.attributes.position?.count / 3 || 0;
+    });
+
+    // Center the whole assembly on the floor
+    const box = new THREE.Box3().setFromObject(group);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const minY = box.min.y;
+    group.children.forEach(mesh => {
+        mesh.geometry.translate(-center.x, -minY, -center.z);
+        mesh.geometry.computeBoundingBox();
+        mesh.geometry.computeVertexNormals();
+    });
+
+    // Detach old gizmo, remove old mesh, add new group
+    if (mainViewport.transformControls) mainViewport.transformControls.detach();
+    if (mainViewport.currentMesh) mainViewport.scene.remove(mainViewport.currentMesh);
+    mainViewport.currentMesh = group;
+    mainViewport.edgeMesh = null;
+
+    applyObjectTransform();
+    drawBuildPlate();
+    updateLightingSettings();
+    mainViewport.scene.add(group);
+    applyDisplayMode(displayMode);
+    updateSelectionHighlight();
+    updatePartHighlight();
+
+    document.getElementById('stats-poly').innerText = `Polys: ${Math.round(totalPolys).toLocaleString()}`;
+    badge.innerText = isFinal ? 'Render Ready' : 'Turbo Preview';
+    badge.className = isFinal ? 'success' : 'info';
+    document.getElementById('render-time').innerText = `${Math.round(performance.now() - startTime)}ms`;
+    currentState.isGenerating = false;
+
+    window.dispatchEvent(new CustomEvent('render-complete', { detail: { isFinal } }));
+    if (isFinal) { saveHistoryState(); setTimeout(generateActiveThumbnail, 500); }
 }
 
 function updateViewportMesh(data) {
@@ -3537,11 +4222,74 @@ function updateViewportMesh(data) {
     updateLightingSettings();
     
     mainViewport.scene.add(mainViewport.currentMesh);
+    mainViewport.edgeMesh = null; // Reset — applyDisplayMode will recreate if needed
+    applyDisplayMode(displayMode);
 
     // Update selection outline box helper and attach active gizmo controls
     updateSelectionHighlight();
 
     document.getElementById('stats-poly').innerText = `Polys: ${Math.round(geometry.attributes.position.count / 3).toLocaleString()}`;
+}
+
+// --- DISPLAY MODE ---
+
+function applyDisplayMode(mode) {
+    displayMode = mode;
+    if (!mainViewport || !mainViewport.currentMesh) return;
+
+    const isGroup = mainViewport.currentMesh.userData?.isPartGroup;
+
+    if (isGroup) {
+        // Multi-part: apply per-child mesh
+        mainViewport.currentMesh.children.forEach(mesh => {
+            if (!mesh.isMesh) return;
+            // Remove old edge overlay from this child
+            const oldEdge = mesh.children.find(c => c.userData.isEdgeMesh);
+            if (oldEdge) { mesh.remove(oldEdge); oldEdge.geometry.dispose(); oldEdge.material.dispose(); }
+
+            mesh.material.wireframe = (mode === 'wireframe' || mode === 'wireframe-edges');
+
+            if (mode === 'shaded-edges' || mode === 'wireframe-edges') {
+                const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 15);
+                const edgesMat = new THREE.LineBasicMaterial({
+                    color: mode === 'wireframe-edges' ? 0xc07840 : 0x3a2a18,
+                    opacity: mode === 'wireframe-edges' ? 0.85 : 0.5,
+                    transparent: true
+                });
+                const edgeMesh = new THREE.LineSegments(edgesGeo, edgesMat);
+                edgeMesh.userData.isEdgeMesh = true;
+                mesh.add(edgeMesh);
+            }
+        });
+    } else {
+        // Single-part: existing behavior using shared material
+        const mat = mainViewport.material;
+        if (mainViewport.edgeMesh) {
+            mainViewport.currentMesh.remove(mainViewport.edgeMesh);
+            mainViewport.edgeMesh.geometry.dispose();
+            mainViewport.edgeMesh.material.dispose();
+            mainViewport.edgeMesh = null;
+        }
+        mat.wireframe = (mode === 'wireframe' || mode === 'wireframe-edges');
+        if (mode === 'shaded-edges' || mode === 'wireframe-edges') {
+            const edgesGeo = new THREE.EdgesGeometry(mainViewport.currentMesh.geometry, 15);
+            const edgesMat = new THREE.LineBasicMaterial({
+                color: mode === 'wireframe-edges' ? 0xc07840 : 0x3a2a18,
+                opacity: mode === 'wireframe-edges' ? 0.85 : 0.5,
+                transparent: true
+            });
+            mainViewport.edgeMesh = new THREE.LineSegments(edgesGeo, edgesMat);
+            mainViewport.currentMesh.add(mainViewport.edgeMesh);
+        }
+    }
+
+    // Sync UI
+    const modeLabels = { shaded: 'Shaded', 'shaded-edges': 'Shaded + Edges', wireframe: 'Wireframe', 'wireframe-edges': 'Wire + Edges' };
+    const labelEl = document.getElementById('dm-current');
+    if (labelEl) labelEl.textContent = modeLabels[mode] || 'Shaded';
+    document.querySelectorAll('.dm-opt').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
 }
 
 // --- HIGH FIDELITY 3D EDITOR FEATURE FUNCTIONS ---
@@ -3693,12 +4441,12 @@ function updateLightingSettings() {
     
     // Apply Lighting presets
     if (state.lightPreset === 'standard') {
-        hemi.color.setHex(0xffffff);
-        hemi.groundColor.setHex(0x444444);
+        hemi.color.setHex(0xfff5e8);
+        hemi.groundColor.setHex(0x1a140a);
         dir.color.setHex(0xffffff);
-        dir.position.set(100, 200, 50);
-        fill.color.setHex(0x90b0d0);
-        fill.position.set(-100, -50, -50);
+        dir.position.set(100, 200, 80);
+        fill.color.setHex(0xb0c8e0);
+        fill.position.set(-80, 40, -100);
     } else if (state.lightPreset === 'bright') {
         hemi.color.setHex(0xffffff);
         hemi.groundColor.setHex(0x888888);
@@ -4225,7 +4973,7 @@ function generateMeshThumbnail(template) {
         
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
         renderer.setSize(250, 180);
-        renderer.setClearColor(0x0a0f1d, 1.0); // Slate-950 dark background for luxury contrast
+        renderer.setClearColor(0x0d0b09, 1.0); // Warm dark background
         
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, 250 / 180, 0.1, 1000);
@@ -4238,12 +4986,12 @@ function generateMeshThumbnail(template) {
         dirLight.position.set(100, 150, 50);
         scene.add(dirLight);
         
-        const fillLight = new THREE.DirectionalLight(0x818cf8, 1.0); // Subtle blue fill light
-        fillLight.position.set(-100, -50, -50);
+        const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.8);
+        fillLight.position.set(-80, 40, -100);
         scene.add(fillLight);
-        
-        // Add subtle background grid for standard CAD layout look
-        const grid = new THREE.GridHelper(120, 24, 0x4f46e5, 0x1e293b);
+
+        // Add subtle background grid
+        const grid = new THREE.GridHelper(120, 24, 0x3a3028, 0x1e1a14);
         grid.position.y = -0.1;
         grid.material.opacity = 0.45;
         grid.material.transparent = true;
@@ -4257,7 +5005,7 @@ function generateMeshThumbnail(template) {
             });
         }
         
-        const dummyMat = new THREE.MeshStandardMaterial({ color: 0x6366f1 });
+        const dummyMat = new THREE.MeshStandardMaterial({ color: 0xc8bdb2, roughness: 0.65, metalness: 0.02 });
         const geom = template.localPreview(defaultParams, dummyMat);
         if (!geom) {
             dummyMat.dispose();
@@ -4334,12 +5082,18 @@ function generateActiveThumbnail() {
     try {
         const id = currentState.template.id;
         
-        // Take canvas capture of current model in editor
-        const dataUrl = mainViewport.renderer.domElement.toDataURL('image/png');
-        if (!dataUrl || dataUrl === 'data:,') return; // Skip empty capture
-        
-        // Save to localStorage
-        localStorage.setItem(`thumbnail_${id}`, dataUrl);
+        // Take canvas capture of current model in editor (JPEG for compact storage)
+        const dataUrl = mainViewport.renderer.domElement.toDataURL('image/jpeg', 0.6);
+        if (!dataUrl || dataUrl === 'data:,') return;
+
+        // Save to localStorage — evict stale thumbnails if quota is exceeded
+        try {
+            localStorage.setItem(`thumbnail_${id}`, dataUrl);
+        } catch (quotaErr) {
+            // Clear all cached thumbnails and retry once
+            Object.keys(localStorage).filter(k => k.startsWith('thumbnail_')).forEach(k => localStorage.removeItem(k));
+            try { localStorage.setItem(`thumbnail_${id}`, dataUrl); } catch (_) { /* give up silently */ }
+        }
         
         // Update template local state in memory
         currentState.template.thumbnail_url = dataUrl;
@@ -4695,9 +5449,29 @@ $preview = false;`;
 
 
 document.getElementById('view-reset').onclick = () => mainViewport?.controls.reset();
-document.getElementById('view-wireframe').onclick = () => {
-    if (mainViewport) mainViewport.material.wireframe = !mainViewport.material.wireframe;
-};
+// Display mode dropdown wiring
+(function () {
+    const toggle = document.getElementById('dm-toggle');
+    const dropdown = document.getElementById('dm-dropdown');
+    const wrap = document.getElementById('display-mode-wrap');
+    if (!toggle || !dropdown) return;
+
+    toggle.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('hidden');
+    };
+
+    dropdown.querySelectorAll('.dm-opt').forEach(btn => {
+        btn.onclick = () => {
+            applyDisplayMode(btn.dataset.mode);
+            dropdown.classList.add('hidden');
+        };
+    });
+
+    document.addEventListener('click', (e) => {
+        if (wrap && !wrap.contains(e.target)) dropdown.classList.add('hidden');
+    });
+})();
 let uploadViewport = null;
 let currentUploadSource = '';
 
@@ -4846,11 +5620,14 @@ function parseParametersFromSource(source) {
         if (comment) {
             const configMatch = comment.trim().match(/^\[([^\]]*)\]$/);
             if (configMatch) {
-                // ParaForm format: [type, Label, min, max, step]
+                // ParaForm format: [type, Label, min, max, step]  or  [enum, Label, Opt1, Opt2, ...]
                 const parts = configMatch[1].split(',').map(s => s.trim());
                 param.type  = parts[0] || 'number';
                 if (parts[1]) param.label = parts[1];
-                if (param.type === 'number' || param.type === 'integer') {
+                if (param.type === 'enum') {
+                    param.options = parts.slice(2).filter(Boolean);
+                    if (param.options.length === 0) param.options = [String(defaultVal)];
+                } else if (param.type === 'number' || param.type === 'integer') {
                     if (parts[2]) param.min  = parseFloat(parts[2]);
                     if (parts[3]) param.max  = parseFloat(parts[3]);
                     if (parts[4]) param.step = parseFloat(parts[4]);
@@ -4908,6 +5685,106 @@ function parseSCADValue(val) {
     if (val.startsWith('"')) return val.replace(/"/g, '');
     if (!isNaN(parseFloat(val))) return parseFloat(val);
     return val;
+}
+
+// ── Syntax Shield & Sanitation ─────────────────────────────────────
+function sanitizeAndFormatOpenSCAD(code) {
+    // 0. Pre-pass: convert C-style for loops to OpenSCAD range syntax
+    //    for (i = start; i <= end; i += step)  →  for (i = [start : step : end])
+    code = code.replace(
+        /for\s*\(\s*(\w+)\s*=\s*([^;]+);\s*\w+\s*[<>]=?\s*([^;]+);\s*\w+\s*[+\-]=\s*([^)]+)\)/g,
+        (_, v, start, end, step) => `for (${v.trim()} = [${start.trim()} : ${step.trim()} : ${end.trim()}])`
+    );
+
+    const lines = code.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        
+        // 1. Column 0 Correction: Trim spaces before variable declarations if they end with ParaForm comments
+        if (/^\s+\w+\s*=\s*[^;]+;\s*\/\/\s*\[.*\]/.test(line)) {
+            line = line.trimStart();
+        }
+
+        // 2. Semicolon Enforcement
+        const paramMatch = line.match(/^(\w+)\s*=\s*([^;]+)(\s*\/\/\s*\[.*\])$/);
+        if (paramMatch && !paramMatch[2].endsWith(';')) {
+            line = `${paramMatch[1]} = ${paramMatch[2]};${paramMatch[3]}`;
+        }
+
+        // 3. $fn limit Sandbox Guard
+        if (/^\s*\$fn\s*=/.test(line)) {
+            const fnMatch = line.match(/^\s*\$fn\s*=\s*(\d+)/);
+            if (fnMatch && parseInt(fnMatch[1], 10) > 64) {
+                line = line.replace(/(\$fn\s*=\s*)\d+/, '$1 64 // Auto-capped for WASM memory safety');
+            }
+        }
+        
+        // 4. Math solver for defaults (basic +-*/ on literals)
+        if (/^(\w+)\s*=\s*[^;]+;\s*\/\/\s*\[.*\]/.test(line)) {
+            const eqMatch = line.match(/^(\w+)\s*=\s*([^;]+);/);
+            if (eqMatch) {
+                const expr = eqMatch[2].trim();
+                if (/^[\d\s\.\+\-\*\/\(\)]+$/.test(expr) && /[\+\-\*\/]/.test(expr)) {
+                    try {
+                        const evaluated = Function(`"use strict";return (${expr})`)();
+                        if (!isNaN(evaluated)) {
+                            line = line.replace(expr, evaluated);
+                        }
+                    } catch(e) {}
+                }
+            }
+        }
+
+        lines[i] = line;
+    }
+    return lines.join('\n');
+}
+
+function syncSourceWithActiveParams(source, activeParams) {
+    const lines = source.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const match = line.match(/^(\w+)\s*=\s*([^;]+);(?:\s*\/\/\s*\[(.*)\])?/);
+        if (match) {
+            const key = match[1];
+            if (activeParams.hasOwnProperty(key)) {
+                let val = activeParams[key];
+                if (typeof val === 'string') val = `"${val}"`;
+                if (typeof val === 'boolean') val = val ? 'true' : 'false';
+                lines[i] = line.replace(match[2], val);
+            }
+        }
+    }
+    return lines.join('\n');
+}
+
+function parseLLMResponseFallback(responseText) {
+    let data = { changes: "Updated geometry", openscad_code: "" };
+    try {
+        data = JSON.parse(responseText);
+        if (data.openscad_code) return data;
+    } catch (e) {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                data = JSON.parse(jsonMatch[0]);
+                if (data.openscad_code) return data;
+            } catch(e2) {}
+        }
+        
+        const codeMatch = responseText.match(/```(?:openscad|scad)?\s([\s\S]*?)```/i);
+        if (codeMatch) {
+            data.openscad_code = codeMatch[1];
+            const explainMatch = responseText.replace(codeMatch[0], '').trim();
+            if (explainMatch) data.changes = explainMatch.split('\n')[0].replace(/[\*#]/g, '').trim();
+            return data;
+        }
+    }
+    
+    if (!data.openscad_code) {
+        data.openscad_code = responseText;
+    }
+    return data;
 }
 
 async function publishTemplate() {
@@ -5121,13 +5998,12 @@ startApp();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let aiChatHistory = [];
+let aiConversations = [];
 
 function loadChatHistory() {
     try {
         const stored = localStorage.getItem('paraform_ai_chat_history');
-        if (stored) {
-            aiChatHistory = JSON.parse(stored);
-        }
+        if (stored) aiChatHistory = JSON.parse(stored);
     } catch (e) {
         console.error('Failed to load chat history', e);
     }
@@ -5137,67 +6013,273 @@ function saveChatHistory() {
     localStorage.setItem('paraform_ai_chat_history', JSON.stringify(aiChatHistory));
 }
 
+// ── Conversation Archive ──────────────────────────────────────────
+
+function loadConversations() {
+    try {
+        const stored = localStorage.getItem('paraform_ai_conversations');
+        if (stored) aiConversations = JSON.parse(stored);
+    } catch (e) { aiConversations = []; }
+}
+
+function saveConversations() {
+    localStorage.setItem('paraform_ai_conversations', JSON.stringify(aiConversations));
+}
+
+function archiveCurrentConversation() {
+    if (aiChatHistory.length === 0) return;
+    const firstUserMsg = aiChatHistory.find(m => m.role === 'user');
+    const raw = firstUserMsg ? firstUserMsg.content : 'Untitled Conversation';
+    const title = raw.slice(0, 52) + (raw.length > 52 ? '…' : '');
+    loadConversations();
+    aiConversations.unshift({
+        id: `conv_${Date.now()}`,
+        title,
+        timestamp: Date.now(),
+        messages: JSON.parse(JSON.stringify(aiChatHistory))
+    });
+    if (aiConversations.length > 25) aiConversations = aiConversations.slice(0, 25);
+    saveConversations();
+}
+
+function formatRelativeTime(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return `${Math.floor(diff / 86400000)}d ago`;
+}
+
+function renderConversationsPanel() {
+    loadConversations();
+    const list = document.getElementById('ai-conv-list');
+    if (!list) return;
+    if (aiConversations.length === 0) {
+        list.innerHTML = '<div class="ai-conv-empty">No past conversations yet.<br>Start chatting to save history.</div>';
+        return;
+    }
+    list.innerHTML = '';
+    aiConversations.forEach(conv => {
+        const msgCount = conv.messages.filter(m => m.role === 'user').length;
+        const item = document.createElement('div');
+        item.className = 'ai-conv-item';
+        item.innerHTML = `
+            <div class="ai-conv-item-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="ai-conv-item-body">
+                <div class="ai-conv-item-title">${conv.title}</div>
+                <div class="ai-conv-item-meta">${formatRelativeTime(conv.timestamp)} · ${msgCount} prompt${msgCount !== 1 ? 's' : ''}</div>
+            </div>`;
+        item.onclick = () => {
+            archiveCurrentConversation();
+            aiChatHistory = JSON.parse(JSON.stringify(conv.messages));
+            saveChatHistory();
+            renderChatHistory();
+            const panel = document.getElementById('ai-conv-panel');
+            if (panel) panel.classList.add('hidden');
+        };
+        list.appendChild(item);
+    });
+}
+
+// ── Model Name Helper ─────────────────────────────────────────────
+
+function getModelDisplayName(provider, customModel) {
+    const names = { local: 'Local Agent', gemini: 'Gemini 2.5 Flash', openai: 'GPT-4o-mini', anthropic: 'Claude 3.5 Sonnet' };
+    if (provider === 'custom') return customModel || 'Custom Model';
+    return names[provider] || provider;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildAssistantCard(msg, msgIndex) {
+    const meta = msg.meta || null;
+    const isPending = meta && meta.applied === false;
+    const isDismissed = meta && meta.applied === 'dismissed';
+    const isApplied = !isPending;
+
+    const card = document.createElement('div');
+    card.className = `ai-response-card${isApplied && !isDismissed ? ' applied' : ''}`;
+
+    const modelName = meta?.modelName || 'AI Assistant';
+
+    let bodyHtml = (msg.content || '')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    let statsHtml = '';
+    if (meta && (meta.paramsAdded > 0 || meta.paramsRemoved > 0)) {
+        if (meta.paramsAdded > 0) statsHtml += `<span style="background:rgba(46,213,115,0.1);color:#2ed573;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">+${meta.paramsAdded} Params</span>`;
+        if (meta.paramsRemoved > 0) statsHtml += `<span style="background:rgba(255,71,87,0.1);color:#ff4757;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">−${meta.paramsRemoved} Params</span>`;
+    } else if (meta) {
+        statsHtml = `<span style="background:rgba(255,255,255,0.05);color:var(--text-muted);padding:2px 6px;border-radius:4px;font-size:10px;">No param changes</span>`;
+    }
+
+    card.innerHTML = `
+        <div class="ai-card-header">
+            <div class="ai-card-label">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                AI Response
+            </div>
+            <span class="ai-model-badge">${modelName}</span>
+        </div>
+        <div class="ai-card-body">${bodyHtml}</div>
+        ${statsHtml ? `<div class="ai-card-stats">${statsHtml}</div>` : ''}
+        <div class="ai-card-actions" id="card-actions-${msgIndex}"></div>`;
+
+    const actionsDiv = card.querySelector(`#card-actions-${msgIndex}`);
+
+    if (isPending && meta.pendingCode) {
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'ai-card-apply-btn';
+        applyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Load Changes`;
+        applyBtn.onclick = () => window.applyPendingAIChange(msgIndex);
+        actionsDiv.appendChild(applyBtn);
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className = 'ai-card-revert-btn';
+        dismissBtn.textContent = 'Dismiss';
+        dismissBtn.onclick = () => {
+            aiChatHistory[msgIndex].meta.applied = 'dismissed';
+            saveChatHistory();
+            renderChatHistory();
+        };
+        actionsDiv.appendChild(dismissBtn);
+    } else {
+        const indicator = document.createElement('button');
+        indicator.className = 'ai-card-apply-btn applied-indicator';
+        indicator.disabled = true;
+        indicator.innerHTML = isDismissed
+            ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Dismissed`
+            : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Loaded`;
+        actionsDiv.appendChild(indicator);
+
+        if (!isDismissed && msg.previousState) {
+            const revertBtn = document.createElement('button');
+            revertBtn.className = 'ai-card-revert-btn';
+            revertBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:scaleX(-1)"><path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> Revert`;
+            revertBtn.onclick = () => window.revertToMessageState(msgIndex);
+            actionsDiv.appendChild(revertBtn);
+        }
+    }
+
+    return card;
+}
+
 function renderChatHistory() {
     const container = document.getElementById('ai-chat-history');
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     if (aiChatHistory.length === 0) {
         container.innerHTML = `
             <div class="chat-bubble system">
-                <div class="bubble-icon">✨</div>
-                <div class="bubble-text">Hi! I'm your ParaForm AI Assistant. Describe what you'd like to build or modify.</div>
-            </div>
-        `;
+                <div class="bubble-text"><span class="material-symbols-outlined">auto_awesome</span> Hi! I'm your ParaForm AI Assistant. Describe what you'd like to build or modify.</div>
+            </div>`;
+        renderTimeline();
         return;
     }
-    
+
     aiChatHistory.forEach((msg, msgIndex) => {
-        const bubble = document.createElement('div');
-        bubble.className = `chat-bubble ${msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant')}`;
-        
-        let formattedText = msg.content;
-        
-        if (msg.role === 'assistant') {
-            // Simple markdown-ish bolding for changes
-            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        if (msg.role === 'user') {
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble user';
+            bubble.innerHTML = `<div class="bubble-text">${escapeHtml(msg.content)}</div>`;
+            container.appendChild(bubble);
+        } else if (msg.role === 'system') {
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble system';
+            bubble.innerHTML = `<div class="bubble-text">${msg.content}</div>`;
+            container.appendChild(bubble);
+        } else if (msg.role === 'assistant') {
+            container.appendChild(buildAssistantCard(msg, msgIndex));
         }
-        
-        bubble.innerHTML = `<div class="bubble-text">${formattedText}</div>`;
-        
-        if (msg.role === 'assistant' && msg.previousState) {
-            const undoBtn = document.createElement('button');
-            undoBtn.className = 'chat-undo-btn glass';
-            undoBtn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-top: 8px; padding: 4px 10px; border-radius: var(--radius); font-size: 11px; font-family: var(--font-main); color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); transition: all 150ms ease;';
-            undoBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: scaleX(-1);"><path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> Undo Edit`;
-            undoBtn.onclick = () => window.revertToMessageState(msgIndex);
-            
-            // Hover effect
-            undoBtn.onmouseenter = () => {
-                undoBtn.style.color = 'var(--text-primary)';
-                undoBtn.style.borderColor = 'var(--accent-bright)';
-                undoBtn.style.background = 'var(--accent-subtle)';
-            };
-            undoBtn.onmouseleave = () => {
-                undoBtn.style.color = 'var(--text-secondary)';
-                undoBtn.style.borderColor = 'var(--border-color)';
-                undoBtn.style.background = 'rgba(255,255,255,0.03)';
-            };
-            bubble.appendChild(undoBtn);
-        }
-        
-        container.appendChild(bubble);
     });
-    
+
     container.scrollTop = container.scrollHeight;
+    renderTimeline();
 }
 
-function appendChatMessage(role, content, previousState = null) {
-    aiChatHistory.push({ role, content, previousState });
+function appendChatMessage(role, content, previousState = null, meta = null) {
+    aiChatHistory.push({ role, content, previousState, meta });
     saveChatHistory();
     renderChatHistory();
 }
+
+// ── Timeline ──────────────────────────────────────────────────────
+
+function renderTimeline() {
+    const bar = document.getElementById('ai-timeline-bar');
+    const track = document.getElementById('ai-timeline-track');
+    if (!bar || !track) return;
+
+    const assistantMsgs = aiChatHistory.filter(m => m.role === 'assistant');
+    if (assistantMsgs.length === 0) {
+        bar.classList.add('hidden');
+        return;
+    }
+    bar.classList.remove('hidden');
+    track.innerHTML = '';
+
+    // Start node
+    const origin = document.createElement('div');
+    origin.className = 'timeline-origin';
+    origin.innerHTML = `<div class="t-dot"></div><span>Start</span>`;
+    track.appendChild(origin);
+
+    // Find index of the last applied (non-pending, non-dismissed) message
+    let lastAppliedIdx = -1;
+    aiChatHistory.forEach((m, i) => {
+        if (m.role === 'assistant' && m.meta?.applied !== false && m.meta?.applied !== 'dismissed') {
+            lastAppliedIdx = i;
+        }
+    });
+
+    let editNum = 0;
+    aiChatHistory.forEach((msg, idx) => {
+        if (msg.role !== 'assistant') return;
+        editNum++;
+
+        const conn = document.createElement('div');
+        conn.className = 'timeline-connector';
+        track.appendChild(conn);
+
+        const isPending = msg.meta?.applied === false;
+        const isCurrent = (idx === lastAppliedIdx) && !isPending;
+        const rawLabel = msg.meta?.changes || `Edit ${editNum}`;
+        const label = rawLabel.length > 16 ? rawLabel.slice(0, 16) + '…' : rawLabel;
+
+        const node = document.createElement('div');
+        node.className = `timeline-node${isCurrent ? ' current' : ''}${isPending ? ' pending' : ''}`;
+        node.innerHTML = `<div class="t-dot"></div><span>${label}</span>`;
+        node.title = rawLabel;
+
+        if (!isPending && msg.previousState) {
+            node.onclick = () => {
+                if (confirm(`Revert to before:\n"${rawLabel}"`)) {
+                    window.revertToMessageState(idx);
+                }
+            };
+        }
+        track.appendChild(node);
+    });
+}
+
+// ── Apply pending AI change ───────────────────────────────────────
+
+window.applyPendingAIChange = function(idx) {
+    const msg = aiChatHistory[idx];
+    if (!msg || !msg.meta || !msg.meta.pendingCode) return;
+    window._aiApplyPending = true;
+    window._aiRenderError = null;
+    applyNewOpenSCADSource(msg.meta.pendingCode);
+    msg.meta.applied = true;
+    saveChatHistory();
+    renderChatHistory();
+};
 
 window.revertToMessageState = function(index) {
     const msg = aiChatHistory[index];
@@ -5231,21 +6313,45 @@ window.revertToMessageState = function(index) {
 function initAIAssistant() {
     const generateBtn = document.getElementById('ai-generate-btn');
     const promptInput = document.getElementById('ai-prompt-input');
-    
+
     if (!generateBtn || !promptInput) return;
-    
+
     loadChatHistory();
+    loadConversations();
     renderChatHistory();
-    
-    // Bind "New Conversation" clear button
+    renderConversationsPanel();
+
+    // Bind "New Conversation" clear button — archives current before clearing
     const clearBtn = document.getElementById('ai-clear-chat-btn');
     if (clearBtn) {
         clearBtn.onclick = () => {
             if (aiChatHistory.length === 0) return;
+            archiveCurrentConversation();
             aiChatHistory = [];
             saveChatHistory();
             renderChatHistory();
+            renderConversationsPanel();
         };
+    }
+
+    // Bind history panel toggle
+    const historyBtn = document.getElementById('ai-history-btn');
+    const convPanel = document.getElementById('ai-conv-panel');
+    const convPanelWrap = historyBtn ? historyBtn.closest('.ai-conv-panel-wrap') : null;
+    const convCloseBtn = document.getElementById('ai-conv-close');
+    if (historyBtn && convPanel) {
+        historyBtn.onclick = (e) => {
+            e.stopPropagation();
+            convPanel.classList.toggle('hidden');
+        };
+        if (convCloseBtn) {
+            convCloseBtn.onclick = () => convPanel.classList.add('hidden');
+        }
+        document.addEventListener('click', (e) => {
+            if (convPanelWrap && !convPanelWrap.contains(e.target)) {
+                convPanel.classList.add('hidden');
+            }
+        });
     }
     
     // Bind quick action chips
@@ -5287,7 +6393,7 @@ function initAIAssistant() {
             const loadingBubble = document.createElement('div');
             loadingBubble.id = 'ai-loading-bubble';
             loadingBubble.className = 'chat-bubble system';
-            loadingBubble.innerHTML = '<div class="bubble-text">Thinking... ⚙️</div>';
+            loadingBubble.innerHTML = '<div class="bubble-text"><span class="material-symbols-outlined">autorenew</span> Thinking...</div>';
             container.appendChild(loadingBubble);
             container.scrollTop = container.scrollHeight;
         }
@@ -5295,7 +6401,7 @@ function initAIAssistant() {
         try {
             await runAIGenerationPipeline(prompt, prePromptState);
         } catch (err) {
-            appendChatMessage('system', `❌ ERROR: ${err.message}`);
+            appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> ERROR: ${err.message}`);
             console.error('AI pipeline error:', err);
         } finally {
             generateBtn.disabled = false;
@@ -5363,8 +6469,20 @@ async function runAIGenerationPipeline(prompt, prePromptState = null) {
             updatedSource = `// Parametric Box generated by Local AI Agent\nbox_width = 90;       // [number, Box Width, 40, 150, 1]\nbox_depth = 70;       // [number, Box Depth, 40, 150, 1]\nbox_height = 40;      // [number, Box Height, 15, 100, 1]\nwall_thickness = 2;   // [number, Wall Thickness, 1.2, 4, 0.1]\n\ndifference() {\n    cube([box_width, box_depth, box_height], center=true);\n    translate([0, 0, wall_thickness]) \n        cube([box_width - wall_thickness*2, box_depth - wall_thickness*2, box_height], center=true);\n}\n`;
         }
         
-        appendChatMessage('assistant', `**Success.** ${changesSummary}`, prePromptState);
-        applyNewOpenSCADSource(updatedSource);
+        const localNewParams = parseParametersFromSource(updatedSource);
+        const localOldParams = prePromptState ? (prePromptState.ui_parameters || []) : [];
+        const localAdded = localNewParams.filter(p => !localOldParams.find(o => o.key === p.key)).length;
+        const localRemoved = localOldParams.filter(o => !localNewParams.find(p => p.key === o.key)).length;
+
+        appendChatMessage('assistant', `**Success.** ${changesSummary}`, prePromptState, {
+            provider: 'local',
+            modelName: 'Local Agent',
+            changes: changesSummary,
+            paramsAdded: localAdded,
+            paramsRemoved: localRemoved,
+            pendingCode: updatedSource,
+            applied: false
+        });
         return;
     }
 
@@ -5373,29 +6491,146 @@ async function runAIGenerationPipeline(prompt, prePromptState = null) {
         throw new Error(`API Key for ${provider.toUpperCase()} is required. Please set it in AI Settings.`);
     }
 
-    const currentSource = currentState.template ? currentState.template.source : '';
+    const rawSource = currentState.template ? currentState.template.source : '';
+    // Pillar 1: Context-Aware Sync
+    const currentSource = syncSourceWithActiveParams(rawSource, currentState.params);
     const customSystemPrompt = localStorage.getItem('paraform_ai_system_prompt') || '';
 
-    let systemPrompt = `You are ParaForm AI, an expert parametric 3D CAD designer specialized in producing clean, functional OpenSCAD model files.
-Your task is to take the user's natural language request and modify the provided OpenSCAD source code accordingly.
+    let systemPrompt = `You are ParaForm AI — an expert parametric 3D CAD engineer who writes production-quality OpenSCAD for real-world 3D printing.
 
-RULES:
-1. Always retain or enhance existing parametric parameters at the top of the file.
-2. If the user asks for a new parameter, define it using the customizer format:
-   key = value; // [type, Label, min, max, step]
-   Supported types: 'number', 'integer', 'string', 'boolean', 'enum'.
-3. Maintain clean geometry. Make sure subtracted shapes (holes, slots) extend slightly past the surfaces they cut through to avoid zero-thickness rendering artifacts.
-4. Keep the orientation Z-up, millimeter scale.
-5. Return ONLY valid OpenSCAD code. Do not wrap it in markdown codeblocks. Specifically, you must output a JSON object containing two fields:
-   - "changes": "A short 1-sentence summary of what geometric features were changed/added."
-   - "openscad_code": "The complete, revised, working OpenSCAD script, with no markdown styling around it."
-6. Ensure no compile errors will occur. No external font imports or unsupported OpenSCAD features.`;
+═══════════════════════════════════════════
+OUTPUT CONTRACT (non-negotiable)
+═══════════════════════════════════════════
+Return ONLY a single JSON object with exactly two fields:
+  { "changes": "<one sentence>", "openscad_code": "<full OpenSCAD source>" }
+No markdown, no code fences, no extra keys. The openscad_code value must be a valid JSON string (escape all backslashes and quotes inside it).
+
+═══════════════════════════════════════════
+COMPLETENESS MANDATE
+═══════════════════════════════════════════
+Every model you output must be VISUALLY COMPLETE and PHYSICALLY MEANINGFUL. Ask yourself:
+  "If I printed this right now, would it look like the thing the user asked for?"
+If the answer is no — add more geometry. A phone stand must have: a solid base, a back support, and a lip to hold the phone. A gear must have teeth. A box must have walls and a bottom. Never output stubs, placeholders, or single-feature geometry when the user asked for a complete object.
+
+═══════════════════════════════════════════
+PARAMETER RULES
+═══════════════════════════════════════════
+1. ALL user-adjustable dimensions go at the TOP of the file as literal number assignments:
+     wall_thickness = 3; // [number, Wall Thickness, 1, 8, 0.5]
+2. NEVER assign a parameter using an expression of another parameter at the top level:
+     BAD:  fillet_r = wall_thickness / 2;   ← UI cannot show this as a slider
+     GOOD: fillet_r = 2; // [number, Fillet Radius, 0.5, 6, 0.5]
+3. Internal computed values (used only inside modules) are fine as expressions — just don't annotate them as [type,...] parameters.
+4. Parameter annotation format:
+     key = value; // [type, Human Label, min, max, step]
+   Types: number · integer · boolean · string · enum
+   Enum:  VIEW_MODE = "Assembly"; // [enum, View Mode, Assembly, Print Layout, Part A, Part B]
+5. Use realistic real-world millimeter dimensions. A standard phone is ~75 × 8 × 155 mm.
+
+═══════════════════════════════════════════
+GEOMETRY RULES
+═══════════════════════════════════════════
+1. Z-up orientation. Models sit on the Z=0 plane (nothing below Z=0 in final output).
+2. All boolean subtractions must extend ±0.1 mm past the cut surface to avoid zero-thickness artifacts.
+3. Minimum wall thickness: 1.2 mm. Minimum feature size: 1.0 mm.
+4. Use $fn = 64 at the top for smooth curves, or $fn = 32 inside heavy loops to control polygon count.
+5. All geometry must be connected — no floating/disconnected solids unless it is a multi-part print layout.
+6. For curved joints or pivot pins: use cylinders. For snap fits: use a thin tapered lip. For threads: approximate with a helix or note it's a friction-fit hole.
+
+═══════════════════════════════════════════
+BUILDING FROM SCRATCH (when existing source is blank or unrelated)
+═══════════════════════════════════════════
+Follow this order:
+  Step 1 — Define all parameters as literal numbers at top.
+  Step 2 — Build the MAIN SOLID (base plate, body, shell — the biggest piece).
+  Step 3 — Add SECONDARY FEATURES (walls, ribs, lips, supports) as union().
+  Step 4 — SUBTRACT holes, slots, pockets using difference().
+  Step 5 — If multi-part: wrap in VIEW_MODE modules so each part can be isolated.
+
+Example skeleton for a stand-type object:
+  module base() { ... solid flat plate ... }
+  module back_support() { ... angled panel with thickness ... }
+  module phone_lip() { ... small retaining ledge at front ... }
+  module assembly() { base(); back_support(); phone_lip(); }
+  if (VIEW_MODE == "Assembly") assembly();
+  else if (VIEW_MODE == "Print Flat") { base(); translate([...]) back_support(); }
+
+═══════════════════════════════════════════
+MULTI-PART ASSEMBLY RULES
+═══════════════════════════════════════════
+- Parts that connect must share the SAME parameter variables for mating dimensions.
+- Add joint_clearance = 0.3; // [number, Joint Clearance, 0.1, 0.8, 0.05] and apply it to all mating features (holes are +clearance, pegs are -clearance).
+- Every assembly must have a VIEW_MODE enum parameter: Assembly · Print Layout · and one per part.
+- In "Print Layout" mode, translate parts side-by-side flat on Z=0 for slicing.
+
+═══════════════════════════════════════════
+MODIFICATION RULES (when existing source is provided)
+═══════════════════════════════════════════
+- Preserve ALL existing parameters unless the user explicitly asks to remove one.
+- Add new parameters ABOVE the geometry, below existing params.
+- When adding a feature (e.g. mounting holes), implement it as a proper geometric subtraction/addition, not a comment.
+- Do not simplify or remove existing geometry to make room for new features.
+
+═══════════════════════════════════════════
+FOR LOOP SYNTAX — CRITICAL
+═══════════════════════════════════════════
+OpenSCAD does NOT support C-style for loops. This is a compile error:
+  BAD:  for (i = 0; i < 5; i++) { ... }
+Use ONLY range-based syntax:
+  GOOD: for (i = [0 : 1 : 4]) { ... }
+  GOOD: for (i = [start : step : end]) { ... }
+  GOOD: for (item = [val1, val2, val3]) { ... }
+
+═══════════════════════════════════════════
+DIFFERENCE / BOOLEAN RULES — CRITICAL
+═══════════════════════════════════════════
+- color() is cosmetic ONLY. It does NOT create a boolean context.
+  WRONG: color("red") { cube([10,10,10]); cylinder(d=5, h=11); }  ← hole is union'd, not subtracted
+  RIGHT: difference() { cube([10,10,10]); cylinder(d=5, h=11, center=true); }
+- Always use difference() explicitly when cutting holes, pockets, or slots.
+- difference() first child = the solid body; all subsequent children = subtracted.
+- Never put holes inside color() or union() — they will be added, not cut.
+
+═══════════════════════════════════════════
+FORBIDDEN PATTERNS
+═══════════════════════════════════════════
+- C-style for loops: for (i=0; i<n; i++) — use range syntax instead
+- import(), use <> with external files (no file system access in browser)
+- surface() with external heightmaps
+- text() with specific font names (use built-in fonts only, or omit font param)
+- Recursive modules without a base case
+- Variables named the same as built-in OpenSCAD functions
+- Using color() blocks as a substitute for difference() or union()
+`;
+
 
     if (customSystemPrompt.trim()) {
         systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS & BEST PRACTICES:\n${customSystemPrompt.trim()}`;
     }
 
-    systemPrompt += `\n\nCurrent OpenSCAD Source Code:\n-------------------------------------------\n${currentSource}\n-------------------------------------------`;
+    if (isMultiPart()) {
+        const template = currentState.template;
+        const activePart = currentState.activePart;
+        const activePartObj = activePart ? template.parts?.find(p => p.id === activePart) : null;
+
+        systemPrompt += `\n\n═══════════════════════════════════════════
+MULTI-PART MODEL: "${getProjectTitle()}"
+═══════════════════════════════════════════
+This model has ${template.parts?.length || 0} parts: ${template.parts?.map(p => p.name).join(', ')}.
+${activePartObj ? `You are currently editing the "${activePartObj.name}" part. Return ONLY the new source for this part — no global params, no other parts.` : 'No specific part is selected. Describe what you want to change and which part(s) to modify.'}
+
+GLOBAL PARAMETERS (shared across all parts):
+${(template.global_parameters || []).map(p => `  ${p.key} = ${currentState.globalParams[p.key] ?? p.default}  // [${p.type}, ${p.label}, ${p.min ?? ''}, ${p.max ?? ''}, ${p.step ?? ''}]`).join('\n') || '  (none)'}
+
+ALL PARTS SOURCE:
+${(template.parts || []).map(part => {
+    const isActive = part.id === activePart;
+    const partParams = (part.ui_parameters || []).map(p => `  ${p.key} = ${currentState.partParams[part.id]?.[p.key] ?? p.default}`).join('\n');
+    return `--- Part: ${part.name}${isActive ? ' ★ ACTIVE — EDIT THIS PART' : ''} ---\n${partParams ? `Part params:\n${partParams}\n` : ''}Source:\n${part.source || ''}`;
+}).join('\n\n')}`;
+    } else {
+        systemPrompt += `\n\nCurrent OpenSCAD Source Code:\n-------------------------------------------\n${currentSource}\n-------------------------------------------`;
+    }
 
     let responseText = '';
 
@@ -5534,56 +6769,80 @@ RULES:
         responseText = result.choices[0].message.content;
     }
 
-    let data;
-    try {
-        data = JSON.parse(responseText);
-    } catch (e) {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            data = JSON.parse(jsonMatch[0]);
-        } else {
-            throw new Error('Could not extract JSON content from AI response.');
-        }
-    }
+    let data = parseLLMResponseFallback(responseText);
 
     if (!data.openscad_code) {
         throw new Error('AI response did not contain openscad_code.');
     }
 
-    appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`, prePromptState);
-    applyNewOpenSCADSource(data.openscad_code);
+    // Diff Calculation
+    const oldUiParams = prePromptState ? (prePromptState.ui_parameters || []) : [];
+    const newParams = parseParametersFromSource(data.openscad_code);
+    const addedCount = newParams.filter(p => !oldUiParams.find(old => old.key === p.key)).length;
+    const removedCount = oldUiParams.filter(o => !newParams.find(p => p.key === o.key)).length;
+
+    appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`, prePromptState, {
+        provider,
+        modelName: getModelDisplayName(provider, customModel),
+        changes: data.changes || 'Geometry updated.',
+        paramsAdded: addedCount,
+        paramsRemoved: removedCount,
+        pendingCode: data.openscad_code,
+        applied: false
+    });
 }
 
-function applyNewOpenSCADSource(newSource) {
+function applyNewOpenSCADSource(rawSource) {
     if (!currentState.template) return;
-    
-    // Disable obsolete local preview to ensure slider changes compile via worker
-    delete currentState.template.localPreview;
-    
-    // 1. Write to code editor textarea
-    const codeEditor = document.getElementById('code-editor');
-    if (codeEditor) codeEditor.value = newSource;
-    
-    currentState.template.source = newSource;
-    
-    // 2. Extract new parameters
-    const newParams = parseParametersFromSource(newSource);
-    currentState.template.ui_parameters = newParams;
-    
-    // 3. Preserve variable values where keys match
-    const oldParams = { ...currentState.params };
-    currentState.params = {};
-    newParams.forEach(p => {
-        currentState.params[p.key] = oldParams[p.key] ?? p.default;
-    });
-    
-    // 4. Update configurator UI sliders
-    renderParameters();
-    
-    // 5. Trigger WebWorker background compilation
-    triggerGeneration(true);
-    
-    console.log('WASM compilation and WebGL viewport re-rendering triggered.');
+
+    const newSource = sanitizeAndFormatOpenSCAD(rawSource);
+
+    if (isMultiPart() && currentState.activePart) {
+        // Multi-part: write to the active part only
+        const part = currentState.template.parts?.find(p => p.id === currentState.activePart);
+        if (!part) return;
+
+        part.source = newSource;
+        delete part.localPreview; // disable fast preview after AI edit
+
+        // Update part params from newly detected parameter annotations
+        const newPartParams = parseParametersFromSource(newSource);
+        if (newPartParams.length) {
+            const oldVals = { ...(currentState.partParams[part.id] || {}) };
+            part.ui_parameters = newPartParams;
+            currentState.partParams[part.id] = {};
+            newPartParams.forEach(p => {
+                currentState.partParams[part.id][p.key] = oldVals[p.key] ?? p.default;
+            });
+        }
+
+        // Sync editor if script tab is visible
+        if (currentState.editMode === 'code') syncCodeEditorToActivePart();
+        renderParameters();
+        triggerGeneration(true);
+    } else if (!isMultiPart()) {
+        // Single-part: existing behavior
+        delete currentState.template.localPreview;
+
+        const codeEditor = document.getElementById('code-editor');
+        if (codeEditor) codeEditor.value = newSource;
+
+        currentState.template.source = newSource;
+
+        const newParams = parseParametersFromSource(newSource);
+        currentState.template.ui_parameters = newParams;
+
+        const oldParams = { ...currentState.params };
+        currentState.params = {};
+        newParams.forEach(p => {
+            currentState.params[p.key] = oldParams[p.key] ?? p.default;
+        });
+
+        renderParameters();
+        triggerGeneration(true);
+    }
+
+    console.log('[ParaForm] AI code applied and compilation triggered.');
 }
 
 // ── AI Settings Modal Management ────────────────
@@ -5625,7 +6884,7 @@ function initAISettingsControls() {
         keyToggle.onclick = () => {
             const isPassword = keyInput.type === 'password';
             keyInput.type = isPassword ? 'text' : 'password';
-            keyToggle.innerText = isPassword ? '🔒' : '👁️';
+            keyToggle.innerHTML = isPassword ? '<span class="material-symbols-outlined">lock</span>' : '<span class="material-symbols-outlined">visibility</span>';
         };
     }
     

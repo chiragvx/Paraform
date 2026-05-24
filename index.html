@@ -8,13 +8,14 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet" />
 </head>
 <body class="dark-theme">
     <div id="app-loader">
         <div class="loader-content">
             <div class="loader-logo">
-                <span class="logo-icon">⬢</span>
+                <span class="material-symbols-outlined logo-icon">hexagon</span>
                 <span class="logo-text">ParaForm</span>
             </div>
             <div class="loader-status">
@@ -29,7 +30,7 @@
     <nav id="global-nav" class="glass">
         <div class="nav-container">
             <a href="#/" class="logo">
-                <span class="logo-icon">⬢</span>
+                <span class="material-symbols-outlined logo-icon">hexagon</span>
                 <span class="logo-text">ParaForm</span>
                 <span id="editor-badge" class="badge mini hidden">Studio</span>
             </a>
@@ -55,7 +56,7 @@
         <section id="view-auth" class="view hidden">
             <div class="auth-container">
                 <div class="auth-header">
-                    <span class="logo-icon" style="font-size:32px;color:var(--accent-color)">⬢</span>
+                    <span class="material-symbols-outlined logo-icon" style="font-size:32px;color:var(--accent-color)">hexagon</span>
                     <h2>Welcome to ParaForm</h2>
                     <p>Create an account to save your designs and access the full library.</p>
                 </div>
@@ -240,7 +241,7 @@
                         <div class="option-group">
                             <label>Upload .scad File</label>
                             <div id="modal-drop-zone" class="drop-zone mini">
-                                <span class="icon">📁</span>
+                                <span class="material-symbols-outlined icon">folder_open</span>
                                 <p>Drag & Drop or <span>Browse</span></p>
                                 <input type="file" id="modal-file-input" accept=".scad" hidden>
                             </div>
@@ -289,14 +290,46 @@
                         <button id="view-reset" class="vp-ctrl-btn" title="Reset Camera">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                         </button>
-                        <button id="view-wireframe" class="vp-ctrl-btn" title="Toggle Wireframe">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><path d="M2 8.5l10 7 10-7"/></svg>
+                    </div>
+
+                    <!-- Display Mode Selector (top-right) -->
+                    <div class="display-mode-wrap" id="display-mode-wrap">
+                        <button class="dm-toggle" id="dm-toggle" title="Display Mode">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/></svg>
+                            <span id="dm-current">Shaded</span>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </button>
+                        <div class="dm-dropdown hidden" id="dm-dropdown">
+                            <button class="dm-opt active" data-mode="shaded">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                Shaded
+                            </button>
+                            <button class="dm-opt" data-mode="shaded-edges">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                Shaded + Edges
+                            </button>
+                            <button class="dm-opt" data-mode="wireframe">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                Wireframe
+                            </button>
+                            <button class="dm-opt" data-mode="wireframe-edges">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                Wireframe + Edges
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Gizmo Details Panel (hidden, used by JS) -->
                     <div id="gizmo-details-panel" class="gizmo-details-panel hidden">
                         <div id="gizmo-panel-body" class="panel-body-mini"></div>
+                    </div>
+
+                    <!-- Fusion-Style AI Timeline Bar -->
+                    <div id="ai-timeline-bar" class="ai-timeline-bar hidden">
+                        <div class="timeline-track" id="ai-timeline-track">
+                            <!-- Nodes injected by JS -->
+                        </div>
+                        <span class="timeline-end-arrow">›</span>
                     </div>
                 </div>
 
@@ -309,7 +342,7 @@
             <div id="create-selection" class="create-selection-overlay hidden">
                 <div class="selection-modal">
                     <div class="selection-header">
-                        <span class="logo-icon" style="font-size:28px;color:var(--accent-color)">⬢</span>
+                        <span class="material-symbols-outlined logo-icon" style="font-size:28px;color:var(--accent-color)">hexagon</span>
                         <h2>Start a new project</h2>
                         <p>Choose how you want to begin</p>
                     </div>
@@ -347,7 +380,7 @@
                         <div class="form-group">
                             <label>SCAD Source File</label>
                             <div id="drop-zone" class="drop-zone">
-                                <span class="icon">📁</span>
+                                <span class="material-symbols-outlined icon">folder_open</span>
                                 <p>Drag & Drop .scad file or <span>Browse</span></p>
                                 <input type="file" id="scad-file-input" accept=".scad" hidden>
                             </div>
@@ -412,6 +445,10 @@
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
                     Parameters
                 </button>
+                <button class="tab-btn" data-tab="layers">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Layers
+                </button>
                 <button class="tab-btn" data-tab="code">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     Script
@@ -425,6 +462,10 @@
 
         <div id="tab-content-params" class="tab-content">
             <div id="parameters-container"></div>
+        </div>
+
+        <div id="tab-content-layers" class="tab-content hidden">
+            <!-- Rendered by JS -->
         </div>
 
         <div id="tab-content-code" class="tab-content hidden">
@@ -443,15 +484,15 @@
 
         <div id="tab-content-ai" class="tab-content hidden">
             <div class="ai-chat-wrapper" style="display: flex; flex-direction: column; height: 100%;">
-                
+
                 <!-- Chat History / Messages -->
-                <div id="ai-chat-history" class="ai-chat-history" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px;">
+                <div id="ai-chat-history" class="ai-chat-history" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px;">
                     <!-- Messages will be injected here by JS -->
                 </div>
 
                 <!-- Input Area (Sticky Bottom) -->
                 <div class="ai-chat-input-area" style="padding: 12px; background: var(--surface-elevated); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
-                    
+
                     <!-- Chips section -->
                     <div class="ai-chips-scroll" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;">
                         <button class="ai-chip" data-prompt="Add 4mm corner mounting holes">Mounting Holes</button>
@@ -460,10 +501,31 @@
                         <button class="ai-chip" data-prompt="Engrave 'ParaForm' text on the top surface">Emboss Text</button>
                     </div>
 
-                    <div class="ai-input-box" style="display: flex; gap: 8px; align-items: flex-end;">
-                        <button id="ai-clear-chat-btn" class="icon-btn" style="height: 42px; width: 42px; border-radius: var(--radius-lg); flex-shrink: 0;" title="Start New Conversation">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <div class="ai-input-box" style="display: flex; gap: 8px; align-items: flex-end; position: relative;">
+
+                        <!-- Past conversations panel (pops up above) -->
+                        <div class="ai-conv-panel-wrap" style="flex-shrink: 0;">
+                            <!-- History button -->
+                            <button id="ai-history-btn" class="icon-btn" style="height: 36px; width: 36px; border-radius: var(--radius-lg);" title="Past Conversations">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
+                            </button>
+                            <!-- Dropdown panel -->
+                            <div id="ai-conv-panel" class="ai-conv-panel hidden">
+                                <div class="ai-conv-panel-header">
+                                    <span>Past Conversations</span>
+                                    <button id="ai-conv-close" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;line-height:1;font-size:16px;">×</button>
+                                </div>
+                                <div id="ai-conv-list" class="ai-conv-list">
+                                    <!-- Injected by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Conversation button -->
+                        <button id="ai-clear-chat-btn" class="icon-btn" style="height: 36px; width: 36px; border-radius: var(--radius-lg); flex-shrink: 0;" title="New Conversation">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         </button>
+
                         <textarea id="ai-prompt-input" spellcheck="false" class="glass-input" style="flex: 1; height: 42px; min-height: 42px; max-height: 120px; resize: none; padding: 10px 12px; border-radius: var(--radius-lg); font-family: var(--font-main);" placeholder="Message AI Assistant..."></textarea>
                         <button id="ai-generate-btn" class="primary-btn" style="height: 42px; width: 42px; border-radius: var(--radius-lg); padding: 0; flex-shrink: 0;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
@@ -551,14 +613,14 @@
                     Material Color
                 </h5>
                 <div class="color-swatches">
-                    <button class="swatch active" data-color="#6366f1" title="Indigo" style="background-color:#6366f1"></button>
+                    <button class="swatch active" data-color="#c8bdb2" title="Clay" style="background-color:#c8bdb2"></button>
                     <button class="swatch" data-color="#ffffff" title="White" style="background-color:#ffffff"></button>
-                    <button class="swatch" data-color="#ff5500" title="Orange" style="background-color:#ff5500"></button>
+                    <button class="swatch" data-color="#8899aa" title="Steel" style="background-color:#8899aa"></button>
                     <button class="swatch" data-color="#1a1a1a" title="Black" style="background-color:#1a1a1a;border:1px solid #444"></button>
                     <button class="swatch" data-color="#22c55e" title="Green" style="background-color:#22c55e"></button>
                     <button class="swatch" data-color="#3b82f6" title="Blue" style="background-color:#3b82f6"></button>
                     <button class="swatch" data-color="#ec4899" title="Pink" style="background-color:#ec4899"></button>
-                    <button class="swatch" data-color="#d4af37" title="Gold" style="background-color:#d4af37"></button>
+                    <button class="swatch" data-color="#c07840" title="Amber" style="background-color:#c07840"></button>
                 </div>
                 <div class="info-row" style="margin-top:8px">
                     <span class="info-label">Surface Finish</span>
@@ -660,7 +722,7 @@
     <div id="ai-settings-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>🤖 AI Assistant Settings</h3>
+                <h3><span class="material-symbols-outlined">smart_toy</span> AI Assistant Settings</h3>
                 <button class="close-modal" id="ai-settings-close">×</button>
             </div>
             <div class="modal-body">
@@ -695,7 +757,7 @@
                         <div class="ai-key-input-container">
                             <input type="password" id="ai-key-input" placeholder="Enter your provider API Key">
                             <button id="ai-key-toggle-visibility" class="ai-toggle-visibility-btn" type="button" title="Toggle Visibility">
-                                👁️
+                                <span class="material-symbols-outlined">visibility</span>
                             </button>
                         </div>
                         <p class="ai-settings-help">
