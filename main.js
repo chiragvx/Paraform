@@ -6,10 +6,192 @@ import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils';
 import { supabase } from './lib/supabase';
-import { fetchCatalog, fetchScadSource, saveProject, listProjects } from './lib/catalog.js';
+import { fetchCatalog, fetchScadSource, saveProject, listProjects,
+         getAssetManifest, getAssetSource, resolveDependencies, buildWorkerFiles } from './lib/catalog.js';
+import { lint, formatErrorsForLLM } from './lib/validators/linter.js';
+import { scoreboard, SCORE_ORDER, SCORE_WEIGHTS } from './lib/validators/scoreboard.js';
+import { runExactClashTests } from './lib/validators/clash.js';
+import { runToolAccessTests } from './lib/validators/tool_access.js';
 import { Evaluator, Operation, Brush, ADDITION, SUBTRACTION } from 'three-bvh-csg';
 
 const csgEvaluator = new Evaluator();
+
+// ============================================================
+// SETTINGS STORE
+// ============================================================
+const SETTINGS_KEY = 'paraform_app_settings';
+
+const DEFAULT_KEYBINDINGS = {
+    undo:            { key: 'z', ctrl: true,  shift: false, alt: false, label: 'Undo' },
+    redo:            { key: 'y', ctrl: true,  shift: false, alt: false, label: 'Redo' },
+    compile:         { key: 's', ctrl: true,  shift: false, alt: false, label: 'Compile & Run' },
+    resetCamera:     { key: 'f', ctrl: false, shift: false, alt: false, label: 'Reset Camera' },
+    toolSelect:      { key: 'v', ctrl: false, shift: false, alt: false, label: 'Tool: Select' },
+    toolMove:        { key: 'g', ctrl: false, shift: false, alt: false, label: 'Tool: Move' },
+    toolRotate:      { key: 'r', ctrl: false, shift: false, alt: false, label: 'Tool: Rotate' },
+    toolScale:       { key: 's', ctrl: false, shift: false, alt: false, label: 'Tool: Scale' },
+    openSettings:    { key: ',', ctrl: true,  shift: false, alt: false, label: 'Open Settings' },
+    toggleWireframe: { key: 'w', ctrl: false, shift: false, alt: false, label: 'Toggle Wireframe' },
+    exportModel:     { key: 'e', ctrl: true,  shift: false, alt: false, label: 'Export Model' },
+};
+
+const DEFAULT_SETTINGS = {
+    preferences: { unitSystem: 'mm', autoSave: 'off', startup: 'library' },
+    viewport:    { defaultDisplayMode: 'shaded', background: 'default', showGrid: true, gridSize: 10, showAxes: true, fov: 75 },
+    camera:      { orbitSpeed: 1.0, zoomSpeed: 1.0, panSpeed: 1.0, dampingFactor: 0.05, invertY: false, autoFitOnCompile: true },
+    performance: { compileQuality: 'preview', autoRecompileDelay: 500, workerThreads: 'auto' },
+    graphics:    { antialias: true, edgeThickness: 1, pixelRatio: 'device' },
+    measurement: { unit: 'mm', decimalPlaces: 2 },
+    export:      { defaultFormat: 'stl', stlType: 'binary', exportQuality: 'high', filenamePattern: '{model}' },
+    diagnostics: { showFPS: false, showPolygonCount: true, showCompileTime: true },
+    keybindings: null, // populated after DEFAULT_KEYBINDINGS is defined
+};
+DEFAULT_SETTINGS.keybindings = { ...DEFAULT_KEYBINDINGS };
+
+function _deepMerge(target, source) {
+    const result = { ...target };
+    for (const k of Object.keys(source)) {
+        if (source[k] !== null && typeof source[k] === 'object' && !Array.isArray(source[k])) {
+            result[k] = _deepMerge(target[k] || {}, source[k]);
+        } else {
+            result[k] = source[k];
+        }
+    }
+    return result;
+}
+
+function getSettings() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        return _deepMerge(DEFAULT_SETTINGS, stored);
+    } catch { return { ...DEFAULT_SETTINGS, keybindings: { ...DEFAULT_KEYBINDINGS } }; }
+}
+
+function saveSettings(patch) {
+    const updated = _deepMerge(getSettings(), patch);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+    applySettings(updated);
+    return updated;
+}
+
+const BG_COLORS = { default: 0x0d0b09, black: 0x000000, gray: 0x1a1a1a, blue: 0x080d14 };
+
+function applySettings(s) {
+    if (mainViewport) {
+        const c = mainViewport.controls;
+        const cam = mainViewport.camera;
+        if (c) {
+            c.rotateSpeed   = s.camera.orbitSpeed * (s.camera.invertY ? -1 : 1);
+            c.zoomSpeed     = s.camera.zoomSpeed;
+            c.panSpeed      = s.camera.panSpeed;
+            c.dampingFactor = s.camera.dampingFactor;
+        }
+        if (cam && cam.fov !== s.viewport.fov) {
+            cam.fov = s.viewport.fov;
+            cam.updateProjectionMatrix();
+        }
+        if (mainViewport.grid)  mainViewport.grid.visible  = s.viewport.showGrid;
+        if (mainViewport.axes)  mainViewport.axes.visible  = s.viewport.showAxes;
+        if (mainViewport.scene) mainViewport.scene.background = new THREE.Color(BG_COLORS[s.viewport.background] ?? 0x0d0b09);
+        if (mainViewport.renderer) {
+            const dpr = s.graphics.pixelRatio === 'device'
+                ? Math.min(window.devicePixelRatio, 2)
+                : parseFloat(s.graphics.pixelRatio);
+            mainViewport.renderer.setPixelRatio(dpr);
+        }
+    }
+    // Diagnostics visibility
+    const polyRow = document.querySelector('.diag-row-secondary');
+    if (polyRow) polyRow.style.display = s.diagnostics.showPolygonCount ? '' : 'none';
+    const renderTimeEl = document.getElementById('render-time');
+    if (renderTimeEl) renderTimeEl.style.display = s.diagnostics.showCompileTime ? '' : 'none';
+    // FPS counter
+    let fpsEl = document.getElementById('fps-counter');
+    if (s.diagnostics.showFPS && !fpsEl) {
+        fpsEl = document.createElement('span');
+        fpsEl.id = 'fps-counter';
+        fpsEl.className = 'mono diag-time';
+        fpsEl.style.cssText = 'font-size:10px;color:var(--text-muted);margin-left:8px';
+        fpsEl.innerText = '— fps';
+        const diagRow = document.querySelector('.diagnostics-bar .diag-row');
+        if (diagRow) diagRow.appendChild(fpsEl);
+    } else if (!s.diagnostics.showFPS && fpsEl) {
+        fpsEl.remove();
+    }
+    // Rebuild keybindings dispatch
+    buildKeyDispatch(s.keybindings);
+}
+
+// --- Auto-save timer ---
+let _autoSaveTimer = null;
+function restartAutoSave() {
+    clearInterval(_autoSaveTimer);
+    const interval = { '30s': 30000, '1min': 60000, '5min': 300000 }[getSettings().preferences.autoSave];
+    if (!interval) return;
+    _autoSaveTimer = setInterval(() => {
+        if (!currentState.template) return;
+        const source = document.getElementById('code-editor')?.value || currentState.template.source || '';
+        saveProject({ id: currentState.template.id, title: currentState.projectTitle || currentState.template.title, templateId: currentState.template.id, source, params: { ...currentState.params } });
+    }, interval);
+}
+
+// --- FPS tracking ---
+let _fpsFrames = 0, _fpsLast = performance.now();
+function tickFPS() {
+    _fpsFrames++;
+    const now = performance.now();
+    if (now - _fpsLast >= 1000) {
+        const el = document.getElementById('fps-counter');
+        if (el) el.innerText = `${_fpsFrames} fps`;
+        _fpsFrames = 0;
+        _fpsLast = now;
+    }
+}
+
+// --- Key dispatch ---
+let keyDispatch = {};
+let isCapturingKeybinding = false;
+
+function comboStr(key, ctrl, shift, alt) {
+    if (!key) return '';
+    const parts = [];
+    if (ctrl)  parts.push('ctrl');
+    if (shift) parts.push('shift');
+    if (alt)   parts.push('alt');
+    parts.push(key.toLowerCase());
+    return parts.join('+');
+}
+
+function buildKeyDispatch(bindings) {
+    keyDispatch = {};
+    for (const [id, b] of Object.entries(bindings)) {
+        if (!b?.key) continue;
+        keyDispatch[comboStr(b.key, b.ctrl, b.shift, b.alt)] = id;
+    }
+}
+
+// Initialise dispatch from saved settings (before mainViewport exists)
+buildKeyDispatch(getSettings().keybindings);
+
+// --- Auto-fit camera after compile ---
+function fitCameraToMesh() {
+    if (!mainViewport?.currentMesh) return;
+    const box = new THREE.Box3().setFromObject(mainViewport.currentMesh);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = mainViewport.camera.fov * (Math.PI / 180);
+    const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.6;
+    const dir = mainViewport.camera.position.clone().sub(center).normalize();
+    mainViewport.camera.position.copy(center.clone().add(dir.multiplyScalar(dist)));
+    mainViewport.controls.target.copy(center);
+    mainViewport.controls.update();
+}
+
+window.addEventListener('render-complete', ({ detail }) => {
+    if (detail.isFinal && getSettings().camera.autoFitOnCompile) fitCameraToMesh();
+});
 
 // --- APP STATE ---
 let currentState = {
@@ -22,7 +204,7 @@ let currentState = {
     wireframe: false,
     view: 'landing',
     isMovingSlider: false,
-    editMode: 'params', // 'params' or 'code'
+    editMode: 'layers', // 'layers' or 'code' (left panel); ai lives in right panel
     projectTitle: 'Untitled Project',
     activeGizmoTool: 'select', // 'select', 'translate', 'rotate', 'scale'
     isSelected: true, // If the active model is highlighted / selected
@@ -44,6 +226,10 @@ let currentState = {
     partParams: {},         // { [partId]: { [key]: value } }
     partVisibility: {},     // { [partId]: boolean }
     partMeshes: {},         // { [partId]: THREE.Mesh } inside the partGroup
+    partCollisions: new Set(), // partIds that overlap ≥1 other part after last render
+    // Scene components — imported assets as independent first-class scene objects
+    sceneComponents: [],      // [{ id, assetId, mode, name, color, source }]
+    componentVisible: {},     // { [componentId]: boolean }
 };
 
 let undoHistory = [];
@@ -52,6 +238,13 @@ let isUndoingRedoing = false;
 
 function isMultiPart() {
     return !!(currentState.template?.parts?.length);
+}
+
+function updateSliderFill(range) {
+    const min = parseFloat(range.min) || 0;
+    const max = parseFloat(range.max) || 100;
+    const pct = ((parseFloat(range.value) - min) / (max - min)) * 100;
+    range.style.setProperty('--slider-fill', pct.toFixed(1) + '%');
 }
 
 // Format a single parameter as an OpenSCAD variable declaration
@@ -2098,96 +2291,133 @@ case("rpi3", cfg, mode);
 `
     },
     // ── Multi-Part Demo Template ─────────────────────────────────────────────
+    // This template demonstrates the CORRECT pattern for multi-part assemblies:
+    //   • Shared dimensions live in global_parameters so all parts reference them.
+    //   • Every part except the anchor uses translate() to position itself in the
+    //     shared assembly coordinate space (SCAD: X=right, Y=depth, Z=up).
+    //   • No two parts overlap at default parameter values.
     {
         id: 'shelf_bracket_v1',
         title: 'Shelf Bracket Assembly',
-        description: 'A 3-part wall shelf bracket: wall plate, horizontal arm, and diagonal brace. Each part prints flat and bolts together.',
+        description: 'A 3-part wall shelf bracket. Demonstrates multi-part assembly with shared global dimensions and collision-free positioning.',
         global_parameters: [
-            { key: 'material_thickness', label: 'Material Thickness', type: 'number', min: 3, max: 8, step: 0.5, default: 5, unit: 'mm' },
-            { key: 'bolt_hole_d', label: 'Bolt Hole Diameter', type: 'number', min: 2, max: 6, step: 0.5, default: 4, unit: 'mm' },
-            { key: 'fillet_r', label: 'Corner Fillet', type: 'number', min: 0, max: 5, step: 0.5, default: 2, unit: 'mm' },
+            { key: 'plate_w',           label: 'Plate Width',         type: 'number', min: 40,  max: 150, step: 1,   default: 80,  unit: 'mm' },
+            { key: 'plate_h',           label: 'Plate Height',        type: 'number', min: 60,  max: 200, step: 1,   default: 100, unit: 'mm' },
+            { key: 'arm_length',        label: 'Arm Length',          type: 'number', min: 60,  max: 250, step: 5,   default: 120, unit: 'mm' },
+            { key: 'material_thickness',label: 'Material Thickness',  type: 'number', min: 3,   max: 10,  step: 0.5, default: 5,   unit: 'mm' },
+            { key: 'bolt_hole_d',       label: 'Bolt Hole Diameter',  type: 'number', min: 2,   max: 6,   step: 0.5, default: 4,   unit: 'mm' },
         ],
         parts: [
+            // ── Part 1: Wall Plate ───────────────────────────────────────────
+            // Anchor part — sits at origin. ALL other parts are translated
+            // relative to this part's bounding box edges.
+            // Occupies: X=[0..plate_w], Y=[0..material_thickness], Z=[0..plate_h]
             {
                 id: 'wall_plate',
                 name: 'Wall Plate',
                 color: '#3b82f6',
                 ui_parameters: [
-                    { key: 'plate_w', label: 'Width', type: 'number', min: 40, max: 120, step: 1, default: 80, unit: 'mm' },
-                    { key: 'plate_h', label: 'Height', type: 'number', min: 60, max: 150, step: 1, default: 100, unit: 'mm' },
-                    { key: 'screw_count', label: 'Wall Screws', type: 'integer', min: 2, max: 4, step: 1, default: 3 },
+                    { key: 'screw_count', label: 'Wall Screws', type: 'integer', min: 2, max: 6, step: 1, default: 4 },
                 ],
-                source: `// Wall Plate — mounts to the wall
-// Globals: material_thickness, bolt_hole_d
-// Locals:  plate_w, plate_h, screw_count
+                source: `// Wall Plate — anchor part at origin (no translate needed).
+// Assembly space: X=[0..plate_w], Y=[0..material_thickness], Z=[0..plate_h]
+// Globals used: plate_w, plate_h, material_thickness, bolt_hole_d
+// Locals:  screw_count
 difference() {
     cube([plate_w, material_thickness, plate_h]);
-    // Wall screw holes evenly spaced
+    // Wall mounting screws — evenly spaced, upper 60% of plate height
     for (i = [1 : 1 : screw_count]) {
         x = plate_w * i / (screw_count + 1);
-        translate([x, -1, plate_h * 0.25]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
-        translate([x, -1, plate_h * 0.75]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+        translate([x, -1, plate_h * 0.4 + plate_h * 0.5 * i / (screw_count + 1)])
+            rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
     }
-    // Arm bolt holes (2x at bottom)
-    translate([plate_w*0.25, -1, material_thickness*2]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
-    translate([plate_w*0.75, -1, material_thickness*2]) rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    // Arm bolt holes — 2x at Z = material_thickness*2 (lower section)
+    translate([plate_w*0.3, -1, material_thickness*2])
+        rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    translate([plate_w*0.7, -1, material_thickness*2])
+        rotate([-90,0,0]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
 }`,
-                localPreview: (globalParams, partParams) => {
-                    const { material_thickness } = globalParams;
-                    const { plate_w = 80, plate_h = 100 } = partParams;
-                    return new THREE.BoxGeometry(plate_w, material_thickness, plate_h);
+                localPreview: (globalParams, _partParams) => {
+                    const { material_thickness = 5, plate_w = 80, plate_h = 100 } = globalParams;
+                    const g = new THREE.BoxGeometry(plate_w, material_thickness, plate_h);
+                    g.translate(plate_w / 2, material_thickness / 2, plate_h / 2);
+                    return g;
                 }
             },
+
+            // ── Part 2: Horizontal Arm ───────────────────────────────────────
+            // The shelf surface. Translated so it sits on TOP of the wall plate
+            // and extends outward in +Y. Touches wall plate at Y=material_thickness
+            // and at Z=plate_h; does NOT overlap.
+            // Occupies: X=[0..plate_w], Y=[t..t+arm_length], Z=[plate_h-t..plate_h]
             {
                 id: 'arm',
                 name: 'Horizontal Arm',
                 color: '#22c55e',
-                ui_parameters: [
-                    { key: 'arm_length', label: 'Arm Length', type: 'number', min: 60, max: 200, step: 5, default: 120, unit: 'mm' },
-                    { key: 'arm_width', label: 'Arm Width', type: 'number', min: 30, max: 80, step: 1, default: 50, unit: 'mm' },
-                ],
-                source: `// Horizontal Arm — extends from wall plate
-// Globals: material_thickness, bolt_hole_d
-// Locals:  arm_length, arm_width
+                ui_parameters: [],  // all dims come from global_parameters
+                source: `// Horizontal Arm — shelf surface, positioned at top of wall plate.
+// ASSEMBLY TRANSLATE: starts where wall plate ends in Y, at top of plate in Z.
+// Touches wall plate edges but does NOT overlap (shared face only).
+// Globals used: plate_w, plate_h, arm_length, material_thickness, bolt_hole_d
+translate([0, material_thickness, plate_h - material_thickness])
 difference() {
-    cube([arm_length, arm_width, material_thickness]);
-    // Wall-side bolt holes
-    translate([material_thickness*2, arm_width*0.25, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
-    translate([material_thickness*2, arm_width*0.75, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
-    // Brace bolt holes (near tip)
-    translate([arm_length - material_thickness*3, arm_width*0.5, -1]) cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    cube([plate_w, arm_length, material_thickness]);
+    // Arm-to-plate bolt holes (at the wall-attachment end)
+    translate([plate_w*0.3, material_thickness*1.5, -1])
+        cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
+    translate([plate_w*0.7, material_thickness*1.5, -1])
+        cylinder(d=bolt_hole_d, h=material_thickness+2, $fn=16);
 }`,
-                localPreview: (globalParams, partParams) => {
-                    const { material_thickness } = globalParams;
-                    const { arm_length = 120, arm_width = 50 } = partParams;
-                    const g = new THREE.BoxGeometry(arm_length, arm_width, material_thickness);
-                    g.translate(arm_length / 2, 0, 0);
+                localPreview: (globalParams, _partParams) => {
+                    const { material_thickness = 5, plate_w = 80, plate_h = 100, arm_length = 120 } = globalParams;
+                    const g = new THREE.BoxGeometry(plate_w, arm_length, material_thickness);
+                    // Centre the BoxGeometry at its SCAD mid-point
+                    g.translate(plate_w / 2, material_thickness + arm_length / 2, plate_h - material_thickness / 2);
                     return g;
                 }
             },
+
+            // ── Part 3: Diagonal Brace ───────────────────────────────────────
+            // Triangular gusset supporting the arm from below.
+            // Uses hull() of 3 thin bars — no rotate/polygon complexity.
+            // Vertices of triangle (in YZ plane, extruded in X by brace_width):
+            //   (Y=t, Z=0)  →  (Y=arm_length-t, Z=0)  →  (Y=t, Z=plate_h-t)
+            // Occupies: approx Y=[t..arm_length], Z=[0..plate_h-t]
+            // Touches wall plate at Y=t, touches arm at Z=plate_h-t — no overlap.
             {
                 id: 'brace',
                 name: 'Diagonal Brace',
                 color: '#f97316',
                 ui_parameters: [
-                    { key: 'brace_width', label: 'Brace Width', type: 'number', min: 20, max: 60, step: 1, default: 35, unit: 'mm' },
+                    { key: 'brace_width', label: 'Brace Thickness (X)', type: 'number', min: 10, max: 60, step: 1, default: 25, unit: 'mm' },
                 ],
-                source: `// Diagonal Brace — triangular support
-// Globals: material_thickness, bolt_hole_d
+                source: `// Diagonal Brace — triangular gusset, positioned between wall plate and arm.
+// ASSEMBLY TRANSLATE: each corner is placed with explicit coordinates so the
+// brace fits exactly in the gap without overlapping wall plate or arm.
+// Globals used: plate_w, plate_h, arm_length, material_thickness
 // Locals:  brace_width
-linear_extrude(height=material_thickness)
-    polygon(points=[[0,0],[120,0],[0,100]]);`,
+brace_x = (plate_w - brace_width) / 2;
+hull() {
+    // Corner A: at wall, ground level  (Y=material_thickness, Z=0)
+    translate([brace_x, material_thickness, 0])
+        cube([brace_width, 1, 1]);
+    // Corner B: at arm tip, ground level  (Y=arm_length-t, Z=0)
+    translate([brace_x, arm_length - material_thickness, 0])
+        cube([brace_width, 1, 1]);
+    // Corner C: at wall, just below arm  (Y=material_thickness, Z=plate_h-t)
+    translate([brace_x, material_thickness, plate_h - material_thickness - 1])
+        cube([brace_width, 1, 1]);
+}`,
                 localPreview: (globalParams, partParams) => {
-                    const { material_thickness } = globalParams;
-                    const { brace_width = 35 } = partParams;
-                    const geoms = [];
-                    const bar1 = new THREE.BoxGeometry(material_thickness, brace_width, 100);
-                    bar1.translate(0, 0, 50);
-                    geoms.push(bar1);
-                    const bar2 = new THREE.BoxGeometry(120, brace_width, material_thickness);
-                    bar2.translate(60, 0, 0);
-                    geoms.push(bar2);
-                    return BufferGeometryUtils.mergeGeometries(geoms);
+                    const { material_thickness = 5, plate_w = 80, plate_h = 100, arm_length = 120 } = globalParams;
+                    const { brace_width = 25 } = partParams;
+                    // Approximate bounding box of the triangular brace
+                    const brace_x = (plate_w - brace_width) / 2;
+                    const g = new THREE.BoxGeometry(brace_width, arm_length - material_thickness, (plate_h - material_thickness) * 0.6);
+                    g.translate(brace_x + brace_width / 2,
+                                material_thickness + (arm_length - material_thickness) / 2,
+                                (plate_h - material_thickness) * 0.3);
+                    return g;
                 }
             }
         ]
@@ -2311,6 +2541,10 @@ async function initApp() {
         const editorBadge = document.getElementById('editor-badge');
         const navLinks = document.querySelector('.nav-links');
         const navActions = document.querySelector('.nav-actions');
+        // Ribbon targets (used in editor mode instead of nav-links/nav-actions)
+        const ribbonMenus = document.querySelector('.ribbon-nav-menus');
+        const ribbonTitle = document.querySelector('.ribbon-nav-title');
+        const ribbonActions = document.querySelector('.ribbon-nav-actions');
 
         if (closeEditorMenusHandler) {
             document.removeEventListener('click', closeEditorMenusHandler);
@@ -2318,71 +2552,71 @@ async function initApp() {
         }
 
         if (isEditor) {
-            // --- STUDIO NAVBAR VARIANT ---
-            if (editorBadge) {
-                editorBadge.innerText = 'Studio';
-                editorBadge.className = 'badge mini success'; // green success badge
-                editorBadge.classList.remove('hidden');
-            }
+            // --- STUDIO NAVBAR VARIANT (renders into ribbon) ---
 
-            if (navLinks) {
-                navLinks.classList.remove('hidden');
-                navLinks.innerHTML = `
-                    <div class="editor-nav-composer">
-                        <input id="nav-project-title" class="editor-project-name" type="text" placeholder="Untitled Project">
-                        <div class="menu-bar">
-                        <div class="menu-item">
-                            <button class="menu-trigger">File ▾</button>
-                            <div class="dropdown-content">
-                                <a href="#" id="menu-open-model"><span class="material-symbols-outlined">folder_open</span> Open Model</a>
-                                <a href="#" id="menu-save-design"><span class="material-symbols-outlined">save</span> Save Design</a>
-                                <a href="#" id="menu-export-stl"><span class="material-symbols-outlined">upload_file</span> Export…</a>
-                                <hr class="menu-divider">
-                                <a href="#/explore"><span class="material-symbols-outlined">exit_to_app</span> Exit Studio</a>
-                            </div>
-                        </div>
-                        <div class="menu-item">
-                            <button class="menu-trigger">View ▾</button>
-                            <div class="dropdown-content">
-                                <a href="#" id="menu-reset-camera"><span class="material-symbols-outlined">center_focus_strong</span> Reset Camera</a>
-                                <a href="#" id="menu-toggle-wireframe"><span class="material-symbols-outlined">grid_on</span> Toggle Wireframe</a>
-                            </div>
-                        </div>
-                        <div class="menu-item">
-                            <button class="menu-trigger">Settings ▾</button>
-                            <div class="dropdown-content">
-                                <a href="#" id="menu-perf-mode"><span class="material-symbols-outlined">bolt</span> Performance Mode</a>
-                                <a href="#" id="menu-show-diags"><span class="material-symbols-outlined">analytics</span> Show Diagnostics</a>
-                                <a href="#" id="menu-ai-settings"><span class="material-symbols-outlined">smart_toy</span> AI Settings</a>
-                            </div>
-                        </div>
+            // Inject menus into ribbon nav menus container
+            const menuTarget = ribbonMenus || navLinks;
+            if (menuTarget) {
+                if (ribbonMenus) ribbonMenus.classList.remove('hidden');
+                else { navLinks.classList.remove('hidden'); }
+
+                const menuHTML = `
+                    <div class="menu-bar">
+                    <div class="menu-item">
+                        <button class="menu-trigger">File ▾</button>
+                        <div class="dropdown-content">
+                            <a href="#" id="menu-open-model"><span class="material-symbols-outlined">folder_open</span> Open Model</a>
+                            <a href="#" id="menu-save-design"><span class="material-symbols-outlined">save</span> Save Design</a>
+                            <a href="#" id="menu-export-stl"><span class="material-symbols-outlined">upload_file</span> Export…</a>
+                            <hr class="menu-divider">
+                            <a href="#/explore"><span class="material-symbols-outlined">exit_to_app</span> Exit Studio</a>
                         </div>
                     </div>
+                    <div class="menu-item">
+                        <button class="menu-trigger">View ▾</button>
+                        <div class="dropdown-content">
+                            <a href="#" id="menu-reset-camera"><span class="material-symbols-outlined">center_focus_strong</span> Reset Camera</a>
+                            <a href="#" id="menu-toggle-wireframe"><span class="material-symbols-outlined">grid_on</span> Toggle Wireframe</a>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        <button class="menu-trigger">Settings ▾</button>
+                        <div class="dropdown-content">
+                            <a href="#" id="menu-app-settings"><span class="material-symbols-outlined">settings</span> App Settings…</a>
+                            <hr class="menu-divider">
+                            <a href="#" id="menu-perf-mode"><span class="material-symbols-outlined">bolt</span> Performance Mode</a>
+                            <a href="#" id="menu-show-diags"><span class="material-symbols-outlined">analytics</span> Show Diagnostics</a>
+                            <a href="#" id="menu-ai-settings"><span class="material-symbols-outlined">smart_toy</span> AI Settings</a>
+                        </div>
+                    </div>
+                    </div>
                 `;
+                menuTarget.innerHTML = menuHTML;
+
+                // Inject project title into ribbon center
+                if (ribbonTitle) {
+                    ribbonTitle.innerHTML = `<input id="nav-project-title" class="editor-project-name" type="text" placeholder="Untitled Project" style="width:100%" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">`;
+                }
+
                 syncProjectTitleUI();
                 bindProjectTitleInput();
 
-                // Bind Dropdown Toggle for Tap / Click (Desktop and Mobile)
-                const menuTriggers = navLinks.querySelectorAll('.menu-trigger');
+                // Bind Dropdown Toggle
+                const menuTriggers = menuTarget.querySelectorAll('.menu-trigger');
                 menuTriggers.forEach(trig => {
                     trig.onclick = (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         const pItem = trig.parentElement;
                         const wasOpen = pItem.classList.contains('open');
-                        
-                        // Close all open dropdowns
-                        navLinks.querySelectorAll('.menu-item').forEach(item => item.classList.remove('open'));
-                        
-                        if (!wasOpen) {
-                            pItem.classList.add('open');
-                        }
+                        menuTarget.querySelectorAll('.menu-item').forEach(item => item.classList.remove('open'));
+                        if (!wasOpen) pItem.classList.add('open');
                     };
                 });
 
                 // Global document click closes open dropdown menus
                 const closeAllMenus = () => {
-                    navLinks.querySelectorAll('.menu-item').forEach(item => item.classList.remove('open'));
+                    menuTarget.querySelectorAll('.menu-item').forEach(item => item.classList.remove('open'));
                 };
                 closeEditorMenusHandler = closeAllMenus;
                 document.addEventListener('click', closeEditorMenusHandler);
@@ -2490,10 +2724,24 @@ async function initApp() {
                         openAISettingsModal();
                     };
                 }
+
+                const appSettingsBtn = document.getElementById('menu-app-settings');
+                if (appSettingsBtn) {
+                    appSettingsBtn.onclick = (e) => {
+                        e.preventDefault();
+                        closeAllMenus();
+                        openAppSettingsModal();
+                    };
+                }
             }
 
-            if (navActions) {
-                navActions.innerHTML = `
+            // Apply persisted settings to viewport/camera as soon as Studio is entered
+            applySettings(getSettings());
+            restartAutoSave();
+
+            const actionsTarget = ribbonActions || navActions;
+            if (actionsTarget) {
+                actionsTarget.innerHTML = `
                     <button id="studio-browse-btn" class="secondary-btn">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                         Library
@@ -2502,11 +2750,11 @@ async function initApp() {
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Export
                     </button>
-                    <button id="mobile-menu-toggle" class="icon-btn mobile-only">
+                    ${!ribbonActions ? `<button id="mobile-menu-toggle" class="icon-btn mobile-only">
                         <span></span>
                         <span></span>
                         <span></span>
-                    </button>
+                    </button>` : ''}
                 `;
 
                 const studioBrowseBtn = document.getElementById('studio-browse-btn');
@@ -2515,13 +2763,14 @@ async function initApp() {
                 const exportBtn = document.getElementById('export-stl');
                 if (exportBtn) exportBtn.onclick = openExportModal;
 
-                // Re-bind mobile menu toggle
-                const mobileToggle = document.getElementById('mobile-menu-toggle');
-                if (mobileToggle) {
-                    mobileToggle.onclick = () => {
-                        navLinks.classList.toggle('mobile-active');
-                        mobileToggle.classList.toggle('active');
-                    };
+                if (!ribbonActions) {
+                    const mobileToggle = document.getElementById('mobile-menu-toggle');
+                    if (mobileToggle) {
+                        mobileToggle.onclick = () => {
+                            navLinks.classList.toggle('mobile-active');
+                            mobileToggle.classList.toggle('active');
+                        };
+                    }
                 }
             }
 
@@ -2607,6 +2856,7 @@ async function initApp() {
     // Initialize High Fidelity Right Panel controls
     initRightPanelControls();
     initViewportToolbar();
+    initPanelResize();
 }
 
 
@@ -2932,7 +3182,7 @@ function createRenderer(containerId) {
         });
     }
     
-    return { scene, camera, renderer, controls, material, container, hemiLight, dirLight, fillLight, grid, transformControls };
+    return { scene, camera, renderer, controls, material, container, hemiLight, dirLight, fillLight, grid, axes, transformControls };
 }
 
 function initHeroPreview() {
@@ -3109,7 +3359,27 @@ class CADWorkerPool {
     }
 
     requestRender(job, callback) {
-        this.callbacks.set(job.jobId, callback);
+        // G2 — auto-attach the dependency closure (semantic API, fasteners,
+        // referenced asset files) to every compile job so `use <…>` resolves
+        // inside the worker's Emscripten VFS. Caller-supplied `files` are
+        // merged on top (caller wins for any path collision).
+        if (job.sourceCode) {
+            const auto = buildWorkerFiles(job.sourceCode);
+            job.files = job.files ? { ...auto, ...job.files } : auto;
+        }
+        // M2 — scoreboard: every main-context compile gates the +40% compile weight.
+        // Wrap the caller's callback so we observe data.assertMessages and data.ok.
+        const wrapped = (data) => {
+            if (job.context === 'main') {
+                if (data.ok && (!data.assertMessages || data.assertMessages.length === 0)) {
+                    scoreboard.mark('compile', true);
+                } else {
+                    scoreboard.mark('compile', false, data.assertMessages || (data.error ? [data.error] : []));
+                }
+            }
+            callback(data);
+        };
+        this.callbacks.set(job.jobId, wrapped);
         this.jobQueue.push(job);
         this._processQueue();
     }
@@ -3147,6 +3417,15 @@ async function selectTemplate(template, autoExtract = false) {
     currentState.template = template;
     currentState.projectTitle = template.title || 'Untitled Project';
     currentState.params = {};
+
+    // Clear any scene components from the previous session
+    currentState.sceneComponents = [];
+    currentState.componentVisible = {};
+    if (mainViewport?.componentGroup) {
+        mainViewport.scene.remove(mainViewport.componentGroup);
+        mainViewport.componentGroup = null;
+        mainViewport.componentMeshes = {};
+    }
 
     if (template.parts?.length) {
         // ── Multi-part mode ─────────────────────────────────
@@ -3377,12 +3656,9 @@ function switchTab(tabId) {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
     });
 
-    document.getElementById('tab-content-params').classList.toggle('hidden', tabId !== 'params');
     document.getElementById('tab-content-layers').classList.toggle('hidden', tabId !== 'layers');
     document.getElementById('tab-content-code').classList.toggle('hidden', tabId !== 'code');
-    document.getElementById('tab-content-ai').classList.toggle('hidden', tabId !== 'ai');
 
-    if (tabId === 'params') renderParameters();
     if (tabId === 'layers') renderLayersTab();
     if (tabId === 'code' && isMultiPart()) syncCodeEditorToActivePart();
 }
@@ -3446,6 +3722,7 @@ function renderParameters() {
                 currentState.params[param.key] = numericVal;
                 range.value = numericVal;
                 manual.value = numericVal;
+                updateSliderFill(range);
                 debouncedGenerate(isFinal);
             };
 
@@ -3458,6 +3735,7 @@ function renderParameters() {
                 update(e.target.value, true);
             };
             manual.onchange = (e) => update(e.target.value, true);
+            updateSliderFill(range);
             
         } else if (param.type === 'enum') {
             const select = group.querySelector('select');
@@ -3484,12 +3762,16 @@ function renderLayersTab() {
     if (!container) return;
 
     if (!isMultiPart()) {
+        // Single-part model: show a brief note, then components below
         container.innerHTML = `
-            <div class="layers-empty-state">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <div>This is a single-part model.</div>
-                <div style="margin-top:6px;font-size:11px">Select a multi-part template from the library, or use the AI to split your design into separate print parts.</div>
-            </div>`;
+            <div class="layers-empty-state" style="padding-bottom:6px">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <div>Single-part model</div>
+                <div style="margin-top:4px;font-size:11px">Use the AI or Add Part to split into layers.</div>
+            </div>
+            <div id="component-list-section"></div>`;
+        renderComponentList();
+        bindComponentEvents();
         return;
     }
 
@@ -3513,11 +3795,87 @@ function renderLayersTab() {
                 <span class="global-params-count">${globalCount}</span>
             </div>
             <div class="global-params-body" id="global-params-body"></div>
-        </div>` : ''}`;
+        </div>` : ''}
+        <div id="component-list-section"></div>`;
 
     renderPartsList();
     if (globalCount > 0) renderGlobalParamsInline();
+    renderComponentList();
     bindLayersTabEvents();
+    bindComponentEvents();
+}
+
+// Render the scene-component rows (independent of template.parts)
+function renderComponentList() {
+    const section = document.getElementById('component-list-section');
+    if (!section) return;
+
+    const components = currentState.sceneComponents;
+    if (components.length === 0) { section.innerHTML = ''; return; }
+
+    // Build per-component connection-point summary for display
+    const manifest = getAssetManifest();
+
+    section.innerHTML = `
+        <div class="layers-toolbar" style="margin-top:6px;border-top:1px solid var(--border-subtle);padding-top:8px">
+            <span class="layers-toolbar-title">Components</span>
+        </div>
+        <div class="parts-list" id="component-list">
+            ${components.map(c => {
+                const isVis = currentState.componentVisible[c.id] !== false;
+                const asset = manifest.find(a => a.id === c.assetId);
+                const cps   = (c.showConnectionPoints && asset?.connection_points) || [];
+
+                // Group CP types into unique set for compact badge display
+                const cpTypeCounts = {};
+                cps.forEach(cp => { cpTypeCounts[cp.type] = (cpTypeCounts[cp.type] || 0) + 1; });
+                const cpBadges = Object.entries(cpTypeCounts).map(([type, count]) => {
+                    const hex = '#' + ((CP_TYPE_COLORS[type] ?? CP_TYPE_COLORS.generic) >>> 0).toString(16).padStart(6, '0');
+                    const label = CP_TYPE_LABEL[type] ?? type;
+                    return `<span class="cp-badge" style="background:${hex}22;border-color:${hex};color:${hex}" title="${label}">${count > 1 ? count + '×' : ''}${label}</span>`;
+                }).join('');
+
+                return `<div class="part-row component-row" data-component-id="${c.id}">
+                    <div class="part-color-dot" style="background:${c.color}"></div>
+                    <div class="component-row-body">
+                        <span class="part-name">${c.name}</span>
+                        ${cpBadges ? `<div class="cp-badge-row">${cpBadges}</div>` : ''}
+                    </div>
+                    <button class="part-vis-btn component-vis-btn${isVis ? '' : ' hidden-part'}" data-component-id="${c.id}" title="${isVis ? 'Hide' : 'Show'}">
+                        ${isVis
+                            ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                            : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                    </button>
+                    <button class="part-delete-btn component-del-btn" data-component-id="${c.id}" title="Remove component">×</button>
+                </div>`;
+            }).join('')}
+        </div>`;
+}
+
+function bindComponentEvents() {
+    document.querySelectorAll('.component-vis-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = btn.dataset.componentId;
+            currentState.componentVisible[id] = !(currentState.componentVisible[id] !== false);
+            if (mainViewport?.componentMeshes?.[id]) {
+                mainViewport.componentMeshes[id].visible = currentState.componentVisible[id];
+            }
+            renderComponentList();
+            bindComponentEvents();
+        });
+    });
+
+    document.querySelectorAll('.component-del-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = btn.dataset.componentId;
+            currentState.sceneComponents = currentState.sceneComponents.filter(c => c.id !== id);
+            delete currentState.componentVisible[id];
+            triggerComponentRender();
+            renderLayersTab();
+        });
+    });
 }
 
 function renderPartsList() {
@@ -3528,12 +3886,16 @@ function renderPartsList() {
     currentState.template.parts.forEach(part => {
         const isActive = currentState.activePart === part.id;
         const isVisible = currentState.partVisibility[part.id] !== false;
+        const hasClip = currentState.partCollisions?.has(part.id) ?? false;
         const row = document.createElement('div');
-        row.className = `part-row${isActive ? ' active' : ''}`;
+        row.className = `part-row${isActive ? ' active' : ''}${hasClip ? ' part-clipping' : ''}`;
         row.dataset.partId = part.id;
+        const clipIcon = hasClip
+            ? `<span class="part-clip-warn" title="This part overlaps another — clipping detected">⚠</span>`
+            : '';
         row.innerHTML = `
             <div class="part-color-dot" style="background:${part.color || '#888'}"></div>
-            <span class="part-name">${part.name || part.id}</span>
+            <span class="part-name">${part.name || part.id}${clipIcon}</span>
             <button class="part-vis-btn${isVisible ? '' : ' hidden-part'}" data-part-id="${part.id}" title="${isVisible ? 'Hide part' : 'Show part'}">
                 ${isVisible
                     ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
@@ -3609,8 +3971,8 @@ function setActivePart(partId) {
     // Highlight active mesh in viewport
     updatePartHighlight();
 
-    // Re-render Parameters tab
-    if (currentState.editMode === 'params') renderParametersMultiPart();
+    // Re-render Parameters tab (now lives in right panel)
+    renderParametersMultiPart();
 
     // Sync code editor if Script tab is open
     if (currentState.editMode === 'code') syncCodeEditorToActivePart();
@@ -3795,11 +4157,13 @@ function buildParamGroup(param, currentValue, onChange) {
         const update = (val, isFinal) => {
             const v = parseFloat(val);
             range.value = v; manual.value = v;
+            updateSliderFill(range);
             onChange(v, isFinal);
         };
         range.oninput = e => { currentState.isMovingSlider = true; update(e.target.value, false); };
         range.onchange = e => { currentState.isMovingSlider = false; update(e.target.value, true); };
         manual.onchange = e => update(e.target.value, true);
+        updateSliderFill(range);
     } else if (param.type === 'enum') {
         group.querySelector('select').onchange = e => onChange(e.target.value, true);
     } else if (param.type === 'boolean') {
@@ -3845,6 +4209,7 @@ function initMultiPartState(template) {
     currentState.partParams = {};
     currentState.partVisibility = {};
     currentState.partMeshes = {};
+    currentState.partCollisions = new Set();
 
     (template.global_parameters || []).forEach(p => {
         currentState.globalParams[p.key] = p.default;
@@ -4007,15 +4372,45 @@ function finalizeModularRender(geometries, startTime, isFinal) {
         badge.innerText = 'Render Failed';
         badge.className = 'error';
         if (window._aiApplyPending && window._aiRenderError) {
-            const shortErr = window._aiRenderError.split('\n').slice(0, 5).join('\n');
-            appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> <strong>Compile error in AI code:</strong><pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
+            const compileErr = window._aiRenderError;
+            const shortErr = compileErr.split('\n').slice(0, 8).join('\n');
+            window._aiApplyPending = false;
+            window._aiRenderError = null;
+            const ctx = window._aiCorrectCtx;
+            window._aiCorrectCtx = null;
+
+            const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+            if (ctx && provider !== 'local') {
+                appendChatMessage('system',
+                    `<span class="material-symbols-outlined">autorenew</span> <strong>Compile error — auto-correcting...</strong>` +
+                    `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
+
+                createAILoadingBubble('Auto-correcting');
+
+                const injectedCorrection = [
+                    { role: 'assistant', content: JSON.stringify({ changes: 'Code applied', openscad_code: ctx.pendingCode }) },
+                    { role: 'user', content: `The OpenSCAD code failed to compile with this error:\n${shortErr}\n\nFix the issue and return the corrected version in the same JSON format: { "changes": "...", "openscad_code": "..." }` }
+                ];
+                runAIGenerationPipeline('', ctx.previousState, injectedCorrection)
+                    .catch(err => {
+                        appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> Auto-correction failed: ${err.message}`);
+                    })
+                    .finally(() => { removeAILoadingBubble(); });
+            } else {
+                appendChatMessage('system',
+                    `<span class="material-symbols-outlined">error_outline</span> <strong>Compile error in AI code:</strong>` +
+                    `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
+                window._aiCorrectCtx = null;
+            }
+        } else {
+            window._aiApplyPending = false;
+            window._aiRenderError = null;
         }
-        window._aiApplyPending = false;
-        window._aiRenderError = null;
         return;
     }
     window._aiApplyPending = false;
     window._aiRenderError = null;
+    window._aiCorrectCtx = null;
 
     const mergedGeom = BufferGeometryUtils.mergeGeometries(Array.from(geometries.values()));
     updateViewportMesh(mergedGeom);
@@ -4157,6 +4552,47 @@ function finalizeMultiPartRender(partGeometries, startTime, isFinal) {
         mesh.geometry.computeVertexNormals();
     });
 
+    // ── Bounding-box collision detection ───────────────────────────────────
+    // Rebuild per-part boxes after centering (geometry was translated in-place)
+    const collisionBoxes = new Map();
+    group.children.forEach(mesh => {
+        if (mesh.userData.partId) {
+            collisionBoxes.set(mesh.userData.partId, new THREE.Box3().setFromObject(mesh));
+        }
+    });
+    const newCollisions = new Set();
+    const candidatePairs = []; // pairs surviving broad-phase, passed to exact WASM tests
+    const pidList = [...collisionBoxes.keys()];
+    for (let i = 0; i < pidList.length; i++) {
+        for (let j = i + 1; j < pidList.length; j++) {
+            const bA = collisionBoxes.get(pidList[i]);
+            const bB = collisionBoxes.get(pidList[j]);
+            if (bA.intersectsBox(bB)) {
+                // Measure the overlap volume — ignore face-touches (< 1 mm on any axis)
+                const isect = bA.clone().intersect(bB);
+                const sz = new THREE.Vector3();
+                isect.getSize(sz);
+                if (sz.x > 1 && sz.y > 1 && sz.z > 1) {
+                    newCollisions.add(pidList[i]);
+                    newCollisions.add(pidList[j]);
+                    candidatePairs.push([pidList[i], pidList[j]]);
+                }
+            }
+        }
+    }
+    currentState.partCollisions = newCollisions;
+    if (newCollisions.size > 0) {
+        const partDefs = currentState.template?.parts || [];
+        const names = [...newCollisions]
+            .map(id => partDefs.find(p => p.id === id)?.name || id)
+            .join(', ');
+        console.warn(`[Assembly] Clipping detected — overlapping parts: ${names}`);
+        // Refresh Layers tab so ⚠ icons appear immediately
+        if (currentState.editMode === 'layers') renderLayersTab();
+    } else if (currentState.editMode === 'layers') {
+        renderLayersTab();   // clear any previous ⚠ icons
+    }
+
     // Detach old gizmo, remove old mesh, add new group
     if (mainViewport.transformControls) mainViewport.transformControls.detach();
     if (mainViewport.currentMesh) mainViewport.scene.remove(mainViewport.currentMesh);
@@ -4178,7 +4614,41 @@ function finalizeMultiPartRender(partGeometries, startTime, isFinal) {
     currentState.isGenerating = false;
 
     window.dispatchEvent(new CustomEvent('render-complete', { detail: { isFinal } }));
-    if (isFinal) { saveHistoryState(); setTimeout(generateActiveThumbnail, 500); }
+    if (isFinal) {
+        saveHistoryState();
+        setTimeout(generateActiveThumbnail, 500);
+        // M3 — kick off exact WASM clash + tool-access validation (non-blocking)
+        scheduleValidation(candidatePairs);
+    }
+}
+
+// M3 — async validation pass that refines the broad-phase collision set and
+// checks tool-access corridors. Runs after every final render, non-blocking.
+function scheduleValidation(candidatePairs) {
+    if (!currentState.template?.parts?.length) return;
+    const partSources = new Map(
+        currentState.template.parts.map(p => [p.id, buildPartSource(p.id, true)])
+    );
+
+    // Exact mesh-intersection clash tests for broad-phase survivors
+    runExactClashTests(candidatePairs, partSources, (exactClashers) => {
+        currentState.partCollisions = exactClashers;
+        if (currentState.editMode === 'layers') renderLayersTab();
+        if (exactClashers.size > 0) {
+            const names = [...exactClashers]
+                .map(id => currentState.template.parts.find(p => p.id === id)?.name || id)
+                .join(', ');
+            console.warn(`[Clash] Exact overlap confirmed: ${names}`);
+        }
+    });
+
+    // Tool-access corridor tests for every fastener_m*_cap() call
+    runToolAccessTests(partSources, ({ blocked }) => {
+        if (blocked.length > 0) {
+            const desc = blocked.map(b => `${b.fastener} in "${b.partId}" blocked by "${b.blocker}"`).join('; ');
+            console.warn(`[ToolAccess] Blocked corridors: ${desc}`);
+        }
+    });
 }
 
 function updateViewportMesh(data) {
@@ -4476,19 +4946,230 @@ function updateLightingSettings() {
     fill.intensity = state.lightIntensity * 0.5;
 }
 
+// initScoreboardUI removed — confidence LEDs replaced by task indicators
+
+// ── Assets Drawer (updatex.md §3B — immutable hardware library) ────────────
+function renderAssetsDrawer() {
+    const list = document.getElementById('assets-drawer-list');
+    if (!list) return;
+    const assets = getAssetManifest();
+
+    // Group by kind for readability.
+    const byKind = assets.reduce((m, a) => {
+        (m[a.kind] = m[a.kind] || []).push(a);
+        return m;
+    }, {});
+
+    const KIND_LABEL = { servo: 'Servos', bearing: 'Bearings', bolt: 'Bolts & Fasteners' };
+
+    list.innerHTML = Object.entries(byKind).map(([kind, items]) => `
+        <div class="assets-group">
+            <div class="assets-group-title">${KIND_LABEL[kind] || kind}</div>
+            ${items.map(a => `
+                <div class="assets-row" data-asset-id="${a.id}">
+                    <div class="assets-row-main">
+                        <div class="assets-row-label">${a.label}</div>
+                        <div class="assets-row-sub">${a.anchor_description}</div>
+                        <div class="assets-row-envelope">Envelope: ${a.envelope_mm.join(' × ')} mm</div>
+                    </div>
+                    <div class="assets-row-actions">
+                        <button class="assets-insert-btn" data-asset-id="${a.id}" data-mode="mesh"      title="Add as scene component">Add</button>
+                        <button class="assets-insert-btn" data-asset-id="${a.id}" data-mode="clearance" title="Add clearance volume as component">Clearance</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.assets-insert-btn').forEach(btn => {
+        btn.onclick = () => addComponentToScene(btn.dataset.assetId, btn.dataset.mode);
+    });
+}
+
+// Colour coding for connection-point types — shared by markers and the UI.
+const CP_TYPE_COLORS = {
+    servo_arm:   0xf97316,   // orange — output shaft
+    screw_m2:    0xfacc15,   // yellow — M2 fastener
+    screw_m3:    0xfacc15,   // yellow — M3 fastener
+    snap_fit:    0x22d3ee,   // cyan   — snap interface
+    shaft_bore:  0xa855f7,   // purple — rotary bore
+    press_fit:   0x3b82f6,   // blue   — press-fit pocket
+    tool_access: 0xef4444,   // red    — tool clearance corridor
+    generic:     0xe5e7eb,   // white  — untyped attachment
+};
+
+const CP_TYPE_LABEL = {
+    servo_arm:   'Servo arm',
+    screw_m2:    'M2 screw',
+    screw_m3:    'M3 screw',
+    snap_fit:    'Snap fit',
+    shaft_bore:  'Shaft bore',
+    press_fit:   'Press fit',
+    tool_access: 'Tool access',
+    generic:     'Attachment',
+};
+
+// Add an asset from the library as an independent scene component.
+// Components are solid, first-class scene objects — not overlays or reference ghosts.
+function addComponentToScene(assetId, mode) {
+    const asset = getAssetManifest().find(a => a.id === assetId);
+    if (!asset) return;
+
+    const moduleName = mode === 'clearance' ? asset.clearance_module : asset.mesh_module;
+    const colors = ['#fb923c', '#34d399', '#f472b6', '#38bdf8', '#a78bfa'];
+    const id = `component_${assetId}_${mode}_${Date.now()}`;
+    const idx = currentState.sceneComponents.length;
+
+    currentState.sceneComponents.push({
+        id,
+        assetId,
+        mode,
+        name: `${asset.label}${mode === 'clearance' ? ' (Clearance)' : ''}`,
+        color: colors[idx % colors.length],
+        source: `// @dependency ${asset.file}\nuse <${asset.file}>\n${moduleName}();\n`,
+        // World-space placement — start staggered so nothing overlaps the main model
+        position: [60 * (idx + 1), 0, 0],
+        rotation: [0, 0, 0],
+        // Connection points live in the asset manifest; we reference them by assetId.
+        // Only mesh-mode components expose connection points (clearance volumes don't).
+        showConnectionPoints: mode === 'mesh',
+    });
+    currentState.componentVisible[id] = true;
+
+    renderLayersTab();
+    triggerComponentRender();
+}
+
+// Compile every visible scene component independently into its own solid mesh.
+// Each component lives as a separate object in the THREE.js scene — never merged
+// into the template mesh — so it can be positioned and manipulated independently.
+function triggerComponentRender() {
+    if (!mainViewport) return;
+
+    // Remove the previous component group without touching the model mesh.
+    if (mainViewport.componentGroup) {
+        mainViewport.scene.remove(mainViewport.componentGroup);
+        mainViewport.componentGroup = null;
+        mainViewport.componentMeshes = {};
+    }
+
+    const visible = currentState.sceneComponents.filter(
+        c => currentState.componentVisible[c.id] !== false
+    );
+    if (visible.length === 0) return;
+
+    const componentGroup = new THREE.Group();
+    componentGroup.userData.isComponentGroup = true;
+    mainViewport.componentGroup  = componentGroup;
+    mainViewport.componentMeshes = {};
+
+    let pending = visible.length;
+    const addToScene = () => { if (--pending === 0) mainViewport.scene.add(componentGroup); };
+
+    visible.forEach(component => {
+        const source = `// Component: ${component.name}\n$fn = 64;\n${component.source}`;
+        const taskId = ++_multiPartTaskCounter;
+        pool.requestRender(
+            { jobId: taskId, partId: component.id, sourceCode: source, format: 'stl', isFinal: true, context: 'component' },
+            (data) => {
+                if (data.ok) {
+                    const geom = new STLLoader().parse(data.buffer);
+                    geom.computeVertexNormals();
+                    // Solid opaque material — components are first-class parts, not ghost references
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color(component.color),
+                        roughness: 0.35, metalness: 0.15,
+                    });
+                    const mesh = new THREE.Mesh(geom, mat);
+                    mesh.userData.componentId = component.id;
+
+                    // Apply world-space placement
+                    const [px, py, pz] = component.position || [0, 0, 0];
+                    const [rx, ry, rz] = component.rotation || [0, 0, 0];
+                    mesh.position.set(px, py, pz);
+                    mesh.rotation.set(
+                        rx * Math.PI / 180,
+                        ry * Math.PI / 180,
+                        rz * Math.PI / 180
+                    );
+
+                    // Add connection-point markers as children so they move with the mesh
+                    if (component.showConnectionPoints) {
+                        buildConnectionPointMarkers(component, mesh);
+                    }
+
+                    componentGroup.add(mesh);
+                    mainViewport.componentMeshes[component.id] = mesh;
+                }
+                addToScene();
+            }
+        );
+    });
+}
+
+// Build small visual markers for every connection point on a component.
+// Markers are added as children of the mesh so they transform with it.
+function buildConnectionPointMarkers(component, mesh) {
+    const asset = getAssetManifest().find(a => a.id === component.assetId);
+    if (!asset?.connection_points?.length) return;
+
+    asset.connection_points.forEach(cp => {
+        const color = CP_TYPE_COLORS[cp.type] ?? CP_TYPE_COLORS.generic;
+
+        // Sphere at the connection point origin
+        const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(1.5, 10, 10),
+            new THREE.MeshBasicMaterial({ color, depthTest: false })
+        );
+        sphere.position.set(...cp.position);
+        sphere.renderOrder = 999;
+        sphere.userData.isConnectionPoint = true;
+        sphere.userData.cpId   = cp.id;
+        sphere.userData.cpName = cp.name;
+        sphere.userData.cpType = cp.type;
+        mesh.add(sphere);
+
+        // Arrow showing the interface normal / direction
+        const dir    = new THREE.Vector3(...cp.normal).normalize();
+        const origin = new THREE.Vector3(...cp.position);
+        const arrow  = new THREE.ArrowHelper(dir, origin, 8, color, 3, 1.8);
+        arrow.renderOrder = 999;
+        arrow.userData.isConnectionPoint = true;
+        mesh.add(arrow);
+    });
+}
+
 function initRightPanelControls() {
     // 1. Right panel tabs switching
     const rightTabs = document.querySelectorAll('.right-tab-btn');
+    const rightTabContents = ['params', 'ai', 'transform', 'env-mat', 'assets'];
+
     rightTabs.forEach(tab => {
         tab.onclick = () => {
             rightTabs.forEach(btn => btn.classList.remove('active'));
             tab.classList.add('active');
-            
-            document.getElementById('right-tab-transform').classList.add('hidden');
-            document.getElementById('right-tab-env-mat').classList.add('hidden');
-            
+
+            rightTabContents.forEach(id => {
+                const el = document.getElementById(`right-tab-${id}`);
+                if (el) el.classList.add('hidden');
+            });
+
             const targetEl = document.getElementById(`right-tab-${tab.dataset.rightTab}`);
             if (targetEl) targetEl.classList.remove('hidden');
+
+            if (tab.dataset.rightTab === 'params') renderParameters();
+            if (tab.dataset.rightTab === 'assets') renderAssetsDrawer();
+        };
+    });
+
+    // Render parameters into right panel on init (params tab is default active)
+    renderParameters();
+
+    // 1b. Panel collapse buttons
+    document.querySelectorAll('.panel-collapse-btn').forEach(btn => {
+        btn.onclick = () => {
+            const panel = document.getElementById(btn.dataset.panel);
+            if (panel) panel.classList.toggle('collapsed');
         };
     });
     
@@ -4505,17 +5186,18 @@ function initRightPanelControls() {
         currentState.viewportState.position.x = parseFloat(moveX.value);
         currentState.viewportState.position.y = parseFloat(moveY.value);
         currentState.viewportState.position.z = parseFloat(moveZ.value);
-        
+
         if (lblX) lblX.innerText = moveX.value;
         if (lblY) lblY.innerText = moveY.value;
         if (lblZ) lblZ.innerText = moveZ.value;
-        
+
+        updateSliderFill(moveX); updateSliderFill(moveY); updateSliderFill(moveZ);
         applyObjectTransform();
     };
-    
-    if (moveX) moveX.oninput = updateMove;
-    if (moveY) moveY.oninput = updateMove;
-    if (moveZ) moveZ.oninput = updateMove;
+
+    if (moveX) { moveX.oninput = updateMove; updateSliderFill(moveX); }
+    if (moveY) { moveY.oninput = updateMove; updateSliderFill(moveY); }
+    if (moveZ) { moveZ.oninput = updateMove; updateSliderFill(moveZ); }
     
     // 3. Rotation sliders
     const rotX = document.getElementById('trans-rot-x');
@@ -4530,17 +5212,18 @@ function initRightPanelControls() {
         currentState.viewportState.rotation.x = parseFloat(rotX.value);
         currentState.viewportState.rotation.y = parseFloat(rotY.value);
         currentState.viewportState.rotation.z = parseFloat(rotZ.value);
-        
+
         if (lblRotX) lblRotX.innerText = `${rotX.value}°`;
         if (lblRotY) lblRotY.innerText = `${rotY.value}°`;
         if (lblRotZ) lblRotZ.innerText = `${rotZ.value}°`;
-        
+
+        updateSliderFill(rotX); updateSliderFill(rotY); updateSliderFill(rotZ);
         applyObjectTransform();
     };
-    
-    if (rotX) rotX.oninput = updateRot;
-    if (rotY) rotY.oninput = updateRot;
-    if (rotZ) rotZ.oninput = updateRot;
+
+    if (rotX) { rotX.oninput = updateRot; updateSliderFill(rotX); }
+    if (rotY) { rotY.oninput = updateRot; updateSliderFill(rotY); }
+    if (rotZ) { rotZ.oninput = updateRot; updateSliderFill(rotZ); }
     
     // 4. Scale slider
     const scaleRange = document.getElementById('trans-scale');
@@ -4549,22 +5232,24 @@ function initRightPanelControls() {
         scaleRange.oninput = () => {
             currentState.viewportState.scale = parseFloat(scaleRange.value);
             if (lblScale) lblScale.innerText = `${scaleRange.value}x`;
+            updateSliderFill(scaleRange);
             applyObjectTransform();
         };
+        updateSliderFill(scaleRange);
     }
     
     // 5. Reset Transform button
     const btnReset = document.getElementById('btn-reset-transform');
     if (btnReset) {
         btnReset.onclick = () => {
-            if (moveX) moveX.value = 0;
-            if (moveY) moveY.value = 0;
-            if (moveZ) moveZ.value = 0;
-            if (rotX) rotX.value = 0;
-            if (rotY) rotY.value = 0;
-            if (rotZ) rotZ.value = 0;
-            if (scaleRange) scaleRange.value = 1.0;
-            
+            if (moveX) { moveX.value = 0; updateSliderFill(moveX); }
+            if (moveY) { moveY.value = 0; updateSliderFill(moveY); }
+            if (moveZ) { moveZ.value = 0; updateSliderFill(moveZ); }
+            if (rotX) { rotX.value = 0; updateSliderFill(rotX); }
+            if (rotY) { rotY.value = 0; updateSliderFill(rotY); }
+            if (rotZ) { rotZ.value = 0; updateSliderFill(rotZ); }
+            if (scaleRange) { scaleRange.value = 1.0; updateSliderFill(scaleRange); }
+
             updateMove();
             updateRot();
             currentState.viewportState.scale = 1.0;
@@ -4620,8 +5305,10 @@ function initRightPanelControls() {
         intensityRange.oninput = () => {
             currentState.viewportState.lightIntensity = parseFloat(intensityRange.value);
             if (lblIntensity) lblIntensity.innerText = `${intensityRange.value}x`;
+            updateSliderFill(intensityRange);
             updateLightingSettings();
         };
+        updateSliderFill(intensityRange);
     }
 }
 
@@ -4639,9 +5326,9 @@ function syncViewportStateToUI() {
     const lblY = document.getElementById('lbl-move-y');
     const lblZ = document.getElementById('lbl-move-z');
 
-    if (moveX) moveX.value = state.position.x;
-    if (moveY) moveY.value = state.position.y;
-    if (moveZ) moveZ.value = state.position.z;
+    if (moveX) { moveX.value = state.position.x; updateSliderFill(moveX); }
+    if (moveY) { moveY.value = state.position.y; updateSliderFill(moveY); }
+    if (moveZ) { moveZ.value = state.position.z; updateSliderFill(moveZ); }
     if (lblX) lblX.innerText = state.position.x;
     if (lblY) lblY.innerText = state.position.y;
     if (lblZ) lblZ.innerText = state.position.z;
@@ -4653,16 +5340,16 @@ function syncViewportStateToUI() {
     const lblRotY = document.getElementById('lbl-rot-y');
     const lblRotZ = document.getElementById('lbl-rot-z');
 
-    if (rotX) rotX.value = state.rotation.x;
-    if (rotY) rotY.value = state.rotation.y;
-    if (rotZ) rotZ.value = state.rotation.z;
+    if (rotX) { rotX.value = state.rotation.x; updateSliderFill(rotX); }
+    if (rotY) { rotY.value = state.rotation.y; updateSliderFill(rotY); }
+    if (rotZ) { rotZ.value = state.rotation.z; updateSliderFill(rotZ); }
     if (lblRotX) lblRotX.innerText = `${state.rotation.x}°`;
     if (lblRotY) lblRotY.innerText = `${state.rotation.y}°`;
     if (lblRotZ) lblRotZ.innerText = `${state.rotation.z}°`;
 
     const scaleRange = document.getElementById('trans-scale');
     const lblScale = document.getElementById('lbl-scale');
-    if (scaleRange) scaleRange.value = state.scale;
+    if (scaleRange) { scaleRange.value = state.scale; updateSliderFill(scaleRange); }
     if (lblScale) lblScale.innerText = `${state.scale}x`;
 
     const finishSelect = document.getElementById('material-finish');
@@ -4673,7 +5360,7 @@ function syncViewportStateToUI() {
 
     const intensityRange = document.getElementById('light-intensity');
     const lblIntensity = document.getElementById('lbl-light-intensity');
-    if (intensityRange) intensityRange.value = state.lightIntensity;
+    if (intensityRange) { intensityRange.value = state.lightIntensity; updateSliderFill(intensityRange); }
     if (lblIntensity) lblIntensity.innerText = `${state.lightIntensity}x`;
 
     const presetBtns = document.querySelectorAll('.light-presets .light-preset-btn');
@@ -4761,9 +5448,9 @@ function updateSelectionHighlight() {
 
 function setGizmoToolMode(tool) {
     currentState.activeGizmoTool = tool;
-    
-    // Toggle active classes on toolbar buttons
-    const btns = document.querySelectorAll('#viewport-toolbar .tool-btn');
+
+    // Toggle active classes on ribbon tool buttons
+    const btns = document.querySelectorAll('#studio-ribbon .rtool[id^="tool-"]');
     btns.forEach(btn => {
         btn.classList.toggle('active', btn.id === `tool-${tool}`);
     });
@@ -5253,6 +5940,200 @@ function initViewportToolbar() {
             setGizmoToolMode('select');
         };
     }
+
+    // 6. Ribbon tab switching
+    document.querySelectorAll('.ribbon-tab').forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll('.ribbon-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.ribbon-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            const content = document.querySelector(`.ribbon-content[data-rcontent="${tab.dataset.rtab}"]`);
+            if (content) content.classList.add('active');
+        };
+    });
+
+    // 7. Ribbon export buttons — trigger the export modal for each format
+    document.querySelectorAll('.rtool-export[data-format]').forEach(btn => {
+        btn.onclick = () => {
+            const formatMap = { stl: 'stl', '3mf': '3mf', obj: 'obj', gltf: 'gltf' };
+            const fmtId = formatMap[btn.dataset.format];
+            // Open the export modal then click the matching format row
+            const exportBtn = document.querySelector('[data-action="export"], #btn-export, .export-btn, button[title*="Export"]');
+            // Fallback: click nav Export button to open modal, then auto-pick format
+            const navExport = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Export');
+            if (navExport) {
+                navExport.click();
+                requestAnimationFrame(() => {
+                    const fmtRow = document.querySelector(`.export-format-row[data-format="${fmtId}"]`);
+                    if (fmtRow) fmtRow.click();
+                });
+            }
+        };
+    });
+
+    // 8. Ribbon camera reset (VIEW tab) — same as bottom-right reset button
+    const ribbonViewReset = document.getElementById('view-reset');
+    const vpResetBtn = document.getElementById('view-reset-vp');
+    if (ribbonViewReset && vpResetBtn) {
+        ribbonViewReset.onclick = () => vpResetBtn.click();
+    }
+
+    // 9. Asset ribbon
+    initAssetRibbon();
+}
+
+// ── Asset Ribbon ─────────────────────────────────────────────────────────────
+
+const ASSET_CAT_META = {
+    servo:   { label: 'Servos',   icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>` },
+    bearing: { label: 'Bearings', icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>` },
+    bolt:    { label: 'Bolts',    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l1 5H8z"/><rect x="8" y="8" width="8" height="3" rx="1"/><line x1="12" y1="11" x2="12" y2="21"/><line x1="9" y1="17" x2="15" y2="17"/></svg>` },
+    nut:     { label: 'Nuts',     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 21.39 7 21.39 17 12 22 2.61 17 2.61 7"/><circle cx="12" cy="12" r="4"/></svg>` },
+    motor:   { label: 'Motors',   icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 10h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4"/><line x1="7" y1="7" x2="7" y2="4"/><line x1="12" y1="7" x2="12" y2="4"/></svg>` },
+    sensor:  { label: 'Sensors',  icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z"/><circle cx="12" cy="12" r="2"/></svg>` },
+    spring:  { label: 'Springs',  icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M8 4c0 2 8 2 8 4s-8 2-8 4 8 2 8 4-8 2-8 4"/></svg>` },
+};
+
+function _assetCatIcon(kind) {
+    return (ASSET_CAT_META[kind] || {}).icon ||
+        `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
+}
+
+function _assetCatLabel(kind) {
+    return (ASSET_CAT_META[kind] || {}).label ||
+        (kind.charAt(0).toUpperCase() + kind.slice(1) + 's');
+}
+
+function initAssetRibbon() {
+    const strip = document.getElementById('asset-category-chips');
+    if (!strip) return;
+
+    const manifest = getAssetManifest();
+    const byKind = {};
+    manifest.forEach(a => { (byKind[a.kind] = byKind[a.kind] || []).push(a); });
+
+    strip.innerHTML = '';
+    Object.entries(byKind).forEach(([kind, assets]) => {
+        const chip = document.createElement('button');
+        chip.className = 'asset-cat-chip';
+        chip.title = `${_assetCatLabel(kind)} (${assets.length})`;
+        chip.innerHTML = `${_assetCatIcon(kind)}<span>${_assetCatLabel(kind)}</span>`;
+        chip.onclick = () => openAssetPicker(kind, byKind);
+        strip.appendChild(chip);
+    });
+
+    // Close picker modal
+    const closeBtn = document.getElementById('asset-picker-close');
+    const modal    = document.getElementById('asset-picker-modal');
+    if (closeBtn && modal) {
+        closeBtn.onclick = () => modal.classList.add('hidden');
+        modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+    }
+
+    // Search filter
+    const searchEl = document.getElementById('asset-picker-search');
+    if (searchEl) {
+        searchEl.addEventListener('input', () => {
+            const q = searchEl.value.toLowerCase();
+            document.querySelectorAll('.asset-picker-card').forEach(card => {
+                card.style.display = card.dataset.search.includes(q) ? '' : 'none';
+            });
+            const visible = [...document.querySelectorAll('.asset-picker-card')].filter(c => c.style.display !== 'none');
+            const empty = document.getElementById('asset-picker-empty');
+            if (empty) empty.style.display = visible.length === 0 ? '' : 'none';
+        });
+    }
+}
+
+// _allAssetsByKind is kept as a reference for re-opening after asset list changes
+let _allAssetsByKind = {};
+
+function openAssetPicker(kind, byKind) {
+    _allAssetsByKind = byKind;
+    const modal    = document.getElementById('asset-picker-modal');
+    const titleEl  = document.getElementById('asset-picker-title');
+    const subEl    = document.getElementById('asset-picker-subtitle');
+    const grid     = document.getElementById('asset-picker-grid');
+    const searchEl = document.getElementById('asset-picker-search');
+    if (!modal || !grid) return;
+
+    const assets = byKind[kind] || [];
+    if (titleEl) titleEl.textContent = _assetCatLabel(kind);
+    if (subEl)   subEl.textContent   = `${assets.length} asset${assets.length !== 1 ? 's' : ''} · click to insert into active design`;
+    if (searchEl) searchEl.value = '';
+
+    grid.innerHTML = '';
+    assets.forEach(asset => {
+        const env = asset.envelope_mm ? asset.envelope_mm.map(v => v + ' mm').join(' × ') : '';
+        // Build connection-point type summary for the card
+        const cps = asset.connection_points || [];
+        const cpGroups = {};
+        cps.forEach(cp => { cpGroups[cp.type] = (cpGroups[cp.type] || 0) + 1; });
+        const cpBadgesHtml = Object.entries(cpGroups).map(([type, cnt]) => {
+            const hex = '#' + ((CP_TYPE_COLORS[type] ?? CP_TYPE_COLORS.generic) >>> 0).toString(16).padStart(6, '0');
+            const lbl = CP_TYPE_LABEL[type] ?? type;
+            return `<span class="cp-badge" style="background:${hex}22;border-color:${hex};color:${hex}">${cnt > 1 ? cnt + '×' : ''}${lbl}</span>`;
+        }).join('');
+
+        const card = document.createElement('div');
+        card.className = 'asset-picker-card';
+        card.dataset.search = `${asset.label} ${asset.id} ${asset.file}`.toLowerCase();
+        card.innerHTML = `
+            <div class="apc-label">${escapeHtml(asset.label)}</div>
+            <div class="apc-meta">${escapeHtml(asset.file)}</div>
+            ${env ? `<div class="apc-envelope">${escapeHtml(env)}</div>` : ''}
+            ${cpBadgesHtml ? `<div class="apc-cp-badges">${cpBadgesHtml}</div>` : ''}
+            <div class="apc-actions">
+                <button class="apc-btn" data-mode="mesh">Add Component</button>
+                <button class="apc-btn secondary" data-mode="clearance">+ Clearance</button>
+            </div>`;
+        card.querySelector('[data-mode="mesh"]').onclick       = () => { addComponentToScene(asset.id, 'mesh');       modal.classList.add('hidden'); };
+        card.querySelector('[data-mode="clearance"]').onclick  = () => { addComponentToScene(asset.id, 'clearance');  modal.classList.add('hidden'); };
+        grid.appendChild(card);
+    });
+
+    // Empty state placeholder (hidden by default, shown by search filter)
+    const empty = document.createElement('div');
+    empty.id = 'asset-picker-empty';
+    empty.className = 'asset-picker-empty';
+    empty.textContent = 'No assets match your search.';
+    empty.style.display = 'none';
+    grid.appendChild(empty);
+
+    modal.classList.remove('hidden');
+    if (searchEl) searchEl.focus();
+}
+
+function insertAsset(asset, moduleType) {
+    const modName  = moduleType === 'mesh' ? asset.mesh_module : asset.clearance_module;
+    const useStmt  = `use <${asset.file}>;`;
+    const callStmt = `\n${modName}();`;
+
+    // Determine active source (multi-part vs single-part)
+    let src = '';
+    let applyFn = null;
+
+    if (isMultiPart() && currentState.activePart) {
+        const part = currentState.template?.parts?.find(p => p.id === currentState.activePart);
+        if (part) {
+            src = part.source || '';
+            applyFn = newSrc => { part.source = newSrc; syncCodeEditorToActivePart?.(); triggerGeneration(true); };
+        }
+    } else if (currentState.template) {
+        src = currentState.template.source || '';
+        applyFn = newSrc => {
+            currentState.template.source = newSrc;
+            const ed = document.getElementById('code-editor');
+            if (ed) ed.value = newSrc;
+            triggerGeneration(true);
+        };
+    }
+
+    if (!applyFn) return;
+
+    if (!src.includes(useStmt)) src = useStmt + '\n' + src;
+    src += callStmt;
+    applyFn(src);
 }
 
 // Event Handlers
@@ -5844,24 +6725,38 @@ window.addEventListener('resize', () => {
     }
 });
 
+// Action handlers referenced by the key dispatch table
+const KEY_ACTIONS = {
+    undo:            () => undoAction(),
+    redo:            () => redoAction(),
+    compile:         () => { /* handled in code-editor keydown */ },
+    resetCamera:     () => { const b = document.getElementById('view-reset') || document.getElementById('view-reset-vp'); b?.click(); },
+    toolSelect:      () => document.getElementById('tool-select')?.click(),
+    toolMove:        () => document.getElementById('tool-translate')?.click(),
+    toolRotate:      () => document.getElementById('tool-rotate')?.click(),
+    toolScale:       () => document.getElementById('tool-scale')?.click(),
+    openSettings:    () => { if (currentState.view === '/create') openAppSettingsModal(); },
+    toggleWireframe: () => { if (typeof displayMode !== 'undefined') applyDisplayMode(displayMode === 'shaded' ? 'wireframe' : 'shaded'); },
+    exportModel:     () => openExportModal(),
+};
+
 window.addEventListener('keydown', (e) => {
     const isEditingText = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
-    
-    if (e.key === 'Control') {
-        currentState.isCtrlPressed = true;
-        updateRotationSnap();
-    }
-    
-    // Ctrl + Z for Undo
-    if (e.ctrlKey && e.key.toLowerCase() === 'z' && !isEditingText) {
+
+    if (e.key === 'Control') { currentState.isCtrlPressed = true; updateRotationSnap(); }
+
+    if (isCapturingKeybinding) return;
+
+    const combo = comboStr(e.key, e.ctrlKey, e.shiftKey, e.altKey);
+    const actionId = keyDispatch[combo];
+    if (actionId) {
+        const isToolShortcut = ['toolSelect', 'toolMove', 'toolRotate', 'toolScale'].includes(actionId);
+        // Skip non-modifier tool shortcuts when typing
+        if (isEditingText && !e.ctrlKey && !e.altKey) return;
+        // compile is handled by code-editor's own keydown
+        if (actionId === 'compile') return;
         e.preventDefault();
-        undoAction();
-    }
-    
-    // Ctrl + Y for Redo
-    if (e.ctrlKey && e.key.toLowerCase() === 'y' && !isEditingText) {
-        e.preventDefault();
-        redoAction();
+        KEY_ACTIONS[actionId]?.();
     }
 });
 
@@ -5919,6 +6814,7 @@ globalAnimate();
 
 function globalAnimate() {
     requestAnimationFrame(globalAnimate);
+    tickFPS();
     if (currentState.view === '/create' && mainViewport) {
         mainViewport.controls.update();
         
@@ -5975,9 +6871,28 @@ async function startApp() {
 
     // 2. Init App Logic (Supabase, Routing)
     await initApp();
+
+    // Disable browser autofill/autocomplete on all inputs and textareas.
+    // Use "new-password" because Chrome ignores "off" on fields it suspects are credentials.
+    const suppressAutofill = el => {
+        el.setAttribute('autocomplete', 'new-password');
+        el.setAttribute('autocorrect', 'off');
+        el.setAttribute('autocapitalize', 'off');
+        el.setAttribute('spellcheck', 'false');
+    };
+    document.querySelectorAll('input, textarea').forEach(suppressAutofill);
+    // Also cover future dynamic inputs (e.g. parameter fields rendered by JS)
+    new MutationObserver(mutations => {
+        mutations.forEach(m => m.addedNodes.forEach(node => {
+            if (node.nodeType !== 1) return;
+            const inputs = node.matches?.('input, textarea') ? [node] : [...node.querySelectorAll('input, textarea')];
+            inputs.forEach(suppressAutofill);
+        }));
+    }).observe(document.body, { childList: true, subtree: true });
     
     // 3. Init AI Assistant Controllers
     initAIAssistant();
+    initCompileOverlayTesseract();
     
     // 4. Complete Loading (No pre-render to save memory)
     updateLoader(100, 'Ready.');
@@ -6085,9 +7000,28 @@ function renderConversationsPanel() {
 
 // ── Model Name Helper ─────────────────────────────────────────────
 
+const GOOGLE_MODEL_NAMES = {
+    'gemini-2.5-flash': 'Gemini 2.5 Flash',
+    'gemini-2.5-pro': 'Gemini 2.5 Pro',
+    'gemini-2.5-flash-lite-preview-06-17': 'Gemini 2.5 Flash Lite',
+    'gemini-2.0-flash': 'Gemini 2.0 Flash',
+    'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+    'gemini-1.5-pro': 'Gemini 1.5 Pro',
+    'gemini-1.5-flash': 'Gemini 1.5 Flash',
+    'gemma-4-31b-it': 'Gemma 4 31B',
+    'gemma-4-12b-it': 'Gemma 4 12B',
+    'gemma-3-27b-it': 'Gemma 3 27B',
+    'gemma-3-12b-it': 'Gemma 3 12B',
+    'gemma-3-4b-it': 'Gemma 3 4B',
+};
+
 function getModelDisplayName(provider, customModel) {
-    const names = { local: 'Local Agent', gemini: 'Gemini 2.5 Flash', openai: 'GPT-4o-mini', anthropic: 'Claude 3.5 Sonnet' };
-    if (provider === 'custom') return customModel || 'Custom Model';
+    const names = { local: 'Local Agent', openai: 'GPT-4o-mini', anthropic: 'Claude 3.5 Sonnet', openrouter: 'OpenRouter' };
+    if (provider === 'gemini') {
+        const googleModel = customModel || localStorage.getItem('paraform_google_model') || 'gemini-2.5-flash';
+        return GOOGLE_MODEL_NAMES[googleModel] || googleModel;
+    }
+    if (provider === 'custom' || provider === 'openrouter') return customModel || (provider === 'openrouter' ? 'openai/gpt-4o-mini' : 'Custom Model');
     return names[provider] || provider;
 }
 
@@ -6275,6 +7209,7 @@ window.applyPendingAIChange = function(idx) {
     if (!msg || !msg.meta || !msg.meta.pendingCode) return;
     window._aiApplyPending = true;
     window._aiRenderError = null;
+    window._aiCorrectCtx = { previousState: msg.previousState, pendingCode: msg.meta.pendingCode };
     applyNewOpenSCADSource(msg.meta.pendingCode);
     msg.meta.applied = true;
     saveChatHistory();
@@ -6309,6 +7244,22 @@ window.revertToMessageState = function(index) {
     // Append a friendly system message to the chat
     appendChatMessage('system', `Reverted changes to state before prompt: "${aiChatHistory[index - 1]?.content || 'previous edit'}"`);
 };
+
+function updateAIModelLabel() {
+    const label = document.getElementById('ai-model-label');
+    if (!label) return;
+    const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+    const customModel = localStorage.getItem('paraform_custom_model') || '';
+    const googleModel = localStorage.getItem('paraform_google_model') || 'gemini-2.5-flash';
+    const names = { local: 'Local Agent', openai: 'GPT-4o', anthropic: 'Claude', custom: 'Custom', openrouter: 'OpenRouter' };
+    if (provider === 'gemini') {
+        label.textContent = GOOGLE_MODEL_NAMES[googleModel] || googleModel;
+    } else if (provider === 'openrouter' && customModel) {
+        label.textContent = customModel.includes('/') ? customModel.split('/').pop() : customModel;
+    } else {
+        label.textContent = names[provider] || 'AI Assistant';
+    }
+}
 
 function initAIAssistant() {
     const generateBtn = document.getElementById('ai-generate-btn');
@@ -6354,6 +7305,13 @@ function initAIAssistant() {
         });
     }
     
+    // Bind AI settings trigger (model chip)
+    const settingsTrigger = document.getElementById('ai-settings-trigger');
+    if (settingsTrigger) {
+        settingsTrigger.onclick = () => openAISettingsModal();
+    }
+    updateAIModelLabel();
+
     // Bind quick action chips
     const chips = document.querySelectorAll('.ai-chip');
     chips.forEach(chip => {
@@ -6387,17 +7345,8 @@ function initAIAssistant() {
         
         appendChatMessage('user', prompt);
         
-        // Show loading bubble
-        const container = document.getElementById('ai-chat-history');
-        if (container) {
-            const loadingBubble = document.createElement('div');
-            loadingBubble.id = 'ai-loading-bubble';
-            loadingBubble.className = 'chat-bubble system';
-            loadingBubble.innerHTML = '<div class="bubble-text"><span class="material-symbols-outlined">autorenew</span> Thinking...</div>';
-            container.appendChild(loadingBubble);
-            container.scrollTop = container.scrollHeight;
-        }
-        
+        createAILoadingBubble('Thinking');
+
         try {
             await runAIGenerationPipeline(prompt, prePromptState);
         } catch (err) {
@@ -6405,8 +7354,7 @@ function initAIAssistant() {
             console.error('AI pipeline error:', err);
         } finally {
             generateBtn.disabled = false;
-            const loadingBubble = document.getElementById('ai-loading-bubble');
-            if (loadingBubble) loadingBubble.remove();
+            removeAILoadingBubble();
         }
     };
 
@@ -6414,22 +7362,385 @@ function initAIAssistant() {
     initAISettingsControls();
 }
 
-async function runAIGenerationPipeline(prompt, prePromptState = null) {
+const MAX_LINT_RETRIES = 3;
+
+// ── Tesseract Animation Engine ──────────────────────────────────────────────
+const _tesseractRafs = new Map();
+
+function initTesseract(canvas, opts = {}) {
+    const { scale = 13, color = '#e8704a', lineWidth = 1.2, speed = 0.007 } = opts;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    let angle = 0;
+
+    // 16 vertices of a 4D hypercube
+    const V = [];
+    for (let a of [-1,1]) for (let b of [-1,1]) for (let c of [-1,1]) for (let d of [-1,1])
+        V.push([a, b, c, d]);
+
+    // 32 edges: pairs differing in exactly one coordinate
+    const E = [];
+    for (let i = 0; i < 16; i++)
+        for (let j = i + 1; j < 16; j++) {
+            let diff = 0;
+            for (let k = 0; k < 4; k++) if (V[i][k] !== V[j][k]) diff++;
+            if (diff === 1) E.push([i, j]);
+        }
+
+    function rot4(v, a1, a2, t) {
+        const [cos, sin] = [Math.cos(t), Math.sin(t)];
+        const r = [...v];
+        r[a1] = v[a1] * cos - v[a2] * sin;
+        r[a2] = v[a1] * sin + v[a2] * cos;
+        return r;
+    }
+
+    function project(v) {
+        const d4 = 1 / (2.5 - v[3]);
+        const v3 = [v[0] * d4, v[1] * d4, v[2] * d4];
+        const d3 = 1 / (4 - v3[2]);
+        return [v3[0] * d3 * scale + W / 2, -v3[1] * d3 * scale + H / 2];
+    }
+
+    const old = _tesseractRafs.get(canvas);
+    if (old) cancelAnimationFrame(old);
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+
+        const pts = V.map(v => {
+            let r = rot4(v, 0, 3, angle);
+            r = rot4(r, 1, 2, angle * 0.71);
+            r = rot4(r, 0, 1, angle * 0.37);
+            return { p: project(r), w4: r[3] };
+        });
+
+        E.forEach(([i, j]) => {
+            ctx.globalAlpha = 0.15 + 0.75 * ((pts[i].w4 + pts[j].w4) / 2 + 1) / 2;
+            ctx.beginPath();
+            ctx.moveTo(...pts[i].p);
+            ctx.lineTo(...pts[j].p);
+            ctx.stroke();
+        });
+
+        angle += speed;
+        _tesseractRafs.set(canvas, requestAnimationFrame(draw));
+    }
+
+    draw();
+    return () => { const id = _tesseractRafs.get(canvas); if (id) { cancelAnimationFrame(id); _tesseractRafs.delete(canvas); } };
+}
+
+// ── AI Thinking Bubble ──────────────────────────────────────────────────────
+const AI_THINKING_PHRASES = [
+    'Spelunking geometry…', 'Tessellating vertices…', 'Computing manifolds…',
+    'Voxelizing topology…', 'Projecting normals…',    'Tracing edge loops…',
+    'Subdividing B-rep…',   'Resolving CSG tree…',    'Intersecting half-spaces…',
+    'Optimizing polytopes…','Lofting profiles…',       'Extruding sketches…',
+    'Checking watertight…', 'Evaluating NURBS…',       'Meshing surfaces…',
+];
+
+function _startPhraseCycle(el, phrases, interval = 2000) {
+    let i = 0;
+    const id = setInterval(() => {
+        i = (i + 1) % phrases.length;
+        el.style.opacity = '0';
+        setTimeout(() => { el.textContent = phrases[i]; el.style.opacity = '1'; }, 200);
+    }, interval);
+    return () => clearInterval(id);
+}
+
+function createAILoadingBubble(label = 'Thinking') {
+    removeAILoadingBubble();
+    const container = document.getElementById('ai-chat-history');
+    if (!container) return;
+    const bubble = document.createElement('div');
+    bubble.id = 'ai-loading-bubble';
+    bubble.className = 'chat-bubble ai-thinking-bubble';
+    bubble.innerHTML = `
+        <canvas class="tesseract-canvas" width="40" height="40"></canvas>
+        <div class="thinking-text">
+            <span class="thinking-main">${escapeHtml(label)}</span>
+            <span class="thinking-sub">${AI_THINKING_PHRASES[0]}</span>
+            <div class="ai-task-list" id="ai-task-list"></div>
+        </div>`;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+    const stopT = initTesseract(bubble.querySelector('.tesseract-canvas'), { scale: 13, speed: 0.007 });
+    const stopC = _startPhraseCycle(bubble.querySelector('.thinking-sub'), AI_THINKING_PHRASES);
+    bubble._stop = () => { stopT(); stopC(); };
+    bubble._stopPhrases = stopC;
+}
+
+function addAILoadingTask(label) {
+    const list = document.getElementById('ai-task-list');
+    if (!list) return;
+    // Complete all previous active tasks
+    list.querySelectorAll('.ai-task-item.active').forEach(el => {
+        el.classList.remove('active');
+        el.classList.add('done');
+    });
+    const item = document.createElement('div');
+    item.className = 'ai-task-item active';
+    item.dataset.taskLabel = label;
+    item.innerHTML = `
+        <span class="ai-task-icon">
+            <svg class="check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg class="circle" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4"/></svg>
+        </span>
+        <span class="ai-task-label">${escapeHtml(label)}</span>`;
+    list.appendChild(item);
+    // Trigger entrance animation
+    requestAnimationFrame(() => item.classList.add('visible'));
+    // Scroll bubble into view
+    const container = document.getElementById('ai-chat-history');
+    if (container) container.scrollTop = container.scrollHeight;
+}
+
+function completeAllAITasks() {
+    const list = document.getElementById('ai-task-list');
+    if (!list) return;
+    list.querySelectorAll('.ai-task-item.active').forEach(el => {
+        el.classList.remove('active');
+        el.classList.add('done');
+    });
+}
+
+function updateAILoadingBubble(label) {
+    const bubble = document.getElementById('ai-loading-bubble');
+    if (!bubble) return;
+    const el = bubble.querySelector('.thinking-main');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(() => { el.textContent = label; el.style.opacity = '1'; }, 200);
+}
+
+function removeAILoadingBubble() {
+    const bubble = document.getElementById('ai-loading-bubble');
+    if (!bubble) return;
+    if (bubble._stop) bubble._stop();
+    bubble.remove();
+}
+
+function initCompileOverlayTesseract() {
+    const overlay = document.getElementById('loader-overlay');
+    const canvas  = document.getElementById('tesseract-compile');
+    if (!overlay || !canvas) return;
+    let stop = null;
+    new MutationObserver(() => {
+        const visible = !overlay.classList.contains('hidden');
+        if (visible && !stop)  stop = initTesseract(canvas, { scale: 18, speed: 0.006, lineWidth: 1.5 });
+        if (!visible && stop)  { stop(); stop = null; }
+    }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+}
+
+async function callLLMApiRaw(provider, apiKey, systemPrompt, messages, customUrl, customModel) {
+    // messages: [{role, content}] in OpenAI/Anthropic format
+
+    if (provider === 'gemini') {
+        const model = customModel || 'gemini-2.5-flash';
+        const supportsThinking = model.startsWith('gemini-2.5-');
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        const contents = messages.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        }));
+        const generationConfig = { responseMimeType: 'application/json' };
+        if (supportsThinking) generationConfig.thinkingConfig = { thinkingBudget: -1 };
+        const payload = {
+            systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig,
+        };
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-target-url': url },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || 'Gemini API call failed');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = '';
+        let thinkingText = '';
+        let responseText = '';
+        let phraseStopped = false;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuffer += decoder.decode(value, { stream: true });
+            const lines = sseBuffer.split('\n');
+            sseBuffer = lines.pop(); // hold incomplete line
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr || jsonStr === '[DONE]') continue;
+                try {
+                    const chunk = JSON.parse(jsonStr);
+                    const parts = chunk.candidates?.[0]?.content?.parts || [];
+                    for (const part of parts) {
+                        if (part.thought) {
+                            thinkingText += part.text || '';
+                            // First thought: stop phrase cycling, take over sub-line
+                            const bubble = document.getElementById('ai-loading-bubble');
+                            if (bubble) {
+                                if (!phraseStopped && bubble._stopPhrases) {
+                                    bubble._stopPhrases();
+                                    phraseStopped = true;
+                                }
+                                const subEl = bubble.querySelector('.thinking-sub');
+                                if (subEl) {
+                                    subEl.style.opacity = '1';
+                                    subEl.style.fontStyle = 'normal';
+                                    subEl.textContent = thinkingText.slice(-140).replace(/\n+/g, ' ');
+                                }
+                                const mainEl = bubble.querySelector('.thinking-main');
+                                if (mainEl && mainEl.textContent === 'Thinking') mainEl.textContent = 'Reasoning…';
+                            }
+                        } else {
+                            responseText += part.text || '';
+                        }
+                    }
+                } catch (_) {}
+            }
+        }
+
+        return responseText;
+    }
+
+    if (provider === 'openai') {
+        const url = 'https://api.openai.com/v1/chat/completions';
+        const payload = {
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'system', content: systemPrompt }, ...messages],
+            response_format: { type: 'json_object' }
+        };
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'x-target-url': url },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'OpenAI API call failed');
+        }
+        const result = await response.json();
+        return result.choices[0].message.content;
+    }
+
+    if (provider === 'anthropic') {
+        const url = 'https://api.anthropic.com/v1/messages';
+        const payload = {
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages
+        };
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'x-target-url': url,
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error('Claude API call failed');
+        }
+        const result = await response.json();
+        return result.content[0].text;
+    }
+
+    if (provider === 'openrouter') {
+        const url = 'https://openrouter.ai/api/v1/chat/completions';
+        const targetModel = customModel || 'openai/gpt-4o-mini';
+        const payload = {
+            model: targetModel,
+            messages: [{ role: 'system', content: systemPrompt }, ...messages],
+            response_format: { type: 'json_object' }
+        };
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'ParaForm',
+                'x-target-url': url,
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `OpenRouter API error (${response.status})`);
+        }
+        const result = await response.json();
+        return result.choices[0].message.content;
+    }
+
+    if (provider === 'custom') {
+        if (!customUrl) throw new Error('Custom Base URL must be configured in AI Settings.');
+
+        // Auto-detect OpenRouter URLs entered in the Custom field and route correctly
+        if (/openrouter\.ai/i.test(customUrl)) {
+            // Delegate to openrouter provider — handles CORS headers & correct endpoint
+            return callLLMApiRaw('openrouter', apiKey, systemPrompt, messages, customUrl, customModel);
+        }
+
+        // Normalise base URL: strip trailing slash, then append /chat/completions
+        const base = customUrl.replace(/\/+$/, '');
+        // If someone pasted the full completions URL already, use it as-is
+        const targetUrl = base.endsWith('/chat/completions') ? base : base + '/chat/completions';
+        const targetModel = customModel || 'deepseek-chat';
+        const payload = {
+            model: targetModel,
+            messages: [{ role: 'system', content: systemPrompt }, ...messages]
+        };
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'x-target-url': targetUrl },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Custom API call failed with status ${response.status}`);
+        const result = await response.json();
+        return result.choices[0].message.content;
+    }
+
+    throw new Error(`Unknown provider: ${provider}`);
+}
+
+async function runAIGenerationPipeline(prompt, prePromptState = null, injectedCorrection = null) {
+    // M2 — fresh scoreboard for each generation cycle.
+    scoreboard.reset();
+
     const provider = localStorage.getItem('paraform_ai_provider') || 'local';
     const apiKey = localStorage.getItem('paraform_ai_key') || '';
     const customUrl = localStorage.getItem('paraform_custom_url') || '';
-    const customModel = localStorage.getItem('paraform_custom_model') || '';
+    const customModel = provider === 'gemini'
+        ? (localStorage.getItem('paraform_google_model') || 'gemini-2.5-flash')
+        : (localStorage.getItem('paraform_custom_model') || '');
 
     // Filter chat history for API payloads (excluding system status messages)
     const apiMessages = aiChatHistory.filter(m => m.role === 'user' || m.role === 'assistant');
 
     // Handle Local Agent Mode (Zero external API dependencies)
     if (provider === 'local') {
+        addAILoadingTask('Analyzing request');
         await sleep(500);
-        
+
         const currentSource = currentState.template ? currentState.template.source : '';
         let updatedSource = currentSource;
-        
+
         const lowerPrompt = prompt.toLowerCase();
         let changesSummary = '';
         
@@ -6473,6 +7784,20 @@ async function runAIGenerationPipeline(prompt, prePromptState = null) {
         const localOldParams = prePromptState ? (prePromptState.ui_parameters || []) : [];
         const localAdded = localNewParams.filter(p => !localOldParams.find(o => o.key === p.key)).length;
         const localRemoved = localOldParams.filter(o => !localNewParams.find(p => p.key === o.key)).length;
+
+        addAILoadingTask('Validating code');
+        // M2 — semantic linter gate for the local agent path too.
+        const localLint = lint(updatedSource);
+        scoreboard.mark('linter', localLint.ok, localLint.errors);
+        if (!localLint.ok) {
+            const errBlock = formatErrorsForLLM(localLint.errors);
+            appendChatMessage('assistant',
+                `<span class="material-symbols-outlined">block</span> <strong>Linter rejected this code:</strong>` +
+                `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(errBlock)}</pre>`,
+                prePromptState,
+                { provider: 'local', modelName: 'Local Agent', changes: 'Lint failed', lintErrors: localLint.errors });
+            return;
+        }
 
         appendChatMessage('assistant', `**Success.** ${changesSummary}`, prePromptState, {
             provider: 'local',
@@ -6556,12 +7881,77 @@ Example skeleton for a stand-type object:
   else if (VIEW_MODE == "Print Flat") { base(); translate([...]) back_support(); }
 
 ═══════════════════════════════════════════
-MULTI-PART ASSEMBLY RULES
+MULTI-PART ASSEMBLY RULES  ★ READ CAREFULLY
 ═══════════════════════════════════════════
-- Parts that connect must share the SAME parameter variables for mating dimensions.
-- Add joint_clearance = 0.3; // [number, Joint Clearance, 0.1, 0.8, 0.05] and apply it to all mating features (holes are +clearance, pegs are -clearance).
-- Every assembly must have a VIEW_MODE enum parameter: Assembly · Print Layout · and one per part.
-- In "Print Layout" mode, translate parts side-by-side flat on Z=0 for slicing.
+
+COORDINATE SYSTEM
+- SCAD X = right, Y = depth (into screen), Z = up.
+- The floor plane is Z = 0.  Parts sit ON the floor, never below it.
+- The runtime centers the whole assembly horizontally — you only control
+  relative placement between parts, not the scene origin.
+
+ANCHOR-PART PATTERN (mandatory for every multi-part model)
+- ONE part is the "anchor".  It is placed at the origin with NO translate().
+- Every other part is offset using translate() so that it TOUCHES the anchor
+  at exactly one shared face (or is separated by a gap).
+- Shared face contact = coordinates match on that face.  Example:
+    Anchor occupies Y = [0 … wall_t].
+    Next part starts at translate([0, wall_t, 0]) — NOT at Y = 0 (that
+    would embed 0 mm of the second part inside the first = clipping).
+
+GLOBAL PARAMETERS ARE THE SINGLE SOURCE OF TRUTH
+- Any dimension used by MORE THAN ONE part MUST live in global_parameters.
+- Never hard-code a value in part B that should match a dimension of part A.
+  Put it in global_parameters and reference the variable in both parts.
+- Typical shared params: overall_width, overall_depth, wall_thickness,
+  base_height, arm_length, joint_clearance.
+
+ZERO-OVERLAP RULE — NEVER VIOLATE
+- Two parts must NOT occupy the same volume.  Face-to-face contact (shared
+  surface, zero thickness overlap) is fine.  Any volumetric overlap is clipping.
+- Think of each part as a rigid solid block.  Before writing translate():
+    1. Write down the bounding box of the anchor (X, Y, Z ranges).
+    2. Write down where the next part starts and ends.
+    3. Verify the ranges do NOT overlap on any axis.
+- Diagonal / brace parts that span two anchor faces: use hull() with thin
+  cube() bars at the EXACT corner coordinates — never scale a box through
+  another part.
+
+TRANSLATE TEMPLATE
+  // Part B sits directly on top of Part A (A has height = h_A):
+  translate([0, 0, h_A])
+      <part B geometry, local origin = bottom-left-front corner>
+
+  // Part B starts where Part A ends in Y:
+  translate([0, depth_A, 0])
+      <part B geometry>
+
+  // Part B is centred inside A in X but offset by clearance:
+  translate([(width_A - width_B) / 2, 0, h_A + joint_clearance])
+      <part B geometry>
+
+JOINT CLEARANCE
+- Add joint_clearance = 0.3 (in global_parameters) and apply it wherever
+  one part slides into or over another:
+    Male peg: subtract clearance  → peg_d = hole_d - joint_clearance
+    Female hole: add clearance    → hole_d = nominal_d + joint_clearance
+- Do NOT apply clearance to flat face-to-face contact — those touch at exactly 0.
+
+MATING DIMENSIONS
+- Parts that share an edge or slot must use the SAME global parameter variable
+  for the mating size — never use separate local copies that could diverge.
+
+PRINT LAYOUT (optional but recommended)
+- Add a VIEW_MODE enum: "Assembly", "Print Flat".
+- In "Print Flat" mode, translate each part flat on Z = 0 with a gap between
+  them so the user can slice all parts in one go.
+
+COLLISION SELF-CHECK (do this mentally before returning code)
+  For each pair of parts (A, B):
+    ✓ Do their X ranges overlap?  (if no → cannot clip, skip)
+    ✓ Do their Y ranges overlap?  (if no → cannot clip, skip)
+    ✓ Do their Z ranges overlap?  (if no → cannot clip, skip)
+    ✗ If ALL THREE overlap → CLIPPING.  Fix translate() before returning.
 
 ═══════════════════════════════════════════
 MODIFICATION RULES (when existing source is provided)
@@ -6613,173 +8003,88 @@ FORBIDDEN PATTERNS
         const activePart = currentState.activePart;
         const activePartObj = activePart ? template.parts?.find(p => p.id === activePart) : null;
 
+        const collidingNames = [...(currentState.partCollisions || [])]
+            .map(id => template.parts?.find(p => p.id === id)?.name || id);
+
         systemPrompt += `\n\n═══════════════════════════════════════════
 MULTI-PART MODEL: "${getProjectTitle()}"
 ═══════════════════════════════════════════
 This model has ${template.parts?.length || 0} parts: ${template.parts?.map(p => p.name).join(', ')}.
 ${activePartObj ? `You are currently editing the "${activePartObj.name}" part. Return ONLY the new source for this part — no global params, no other parts.` : 'No specific part is selected. Describe what you want to change and which part(s) to modify.'}
-
+${collidingNames.length > 0 ? `\n⚠ CLIPPING DETECTED: The following parts are currently overlapping each other: ${collidingNames.join(', ')}.\n  Fix the translate() offsets so these parts only touch at shared faces (zero volumetric overlap).\n` : ''}
 GLOBAL PARAMETERS (shared across all parts):
 ${(template.global_parameters || []).map(p => `  ${p.key} = ${currentState.globalParams[p.key] ?? p.default}  // [${p.type}, ${p.label}, ${p.min ?? ''}, ${p.max ?? ''}, ${p.step ?? ''}]`).join('\n') || '  (none)'}
 
 ALL PARTS SOURCE:
 ${(template.parts || []).map(part => {
     const isActive = part.id === activePart;
+    const isClipping = currentState.partCollisions?.has(part.id);
     const partParams = (part.ui_parameters || []).map(p => `  ${p.key} = ${currentState.partParams[part.id]?.[p.key] ?? p.default}`).join('\n');
-    return `--- Part: ${part.name}${isActive ? ' ★ ACTIVE — EDIT THIS PART' : ''} ---\n${partParams ? `Part params:\n${partParams}\n` : ''}Source:\n${part.source || ''}`;
+    return `--- Part: ${part.name}${isActive ? ' ★ ACTIVE — EDIT THIS PART' : ''}${isClipping ? ' ⚠ CLIPPING' : ''} ---\n${partParams ? `Part params:\n${partParams}\n` : ''}Source:\n${part.source || ''}`;
 }).join('\n\n')}`;
     } else {
         systemPrompt += `\n\nCurrent OpenSCAD Source Code:\n-------------------------------------------\n${currentSource}\n-------------------------------------------`;
     }
 
-    let responseText = '';
+    // Auto-correction retry loop — on lint failure the LLM gets its own errors
+    // back as a user message and tries again, up to MAX_LINT_RETRIES times.
+    let callMessages = apiMessages.map(m => ({ role: m.role, content: m.content }));
+    if (injectedCorrection) callMessages = [...callMessages, ...injectedCorrection];
+    let data, lintResult;
 
-    // Route request to appropriate API
-    if (provider === 'gemini') {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        
-        const contents = [];
-        // Optional system instruction
-        const systemInstruction = { role: 'system', parts: [{text: systemPrompt}] };
-        
-        apiMessages.forEach(msg => {
-            contents.push({
-                role: msg.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            });
-        });
-        
-        const payload = {
-            systemInstruction,
-            contents,
-            generationConfig: {
-                responseMimeType: 'application/json'
-            }
-        };
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Gemini API call failed');
-        }
-        
-        const result = await response.json();
-        responseText = result.candidates[0].content.parts[0].text;
+    addAILoadingTask('Preparing context');
 
-    } else if (provider === 'openai') {
-        const url = 'https://api.openai.com/v1/chat/completions';
-        
-        const messages = [{ role: 'system', content: systemPrompt }];
-        apiMessages.forEach(msg => {
-            messages.push({ role: msg.role, content: msg.content });
-        });
-        
-        const payload = {
-            model: 'gpt-4o-mini',
-            messages: messages,
-            response_format: { type: 'json_object' }
-        };
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'OpenAI API call failed');
+    for (let attempt = 1; attempt <= MAX_LINT_RETRIES; attempt++) {
+        if (attempt > 1) {
+            updateAILoadingBubble(`Auto-correcting (attempt ${attempt}/${MAX_LINT_RETRIES})`);
+            addAILoadingTask(`Correcting errors (attempt ${attempt})`);
+        } else {
+            addAILoadingTask('Generating code');
         }
-        
-        const result = await response.json();
-        responseText = result.choices[0].message.content;
 
-    } else if (provider === 'anthropic') {
-        const url = 'https://api.anthropic.com/v1/messages';
-        
-        const messages = [];
-        apiMessages.forEach(msg => {
-            messages.push({ role: msg.role, content: msg.content });
-        });
-        
-        const payload = {
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 4000,
-            system: systemPrompt,
-            messages: messages
-        };
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-danger-out-of-band-requests-enabled': 'true'
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            throw new Error('Claude API call failed (CORS blocked. Please use OpenRouter/Custom instead)');
-        }
-        
-        const result = await response.json();
-        responseText = result.content[0].text;
+        const responseText = await callLLMApiRaw(provider, apiKey, systemPrompt, callMessages, customUrl, customModel);
+        data = parseLLMResponseFallback(responseText);
 
-    } else if (provider === 'custom') {
-        const targetUrl = customUrl ? (customUrl.endsWith('/') ? customUrl + 'chat/completions' : customUrl + '/chat/completions') : '';
-        if (!targetUrl) {
-            throw new Error('Custom Base URL must be configured in Settings.');
+        if (!data.openscad_code) throw new Error('AI response did not contain openscad_code.');
+
+        addAILoadingTask('Validating output');
+        lintResult = lint(data.openscad_code);
+        scoreboard.mark('linter', lintResult.ok, lintResult.errors);
+
+        if (lintResult.ok) break;
+
+        if (attempt < MAX_LINT_RETRIES) {
+            const errBlock = formatErrorsForLLM(lintResult.errors);
+            callMessages = [
+                ...callMessages,
+                { role: 'assistant', content: responseText },
+                {
+                    role: 'user',
+                    content: `The code you returned failed the semantic linter. Fix ALL of the following errors and return the corrected version in the same JSON format:\n\n${errBlock}\n\nDo not use banned primitives, unresolved imports, or top-level transforms. Return only: { "changes": "...", "openscad_code": "..." }`
+                }
+            ];
         }
-        const targetModel = customModel || 'deepseek-chat';
-        
-        const messages = [{ role: 'system', content: systemPrompt }];
-        apiMessages.forEach(msg => {
-            messages.push({ role: msg.role, content: msg.content });
-        });
-        
-        const payload = {
-            model: targetModel,
-            messages: messages
-        };
-        
-        const response = await fetch(targetUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Custom API call failed with status ${response.status}`);
-        }
-        
-        const result = await response.json();
-        responseText = result.choices[0].message.content;
     }
 
-    let data = parseLLMResponseFallback(responseText);
-
-    if (!data.openscad_code) {
-        throw new Error('AI response did not contain openscad_code.');
+    if (!lintResult.ok) {
+        const errBlock = formatErrorsForLLM(lintResult.errors);
+        appendChatMessage('assistant',
+            `<span class="material-symbols-outlined">block</span> <strong>Auto-correction failed after ${MAX_LINT_RETRIES} attempts:</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(errBlock)}</pre>` +
+            `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">The model could not satisfy all linting rules. Try rephrasing your request.</div>`,
+            prePromptState,
+            { provider, modelName: getModelDisplayName(provider, customModel),
+              changes: 'Lint failed', lintErrors: lintResult.errors });
+        return;
     }
 
     // Diff Calculation
+    addAILoadingTask('Parsing parameters');
     const oldUiParams = prePromptState ? (prePromptState.ui_parameters || []) : [];
     const newParams = parseParametersFromSource(data.openscad_code);
     const addedCount = newParams.filter(p => !oldUiParams.find(old => old.key === p.key)).length;
     const removedCount = oldUiParams.filter(o => !newParams.find(p => p.key === o.key)).length;
+    completeAllAITasks();
 
     appendChatMessage('assistant', `**Success.** ${data.changes || 'Geometry updated.'}`, prePromptState, {
         provider,
@@ -6789,6 +8094,68 @@ ${(template.parts || []).map(part => {
         paramsRemoved: removedCount,
         pendingCode: data.openscad_code,
         applied: false
+    });
+
+    // Auto compile & run — apply immediately without waiting for user to click Load.
+    window.applyPendingAIChange(aiChatHistory.length - 1);
+}
+
+// ── Panel Resize ──────────────────────────────────────────────────────────────
+function initPanelResize() {
+    const STORAGE_KEY = 'paraform_panel_widths';
+    const MIN_WIDTH = { 'config-panel': 260, 'info-panel': 240 };
+    const MAX_WIDTH = 600;
+
+    function loadWidths() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+    }
+
+    function saveWidth(panelId, width) {
+        const w = loadWidths();
+        w[panelId] = width;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(w));
+    }
+
+    function applyStoredWidths() {
+        const widths = loadWidths();
+        for (const [id, width] of Object.entries(widths)) {
+            const el = document.getElementById(id);
+            if (el) el.style.setProperty('width', `${width}px`, 'important');
+        }
+    }
+
+    applyStoredWidths();
+
+    document.querySelectorAll('.panel-resize-handle').forEach(handle => {
+        const panelId = handle.dataset.panel;
+        const isLeft = handle.classList.contains('panel-resize-handle-left');
+
+        handle.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            handle.classList.add('dragging');
+            const startX = e.clientX;
+            const startWidth = panel.offsetWidth;
+
+            function onMove(ev) {
+                const delta = isLeft ? (startX - ev.clientX) : (ev.clientX - startX);
+                const newWidth = Math.max(MIN_WIDTH[panelId] || 240, Math.min(MAX_WIDTH, startWidth + delta));
+                panel.style.setProperty('width', `${newWidth}px`, 'important');
+            }
+
+            function onUp() {
+                handle.classList.remove('dragging');
+                const panel = document.getElementById(panelId);
+                if (panel) saveWidth(panelId, panel.offsetWidth);
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
     });
 }
 
@@ -6862,19 +8229,34 @@ function initAISettingsControls() {
     // Handle provider selection visibility toggling
     providerSelect.onchange = () => {
         const val = providerSelect.value;
-        
-        // Toggle Custom Base URL / Model ID fields
-        customFields.classList.toggle('hidden', val !== 'custom');
-        
+
+        // Show/hide Google model selector
+        const googleModelRow = document.getElementById('ai-google-model-row');
+        if (googleModelRow) googleModelRow.classList.toggle('hidden', val !== 'gemini');
+
+        // Show custom fields for 'custom' (URL+model) or 'openrouter' (model only)
+        customFields.classList.toggle('hidden', val !== 'custom' && val !== 'openrouter');
+        const urlRow = document.getElementById('ai-custom-url-row');
+        const modelRow = document.getElementById('ai-custom-model-row');
+        const modelLabel = document.getElementById('ai-custom-model-label');
+        const modelInput = document.getElementById('ai-custom-model-input');
+        if (urlRow) urlRow.classList.toggle('hidden', val === 'openrouter');
+        if (modelRow) modelRow.classList.remove('hidden');
+        if (modelLabel) modelLabel.innerText = val === 'openrouter' ? 'Model ID (e.g. openai/gpt-4o-mini)' : 'Model ID';
+        if (modelInput && val === 'openrouter' && !modelInput.value) {
+            modelInput.placeholder = 'e.g. openai/gpt-4o-mini or anthropic/claude-3.5-sonnet';
+        }
+
         // Toggle API Key field row
         keyFieldRow.classList.toggle('hidden', val === 'local');
-        
+
         // Label dynamic adjustment
         const keyLabel = document.getElementById('ai-key-label');
         if (keyLabel) {
-            if (val === 'gemini') keyLabel.innerText = 'Gemini API Key';
+            if (val === 'gemini') keyLabel.innerText = 'Google AI API Key';
             else if (val === 'openai') keyLabel.innerText = 'OpenAI API Key';
             else if (val === 'anthropic') keyLabel.innerText = 'Anthropic API Key';
+            else if (val === 'openrouter') keyLabel.innerText = 'OpenRouter API Key';
             else keyLabel.innerText = 'API Key';
         }
     };
@@ -6892,16 +8274,22 @@ function initAISettingsControls() {
     saveBtn.onclick = () => {
         localStorage.setItem('paraform_ai_provider', providerSelect.value);
         localStorage.setItem('paraform_ai_key', keyInput.value.trim());
-        
+
+        const googleModelSelect = document.getElementById('ai-google-model-select');
         const urlInput = document.getElementById('ai-custom-url-input');
         const modelInput = document.getElementById('ai-custom-model-input');
         const systemPromptInput = document.getElementById('ai-system-prompt-input');
+        if (googleModelSelect) localStorage.setItem('paraform_google_model', googleModelSelect.value);
         if (urlInput) localStorage.setItem('paraform_custom_url', urlInput.value.trim());
         if (modelInput) localStorage.setItem('paraform_custom_model', modelInput.value.trim());
         if (systemPromptInput) localStorage.setItem('paraform_ai_system_prompt', systemPromptInput.value.trim());
-        
+
         modal.classList.add('hidden');
-        appendChatMessage('system', `AI Settings updated. Active Provider: ${providerSelect.value.toUpperCase()}`);
+        updateAIModelLabel();
+        const modelName = providerSelect.value === 'gemini'
+            ? (GOOGLE_MODEL_NAMES[googleModelSelect?.value] || googleModelSelect?.value || 'Gemini')
+            : providerSelect.value.toUpperCase();
+        appendChatMessage('system', `AI Settings updated. Active Model: ${modelName}`);
     };
     
     // Close button click
@@ -6918,36 +8306,401 @@ function openAISettingsModal() {
     const keyInput = document.getElementById('ai-key-input');
     const urlInput = document.getElementById('ai-custom-url-input');
     const modelInput = document.getElementById('ai-custom-model-input');
+    const googleModelSelect = document.getElementById('ai-google-model-select');
     const systemPromptInput = document.getElementById('ai-system-prompt-input');
-    
+
     if (!modal) return;
-    
+
     // Load persisted configurations
     const provider = localStorage.getItem('paraform_ai_provider') || 'local';
     const key = localStorage.getItem('paraform_ai_key') || '';
     const customUrl = localStorage.getItem('paraform_custom_url') || '';
     const customModel = localStorage.getItem('paraform_custom_model') || '';
+    const googleModel = localStorage.getItem('paraform_google_model') || 'gemini-2.5-flash';
     const customSystemPrompt = localStorage.getItem('paraform_ai_system_prompt') || '';
-    
+
     if (providerSelect) providerSelect.value = provider;
     if (keyInput) keyInput.value = key;
     if (urlInput) urlInput.value = customUrl;
     if (modelInput) modelInput.value = customModel;
+    if (googleModelSelect) googleModelSelect.value = googleModel;
     if (systemPromptInput) systemPromptInput.value = customSystemPrompt;
-    
+
     // Toggle field visibility matching loaded configuration
-    if (customFields) customFields.classList.toggle('hidden', provider !== 'custom');
+    const isGemini = provider === 'gemini';
+    const isCustom = provider === 'custom';
+    const isOpenRouter = provider === 'openrouter';
+    const googleModelRow = document.getElementById('ai-google-model-row');
+    if (googleModelRow) googleModelRow.classList.toggle('hidden', !isGemini);
+    if (customFields) customFields.classList.toggle('hidden', !isCustom && !isOpenRouter);
+    const urlRow = document.getElementById('ai-custom-url-row');
+    const modelLabel = document.getElementById('ai-custom-model-label');
+    if (urlRow) urlRow.classList.toggle('hidden', isOpenRouter);
+    if (modelLabel) modelLabel.innerText = isOpenRouter ? 'Model ID (e.g. openai/gpt-4o-mini)' : 'Model ID';
+    if (modelInput && isOpenRouter && !modelInput.placeholder.includes('openai/')) {
+        modelInput.placeholder = 'e.g. openai/gpt-4o-mini or anthropic/claude-3.5-sonnet';
+    }
     if (keyFieldRow) keyFieldRow.classList.toggle('hidden', provider === 'local');
-    
+
     const keyLabel = document.getElementById('ai-key-label');
     if (keyLabel && providerSelect) {
-        if (provider === 'gemini') keyLabel.innerText = 'Gemini API Key';
+        if (provider === 'gemini') keyLabel.innerText = 'Google AI API Key';
         else if (provider === 'openai') keyLabel.innerText = 'OpenAI API Key';
         else if (provider === 'anthropic') keyLabel.innerText = 'Anthropic API Key';
+        else if (provider === 'openrouter') keyLabel.innerText = 'OpenRouter API Key';
         else keyLabel.innerText = 'API Key';
     }
-    
+
     // Display Modal overlay
     modal.classList.remove('hidden');
 }
 
+// ============================================================
+// APP SETTINGS MODAL
+// ============================================================
+function openAppSettingsModal() {
+    const modal = document.getElementById('app-settings-modal');
+    if (!modal) return;
+
+    const s = getSettings();
+
+    // ── Panel switching ──────────────────────────────────────
+    const navItems = modal.querySelectorAll('.settings-nav-item');
+    const panels   = modal.querySelectorAll('.settings-panel');
+
+    function showPanel(panelId) {
+        navItems.forEach(b => b.classList.toggle('active', b.dataset.panel === panelId));
+        panels.forEach(p  => p.classList.toggle('active',  p.dataset.settingsPanel === panelId));
+    }
+    navItems.forEach(btn => { btn.onclick = () => showPanel(btn.dataset.panel); });
+
+    // ── Populate all controls ────────────────────────────────
+    function setVal(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = val;
+        else el.value = String(val);
+    }
+    function setSlider(id, val, labelId, fmt) {
+        const el = document.getElementById(id);
+        if (el) { el.value = String(val); updateSliderFill(el); }
+        const lb = document.getElementById(labelId);
+        if (lb) lb.innerText = fmt(val);
+    }
+    function setRadio(name, val) {
+        const radios = modal.querySelectorAll(`input[name="${name}"]`);
+        radios.forEach(r => { r.checked = (r.value === String(val)); });
+    }
+    function setBgChip(val) {
+        modal.querySelectorAll('.bg-chip').forEach(c => c.classList.toggle('active', c.dataset.bg === val));
+    }
+
+    // General
+    setVal('s-pref-unit',    s.preferences.unitSystem);
+    setVal('s-pref-autosave', s.preferences.autoSave);
+    setVal('s-pref-startup',  s.preferences.startup);
+    // Viewport
+    setVal('s-vp-display',   s.viewport.defaultDisplayMode);
+    setBgChip(s.viewport.background);
+    setVal('s-vp-grid',      s.viewport.showGrid);
+    setSlider('s-vp-gridsize', s.viewport.gridSize,  's-vp-gridsize-val', v => `${v}mm`);
+    setVal('s-vp-axes',      s.viewport.showAxes);
+    setSlider('s-vp-fov',    s.viewport.fov,         's-vp-fov-val',      v => `${v}°`);
+    // Camera
+    setSlider('s-cam-orbit', s.camera.orbitSpeed,    's-cam-orbit-val',   v => `${parseFloat(v).toFixed(2)}×`);
+    setSlider('s-cam-zoom',  s.camera.zoomSpeed,     's-cam-zoom-val',    v => `${parseFloat(v).toFixed(2)}×`);
+    setSlider('s-cam-pan',   s.camera.panSpeed,      's-cam-pan-val',     v => `${parseFloat(v).toFixed(2)}×`);
+    setSlider('s-cam-damp',  s.camera.dampingFactor, 's-cam-damp-val',    v => parseFloat(v).toFixed(2));
+    setVal('s-cam-invert',   s.camera.invertY);
+    setVal('s-cam-autofit',  s.camera.autoFitOnCompile);
+    // Performance
+    setRadio('s-perf-quality', s.performance.compileQuality);
+    setVal('s-perf-delay',   String(s.performance.autoRecompileDelay));
+    setVal('s-perf-workers', String(s.performance.workerThreads));
+    // Graphics
+    setVal('s-gfx-aa',       s.graphics.antialias);
+    setSlider('s-gfx-edge',  s.graphics.edgeThickness, 's-gfx-edge-val',  v => `${v}px`);
+    setVal('s-gfx-dpr',      String(s.graphics.pixelRatio));
+    // Measurement
+    setVal('s-meas-unit',    s.measurement.unit);
+    setVal('s-meas-decimals', String(s.measurement.decimalPlaces));
+    // Export
+    setVal('s-exp-format',   s.export.defaultFormat);
+    setRadio('s-exp-stltype', s.export.stlType);
+    setRadio('s-exp-quality', s.export.exportQuality);
+    setVal('s-exp-filename',  s.export.filenamePattern);
+    // Presets / Diagnostics
+    setVal('s-diag-fps',     s.diagnostics.showFPS);
+    setVal('s-diag-poly',    s.diagnostics.showPolygonCount);
+    setVal('s-diag-time',    s.diagnostics.showCompileTime);
+
+    // ── Build shortcut table ─────────────────────────────────
+    renderShortcutTable(s.keybindings);
+
+    // ── Live-apply on change ─────────────────────────────────
+    function wire(id, path, transform) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.oninput = el.onchange = () => {
+            const raw = el.type === 'checkbox' ? el.checked : el.value;
+            const val = transform ? transform(raw) : raw;
+            const parts = path.split('.');
+            const patch = {};
+            let cur = patch;
+            parts.forEach((p, i) => { cur[p] = i === parts.length - 1 ? val : {}; cur = cur[p]; });
+            saveSettings(patch);
+        };
+    }
+    function wireSlider(id, path, labelId, fmt, transform) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.oninput = () => {
+            updateSliderFill(el);
+            const lb = document.getElementById(labelId);
+            if (lb) lb.innerText = fmt(el.value);
+            const val = transform ? transform(el.value) : parseFloat(el.value);
+            const parts = path.split('.');
+            const patch = {};
+            let cur = patch;
+            parts.forEach((p, i) => { cur[p] = i === parts.length - 1 ? val : {}; cur = cur[p]; });
+            saveSettings(patch);
+        };
+    }
+    function wireRadio(name, path, transform) {
+        modal.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+            r.onchange = () => {
+                if (!r.checked) return;
+                const val = transform ? transform(r.value) : r.value;
+                const parts = path.split('.');
+                const patch = {};
+                let cur = patch;
+                parts.forEach((p, i) => { cur[p] = i === parts.length - 1 ? val : {}; cur = cur[p]; });
+                saveSettings(patch);
+            };
+        });
+    }
+
+    // General
+    wire('s-pref-unit',    'preferences.unitSystem');
+    wire('s-pref-autosave','preferences.autoSave', v => { restartAutoSave(); return v; });
+    wire('s-pref-startup', 'preferences.startup');
+    // Viewport
+    wire('s-vp-display',   'viewport.defaultDisplayMode', v => { applyDisplayMode(v); return v; });
+    modal.querySelectorAll('.bg-chip').forEach(chip => {
+        chip.onclick = () => {
+            modal.querySelectorAll('.bg-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            saveSettings({ viewport: { background: chip.dataset.bg } });
+        };
+    });
+    wire('s-vp-grid',      'viewport.showGrid', v => !!v);
+    wireSlider('s-vp-gridsize', 'viewport.gridSize', 's-vp-gridsize-val', v => `${v}mm`, v => parseInt(v, 10));
+    wire('s-vp-axes',      'viewport.showAxes', v => !!v);
+    wireSlider('s-vp-fov', 'viewport.fov', 's-vp-fov-val', v => `${v}°`, v => parseInt(v, 10));
+    // Camera
+    wireSlider('s-cam-orbit', 'camera.orbitSpeed',    's-cam-orbit-val', v => `${parseFloat(v).toFixed(2)}×`, parseFloat);
+    wireSlider('s-cam-zoom',  'camera.zoomSpeed',     's-cam-zoom-val',  v => `${parseFloat(v).toFixed(2)}×`, parseFloat);
+    wireSlider('s-cam-pan',   'camera.panSpeed',      's-cam-pan-val',   v => `${parseFloat(v).toFixed(2)}×`, parseFloat);
+    wireSlider('s-cam-damp',  'camera.dampingFactor', 's-cam-damp-val',  v => parseFloat(v).toFixed(2),       parseFloat);
+    wire('s-cam-invert',   'camera.invertY',         v => !!v);
+    wire('s-cam-autofit',  'camera.autoFitOnCompile', v => !!v);
+    // Performance
+    wireRadio('s-perf-quality', 'performance.compileQuality');
+    wire('s-perf-delay',   'performance.autoRecompileDelay', v => parseInt(v, 10));
+    wire('s-perf-workers', 'performance.workerThreads',      v => v === 'auto' ? 'auto' : parseInt(v, 10));
+    // Graphics
+    wire('s-gfx-aa',       'graphics.antialias',    v => !!v);
+    wireSlider('s-gfx-edge', 'graphics.edgeThickness', 's-gfx-edge-val', v => `${v}px`, parseFloat);
+    wire('s-gfx-dpr',      'graphics.pixelRatio',   v => v === '1' || v === '1.5' || v === '2' ? parseFloat(v) : v);
+    // Measurement
+    wire('s-meas-unit',    'measurement.unit');
+    wire('s-meas-decimals','measurement.decimalPlaces', v => parseInt(v, 10));
+    // Export
+    wire('s-exp-format',   'export.defaultFormat');
+    wireRadio('s-exp-stltype', 'export.stlType');
+    wireRadio('s-exp-quality', 'export.exportQuality');
+    wire('s-exp-filename', 'export.filenamePattern');
+    // Diagnostics
+    wire('s-diag-fps',     'diagnostics.showFPS',          v => !!v);
+    wire('s-diag-poly',    'diagnostics.showPolygonCount',  v => !!v);
+    wire('s-diag-time',    'diagnostics.showCompileTime',   v => !!v);
+
+    // ── Diagnostics actions ──────────────────────────────────
+    const clearCacheBtn = document.getElementById('s-diag-clear-cache');
+    if (clearCacheBtn) clearCacheBtn.onclick = () => {
+        Object.keys(localStorage).filter(k => k.startsWith('thumbnail_')).forEach(k => localStorage.removeItem(k));
+        clearCacheBtn.innerText = 'Cleared!';
+        setTimeout(() => { clearCacheBtn.innerText = 'Clear'; }, 2000);
+    };
+
+    const copyDiagsBtn = document.getElementById('s-diag-copy');
+    if (copyDiagsBtn) copyDiagsBtn.onclick = () => {
+        const info = {
+            version: 'v0.11',
+            userAgent: navigator.userAgent,
+            webgl: (() => { try { const c = document.createElement('canvas'); return c.getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch { return 'none'; } })(),
+            settings: getSettings(),
+            timestamp: new Date().toISOString(),
+        };
+        navigator.clipboard?.writeText(JSON.stringify(info, null, 2)).then(() => {
+            copyDiagsBtn.innerText = 'Copied!';
+            setTimeout(() => { copyDiagsBtn.innerText = 'Copy'; }, 2000);
+        });
+    };
+
+    // ── Preset cards ─────────────────────────────────────────
+    const PRESETS = {
+        'cad-draft': {
+            viewport:    { defaultDisplayMode: 'shaded', background: 'black', showGrid: true, gridSize: 10 },
+            performance: { compileQuality: 'preview', autoRecompileDelay: 200 },
+            camera:      { autoFitOnCompile: false },
+            diagnostics: { showFPS: false, showPolygonCount: true, showCompileTime: true },
+        },
+        'presentation': {
+            viewport:    { defaultDisplayMode: 'shaded', background: 'default', showGrid: false, fov: 65 },
+            performance: { compileQuality: 'high', autoRecompileDelay: 1000 },
+            camera:      { autoFitOnCompile: true, dampingFactor: 0.08 },
+            graphics:    { pixelRatio: 'device' },
+            diagnostics: { showFPS: false, showPolygonCount: false, showCompileTime: false },
+        },
+        'development': {
+            viewport:    { defaultDisplayMode: 'shaded-edges', background: 'default', showGrid: true, showAxes: true },
+            performance: { compileQuality: 'balanced', autoRecompileDelay: 500 },
+            camera:      { autoFitOnCompile: true },
+            diagnostics: { showFPS: true, showPolygonCount: true, showCompileTime: true },
+        },
+    };
+    modal.querySelectorAll('.preset-card').forEach(card => {
+        card.onclick = () => {
+            const preset = PRESETS[card.dataset.preset];
+            if (!preset) return;
+            if (!confirm(`Apply "${card.querySelector('.preset-card-name').innerText}" preset? This will overwrite your current settings.`)) return;
+            saveSettings(preset);
+            modal.classList.add('hidden');
+            openAppSettingsModal(); // reopen to reflect new values
+        };
+    });
+
+    // ── Reset to defaults ────────────────────────────────────
+    const resetBtn = document.getElementById('settings-reset-btn');
+    if (resetBtn) resetBtn.onclick = () => {
+        if (!confirm('Reset all settings to defaults? This cannot be undone.')) return;
+        localStorage.removeItem(SETTINGS_KEY);
+        applySettings(DEFAULT_SETTINGS);
+        modal.classList.add('hidden');
+        openAppSettingsModal();
+    };
+
+    // ── Restore shortcut defaults ────────────────────────────
+    const restoreShortcutsBtn = document.getElementById('shortcuts-restore-defaults');
+    if (restoreShortcutsBtn) restoreShortcutsBtn.onclick = () => {
+        saveSettings({ keybindings: { ...DEFAULT_KEYBINDINGS } });
+        renderShortcutTable(getSettings().keybindings);
+    };
+
+    // ── Done / close ─────────────────────────────────────────
+    const closeBtn = document.getElementById('settings-close-btn');
+    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+    modal.onclick = e => { if (e.target === modal) modal.classList.add('hidden'); };
+
+    modal.classList.remove('hidden');
+}
+
+function renderShortcutTable(bindings) {
+    const table = document.getElementById('shortcut-table');
+    if (!table) return;
+    table.innerHTML = '';
+
+    for (const [actionId, binding] of Object.entries(bindings)) {
+        const row = document.createElement('div');
+        row.className = 'shortcut-row';
+        row.dataset.action = actionId;
+
+        const label = document.createElement('span');
+        label.className = 'shortcut-row-label';
+        label.innerText = binding.label;
+
+        const badge = document.createElement('span');
+        badge.className = 'shortcut-badge';
+        badge.innerText = formatCombo(binding);
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'capture-btn';
+        editBtn.innerText = 'Edit';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'shortcut-reset-btn';
+        resetBtn.title = 'Reset to default';
+        resetBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
+
+        row.append(label, badge, editBtn, resetBtn);
+        table.appendChild(row);
+
+        editBtn.onclick = () => startCapture(row, badge, actionId, bindings);
+        resetBtn.onclick = () => {
+            const def = DEFAULT_KEYBINDINGS[actionId];
+            if (!def) return;
+            bindings[actionId] = { ...def };
+            saveSettings({ keybindings: { ...bindings } });
+            badge.innerText = formatCombo(def);
+            badge.classList.remove('conflict');
+        };
+    }
+}
+
+function formatCombo(b) {
+    if (!b?.key) return '—';
+    const parts = [];
+    if (b.ctrl)  parts.push('Ctrl');
+    if (b.shift) parts.push('Shift');
+    if (b.alt)   parts.push('Alt');
+    parts.push(b.key === ',' ? ',' : b.key.toUpperCase());
+    return parts.join(' + ');
+}
+
+function startCapture(row, badge, actionId, bindings) {
+    if (isCapturingKeybinding) return;
+    isCapturingKeybinding = true;
+    row.classList.add('capturing');
+    badge.classList.remove('conflict');
+
+    const hint = document.createElement('span');
+    hint.className = 'shortcut-capture-hint';
+    hint.innerText = 'Press a key…';
+    badge.replaceWith(hint);
+
+    function onCapture(e) {
+        const modKeys = ['Control', 'Shift', 'Alt', 'Meta'];
+        if (modKeys.includes(e.key)) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const newBinding = { key: e.key, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, label: bindings[actionId].label };
+        const combo = comboStr(e.key, e.ctrlKey, e.shiftKey, e.altKey);
+
+        // Conflict check
+        const conflict = Object.entries(bindings).find(([id, b]) => id !== actionId && comboStr(b.key, b.ctrl, b.shift, b.alt) === combo);
+
+        bindings[actionId] = newBinding;
+        saveSettings({ keybindings: { ...bindings } });
+
+        // Restore badge
+        const newBadge = document.createElement('span');
+        newBadge.className = 'shortcut-badge';
+        newBadge.innerText = formatCombo(newBinding);
+        if (conflict) {
+            newBadge.classList.add('conflict');
+            newBadge.title = `Conflicts with "${conflict[1].label}"`;
+        }
+        hint.replaceWith(newBadge);
+        row.classList.remove('capturing');
+
+        // Re-wire edit button to new badge
+        row.querySelector('.capture-btn').onclick = () => startCapture(row, newBadge, actionId, bindings);
+
+        document.removeEventListener('keydown', onCapture, true);
+        isCapturingKeybinding = false;
+    }
+
+    document.addEventListener('keydown', onCapture, true);
+}

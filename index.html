@@ -258,65 +258,188 @@
         <!-- CREATE PAGE (Studio) -->
         <section id="view-create" class="view hidden">
             <div id="configurator-container" class="configurator-layout">
+
+                <!-- Studio Ribbon Bar -->
+                <div id="studio-ribbon" class="studio-ribbon hidden-global">
+
+                    <!-- Row 1: Nav bar (logo + menus + actions) -->
+                    <div class="ribbon-nav">
+                        <div class="ribbon-nav-left">
+                            <a href="#/" class="ribbon-logo">
+                                <span class="material-symbols-outlined" style="font-size:18px;color:var(--accent-color);vertical-align:-4px">hexagon</span>
+                                <span class="ribbon-logo-text">ParaForm</span>
+                            </a>
+                            <div class="ribbon-nav-vsep"></div>
+                            <!-- Menus injected by JS into .ribbon-nav-menus -->
+                            <div class="ribbon-nav-menus"></div>
+                        </div>
+                        <div class="ribbon-nav-center">
+                            <!-- Project title injected by JS -->
+                            <div class="ribbon-nav-title"></div>
+                        </div>
+                        <div class="ribbon-nav-right">
+                            <!-- Library + Export injected by JS into .ribbon-nav-actions -->
+                            <div class="ribbon-nav-actions"></div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Tab strip -->
+                    <div class="ribbon-tabstrip">
+                        <div class="ribbon-workspace">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l4.5 2.6v5.2L12 12.4 7.5 9.8V4.6L12 2z"/><path d="M12 12.4l4.5 2.6v5.2L12 22.8l-4.5-2.6v-5.2L12 12.4z" opacity=".5"/></svg>
+                            DESIGN
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="ribbon-tab-vsep"></div>
+                        <button class="ribbon-tab active" data-rtab="transform">TRANSFORM</button>
+                        <button class="ribbon-tab" data-rtab="view">VIEW</button>
+                        <button class="ribbon-tab" data-rtab="export">EXPORT</button>
+                        <button class="ribbon-tab" data-rtab="assets">ASSETS</button>
+                    </div>
+
+                    <!-- Ribbon tool body -->
+                    <div class="ribbon-body">
+
+                        <!-- TRANSFORM tab -->
+                        <div class="ribbon-content active" data-rcontent="transform">
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <button class="rtool active" id="tool-select" title="Select [V]">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-7 1-4 7z"/></svg>
+                                        <span>Select</span>
+                                    </button>
+                                    <button class="rtool" id="tool-translate" title="Move [G]">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+                                        <span>Move</span>
+                                    </button>
+                                    <button class="rtool" id="tool-rotate" title="Rotate [R]">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M22 13A10 10 0 0 0 3.2 7.2M2 11a10 10 0 0 0 18.8 4.8"/></svg>
+                                        <span>Rotate</span>
+                                    </button>
+                                    <button class="rtool" id="tool-scale" title="Scale [S]">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                                        <span>Scale</span>
+                                    </button>
+                                </div>
+                                <span class="ribbon-group-label">TOOLS</span>
+                            </div>
+                            <div class="ribbon-group-sep"></div>
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <button class="rtool" id="tool-layflat" title="Lay Flat on Bed">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="21" x2="19" y2="21"/></svg>
+                                        <span>Lay Flat</span>
+                                    </button>
+                                    <button class="rtool" id="tool-reset" title="Reset Transform">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                        <span>Reset</span>
+                                    </button>
+                                </div>
+                                <span class="ribbon-group-label">ALIGN</span>
+                            </div>
+                            <div class="ribbon-group-sep"></div>
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <button class="rtool" id="tool-undo" title="Undo [Ctrl+Z]" disabled>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 5.27 6.56"/></svg>
+                                        <span>Undo</span>
+                                    </button>
+                                    <button class="rtool" id="tool-redo" title="Redo [Ctrl+Y]" disabled>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18.73 6.56"/></svg>
+                                        <span>Redo</span>
+                                    </button>
+                                </div>
+                                <span class="ribbon-group-label">HISTORY</span>
+                            </div>
+                        </div>
+
+                        <!-- VIEW tab -->
+                        <div class="ribbon-content" data-rcontent="view">
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <div class="rtool-split" id="display-mode-wrap">
+                                        <button class="rtool rtool-split-btn" id="dm-toggle" title="Display Mode">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/></svg>
+                                            <span id="dm-current">Shaded</span>
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </button>
+                                        <div class="dm-dropdown hidden" id="dm-dropdown">
+                                            <button class="dm-opt active" data-mode="shaded">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                                Shaded
+                                            </button>
+                                            <button class="dm-opt" data-mode="shaded-edges">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                                Shaded + Edges
+                                            </button>
+                                            <button class="dm-opt" data-mode="wireframe">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                                Wireframe
+                                            </button>
+                                            <button class="dm-opt" data-mode="wireframe-edges">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                                Wireframe + Edges
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="ribbon-group-label">DISPLAY</span>
+                            </div>
+                            <div class="ribbon-group-sep"></div>
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <button class="rtool" id="view-reset" title="Reset Camera View">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                        <span>Reset</span>
+                                    </button>
+                                </div>
+                                <span class="ribbon-group-label">CAMERA</span>
+                            </div>
+                        </div>
+
+                        <!-- ASSETS tab -->
+                        <div class="ribbon-content" data-rcontent="assets">
+                            <div id="asset-category-chips" class="asset-cat-strip">
+                                <!-- Populated by JS from asset manifest -->
+                            </div>
+                        </div>
+
+                        <!-- EXPORT tab -->
+                        <div class="ribbon-content" data-rcontent="export">
+                            <div class="ribbon-group">
+                                <div class="ribbon-group-btns">
+                                    <button class="rtool rtool-export" data-format="stl" title="Export as STL — universal slicer format">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>STL</span>
+                                    </button>
+                                    <button class="rtool rtool-export" data-format="3mf" title="Export as 3MF — modern Bambu/Orca format">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>3MF</span>
+                                    </button>
+                                    <button class="rtool rtool-export" data-format="obj" title="Export as OBJ — Blender / Maya compatible">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>OBJ</span>
+                                    </button>
+                                    <button class="rtool rtool-export" data-format="gltf" title="Export as glTF — web / AR format">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>glTF</span>
+                                    </button>
+                                </div>
+                                <span class="ribbon-group-label">EXPORT</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div id="viewport-container" class="full-viewport">
                     <div id="viewport"></div>
 
-                    <!-- Floating Tool Toolbar -->
-                    <div id="viewport-toolbar" class="viewport-toolbar">
-                        <button class="tool-btn active" id="tool-select" title="Select (V)">
-                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-7 1-4 7z"/></svg>
-                            <span class="tool-label">Select</span>
-                        </button>
-                        <button class="tool-btn" id="tool-translate" title="Move (G)">
-                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
-                            <span class="tool-label">Move</span>
-                        </button>
-                        <button class="tool-btn" id="tool-rotate" title="Rotate (R)">
-                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M22 13A10 10 0 0 0 3.2 7.2M2 11a10 10 0 0 0 18.8 4.8"/></svg>
-                            <span class="tool-label">Rotate</span>
-                        </button>
-                        <button class="tool-btn" id="tool-scale" title="Scale (S)">
-                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                            <span class="tool-label">Scale</span>
-                        </button>
-                        <button class="tool-btn" id="tool-layflat" title="Lay Flat on Bed">
-                            <svg class="tool-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="21" x2="19" y2="21"/></svg>
-                            <span class="tool-label">Lay Flat</span>
-                        </button>
-                    </div>
-
                     <!-- Viewport overlay controls (bottom-right) -->
                     <div class="viewport-controls-overlay">
-                        <button id="view-reset" class="vp-ctrl-btn" title="Reset Camera">
+                        <button id="view-reset-vp" class="vp-ctrl-btn" title="Reset Camera">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                         </button>
-                    </div>
-
-                    <!-- Display Mode Selector (top-right) -->
-                    <div class="display-mode-wrap" id="display-mode-wrap">
-                        <button class="dm-toggle" id="dm-toggle" title="Display Mode">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/></svg>
-                            <span id="dm-current">Shaded</span>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                        <div class="dm-dropdown hidden" id="dm-dropdown">
-                            <button class="dm-opt active" data-mode="shaded">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                                Shaded
-                            </button>
-                            <button class="dm-opt" data-mode="shaded-edges">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-                                Shaded + Edges
-                            </button>
-                            <button class="dm-opt" data-mode="wireframe">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                                Wireframe
-                            </button>
-                            <button class="dm-opt" data-mode="wireframe-edges">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-                                Wireframe + Edges
-                            </button>
-                        </div>
                     </div>
 
                     <!-- Gizmo Details Panel (hidden, used by JS) -->
@@ -334,8 +457,8 @@
                 </div>
 
                 <div id="loader-overlay" class="hidden">
-                    <div class="loader"></div>
-                    <p>Compiling mesh...</p>
+                    <canvas id="tesseract-compile" width="56" height="56"></canvas>
+                    <p id="compile-overlay-text">Compiling mesh...</p>
                 </div>
             </div>
 
@@ -437,15 +560,12 @@
         </section>
     </main>
 
-    <!-- LEFT PANEL: Parameters & Script -->
+    <!-- LEFT PANEL: Layers & Script -->
     <aside id="config-panel" class="floating-panel left hidden-global">
+        <div class="panel-resize-handle panel-resize-handle-right" data-panel="config-panel"></div>
         <header class="config-header">
             <div class="config-tabs">
-                <button class="tab-btn active" data-tab="params">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
-                    Parameters
-                </button>
-                <button class="tab-btn" data-tab="layers">
+                <button class="tab-btn active" data-tab="layers">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
                     Layers
                 </button>
@@ -453,18 +573,13 @@
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     Script
                 </button>
-                <button class="tab-btn" data-tab="ai">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                    AI Assistant
-                </button>
             </div>
+            <button class="panel-collapse-btn" data-panel="config-panel" title="Collapse panel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
         </header>
 
-        <div id="tab-content-params" class="tab-content">
-            <div id="parameters-container"></div>
-        </div>
-
-        <div id="tab-content-layers" class="tab-content hidden">
+        <div id="tab-content-layers" class="tab-content">
             <!-- Rendered by JS -->
         </div>
 
@@ -482,7 +597,52 @@
             </div>
         </div>
 
-        <div id="tab-content-ai" class="tab-content hidden">
+    </aside>
+
+    <!-- RIGHT PANEL: Parameters, AI Assistant (Transform & Scene hidden) -->
+    <aside id="info-panel" class="floating-panel right hidden-global">
+        <div class="panel-resize-handle panel-resize-handle-left" data-panel="info-panel"></div>
+        <header class="config-header">
+            <button class="panel-collapse-btn" data-panel="info-panel" title="Collapse panel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div class="config-tabs">
+                <button class="right-tab-btn active" data-right-tab="params">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
+                    Parameters
+                </button>
+                <button class="right-tab-btn" data-right-tab="ai">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    AI Assistant
+                </button>
+                <button class="right-tab-btn" data-right-tab="assets">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    Assets
+                </button>
+                <!-- Transform & Scene hidden for now — keep HTML for future use -->
+                <button class="right-tab-btn" data-right-tab="transform" style="display:none">Transform</button>
+                <button class="right-tab-btn" data-right-tab="env-mat" style="display:none">Scene</button>
+            </div>
+        </header>
+
+        <!-- PARAMETERS TAB -->
+        <div id="right-tab-params" class="tab-content">
+            <div id="parameters-container"></div>
+        </div>
+
+        <!-- ASSETS TAB (immutable hardware library — updatex.md §3B) -->
+        <div id="right-tab-assets" class="tab-content hidden">
+            <div class="assets-drawer">
+                <div class="assets-drawer-header">
+                    <div class="assets-drawer-title">Hardware Library</div>
+                    <div class="assets-drawer-sub">Read-only validated parts. Insert into the active SCAD to subtract clearances or visualise.</div>
+                </div>
+                <div id="assets-drawer-list" class="assets-drawer-list"></div>
+            </div>
+        </div>
+
+        <!-- AI ASSISTANT TAB -->
+        <div id="right-tab-ai" class="tab-content hidden">
             <div class="ai-chat-wrapper" style="display: flex; flex-direction: column; height: 100%;">
 
                 <!-- Chat History / Messages -->
@@ -491,62 +651,63 @@
                 </div>
 
                 <!-- Input Area (Sticky Bottom) -->
-                <div class="ai-chat-input-area" style="padding: 12px; background: var(--surface-elevated); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+                <div class="ai-chat-input-area">
 
                     <!-- Chips section -->
-                    <div class="ai-chips-scroll" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;">
+                    <div class="ai-chips-scroll">
                         <button class="ai-chip" data-prompt="Add 4mm corner mounting holes">Mounting Holes</button>
                         <button class="ai-chip" data-prompt="Fillet the outer vertical edges by 3mm">Fillet Edges</button>
                         <button class="ai-chip" data-prompt="Add a linear grid of ventilation slots on the base">Ventilation Grid</button>
                         <button class="ai-chip" data-prompt="Engrave 'ParaForm' text on the top surface">Emboss Text</button>
                     </div>
 
-                    <div class="ai-input-box" style="display: flex; gap: 8px; align-items: flex-end; position: relative;">
-
+                    <!-- Claude-style unified input card -->
+                    <div class="ai-input-card">
                         <!-- Past conversations panel (pops up above) -->
-                        <div class="ai-conv-panel-wrap" style="flex-shrink: 0;">
-                            <!-- History button -->
-                            <button id="ai-history-btn" class="icon-btn" style="height: 36px; width: 36px; border-radius: var(--radius-lg);" title="Past Conversations">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
-                            </button>
-                            <!-- Dropdown panel -->
+                        <div class="ai-conv-panel-wrap">
                             <div id="ai-conv-panel" class="ai-conv-panel hidden">
                                 <div class="ai-conv-panel-header">
                                     <span>Past Conversations</span>
                                     <button id="ai-conv-close" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;line-height:1;font-size:16px;">×</button>
                                 </div>
-                                <div id="ai-conv-list" class="ai-conv-list">
-                                    <!-- Injected by JS -->
-                                </div>
+                                <div id="ai-conv-list" class="ai-conv-list"><!-- Injected by JS --></div>
                             </div>
                         </div>
 
-                        <!-- New Conversation button -->
-                        <button id="ai-clear-chat-btn" class="icon-btn" style="height: 36px; width: 36px; border-radius: var(--radius-lg); flex-shrink: 0;" title="New Conversation">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                        </button>
+                        <textarea id="ai-prompt-input" spellcheck="false" placeholder="Write a message..."></textarea>
 
-                        <textarea id="ai-prompt-input" spellcheck="false" class="glass-input" style="flex: 1; height: 42px; min-height: 42px; max-height: 120px; resize: none; padding: 10px 12px; border-radius: var(--radius-lg); font-family: var(--font-main);" placeholder="Message AI Assistant..."></textarea>
-                        <button id="ai-generate-btn" class="primary-btn" style="height: 42px; width: 42px; border-radius: var(--radius-lg); padding: 0; flex-shrink: 0;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                        </button>
+                        <div class="ai-input-card-toolbar">
+                            <div class="ai-toolbar-left">
+                                <button id="ai-history-btn" class="ai-toolbar-icon-btn" title="Past Conversations">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                </button>
+                                <button id="ai-clear-chat-btn" class="ai-toolbar-icon-btn" title="New Conversation">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                </button>
+                            </div>
+                            <div class="ai-toolbar-right">
+                                <button class="ai-model-chip" id="ai-settings-trigger" title="AI Settings">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                                    <span id="ai-model-label">AI Assistant</span>
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <button class="ai-toolbar-icon-btn ai-mic-btn" title="Voice input" disabled>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                </button>
+                                <button id="ai-generate-btn" class="ai-send-btn">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+
+                    <p class="ai-disclaimer">AI can make mistakes. Always verify generated SCAD code.</p>
                 </div>
             </div>
         </div>
-    </aside>
 
-    <!-- RIGHT PANEL: Transform & Scene -->
-    <aside id="info-panel" class="floating-panel right hidden-global">
-        <header class="config-header">
-            <div class="config-tabs">
-                <button class="right-tab-btn active" data-right-tab="transform">Transform</button>
-                <button class="right-tab-btn" data-right-tab="env-mat">Scene</button>
-            </div>
-        </header>
-
-        <!-- TRANSFORM TAB -->
-        <div id="right-tab-transform" class="tab-content">
+        <!-- TRANSFORM TAB (hidden — preserved for future use) -->
+        <div id="right-tab-transform" class="tab-content hidden">
             <div class="control-section">
                 <h5 class="section-title-mini">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
@@ -697,6 +858,25 @@
     </div>
 
     <!-- EXPORT MODAL -->
+    <!-- Asset Picker Modal -->
+    <div id="asset-picker-modal" class="modal-overlay hidden">
+        <div class="modal" style="display:flex;flex-direction:column;max-width:680px;width:90vw;max-height:80vh;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="asset-picker-title">Assets</h3>
+                    <p id="asset-picker-subtitle" style="font-size:12px;color:var(--text-muted);margin:2px 0 0">Click an asset to insert it into your design</p>
+                </div>
+                <button class="modal-close" id="asset-picker-close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="asset-picker-search">
+                <input id="asset-picker-search" type="text" placeholder="Search assets…" autocomplete="off">
+            </div>
+            <div id="asset-picker-grid" class="asset-picker-grid"></div>
+        </div>
+    </div>
+
     <div id="export-modal" class="modal-overlay hidden">
         <div class="modal-content export-modal-content">
             <div class="modal-header">
@@ -732,21 +912,51 @@
                         <label for="ai-provider-select">AI Engine / Provider</label>
                         <select id="ai-provider-select" class="glass-select">
                             <option value="local">Local Context-Aware Agent (No API Key)</option>
-                            <option value="gemini">Google Gemini (Recommended)</option>
+                            <option value="gemini">Google (Gemini / Gemma)</option>
                             <option value="openai">OpenAI (GPT-4o/GPT-4o-mini)</option>
                             <option value="anthropic">Anthropic Claude (Direct/Proxy)</option>
-                            <option value="custom">Custom (DeepSeek / OpenRouter / Ollama / LM Studio)</option>
+                            <option value="openrouter">OpenRouter (Claude / GPT / DeepSeek / Llama)</option>
+                            <option value="custom">Custom (Ollama / LM Studio / Any OpenAI-compatible)</option>
+                        </select>
+                    </div>
+
+                    <!-- Google Model Selection (shown when Gemini provider is selected) -->
+                    <div id="ai-google-model-row" class="ai-settings-row hidden">
+                        <label for="ai-google-model-select">Google Model</label>
+                        <select id="ai-google-model-select" class="glass-select">
+                            <optgroup label="Gemini 2.5">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value="gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash Lite</option>
+                            </optgroup>
+                            <optgroup label="Gemini 2.0">
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+                            </optgroup>
+                            <optgroup label="Gemini 1.5">
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            </optgroup>
+                            <optgroup label="Gemma 4">
+                                <option value="gemma-4-31b-it">Gemma 4 31B (Unlimited Output)</option>
+                                <option value="gemma-4-12b-it">Gemma 4 12B</option>
+                            </optgroup>
+                            <optgroup label="Gemma 3">
+                                <option value="gemma-3-27b-it">Gemma 3 27B</option>
+                                <option value="gemma-3-12b-it">Gemma 3 12B</option>
+                                <option value="gemma-3-4b-it">Gemma 3 4B</option>
+                            </optgroup>
                         </select>
                     </div>
 
                     <!-- Custom API Endpoint Fields (Conditionally shown) -->
                     <div id="ai-custom-fields" class="hidden">
-                        <div class="ai-settings-row" style="margin-bottom: 12px;">
+                        <div id="ai-custom-url-row" class="ai-settings-row" style="margin-bottom: 12px;">
                             <label for="ai-custom-url-input">API Base URL</label>
                             <input type="text" id="ai-custom-url-input" class="manual-input" style="width: 100%; text-align: left; background: var(--surface-input); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; height: 34px;" placeholder="e.g. https://api.deepseek.com/v1 or http://localhost:11434/v1">
                         </div>
-                        <div class="ai-settings-row">
-                            <label for="ai-custom-model-input">Model ID</label>
+                        <div id="ai-custom-model-row" class="ai-settings-row">
+                            <label for="ai-custom-model-input" id="ai-custom-model-label">Model ID</label>
                             <input type="text" id="ai-custom-model-input" class="manual-input" style="width: 100%; text-align: left; background: var(--surface-input); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; height: 34px;" placeholder="e.g. deepseek-coder or llama3">
                         </div>
                     </div>
@@ -774,6 +984,525 @@
             </div>
             <div class="modal-footer">
                 <button id="ai-settings-save" class="primary-btn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP SETTINGS MODAL -->
+    <div id="app-settings-modal" class="modal-overlay hidden">
+        <div class="modal-content settings-modal">
+            <!-- Sidebar navigation -->
+            <div class="settings-sidebar">
+                <div class="settings-sidebar-title">Settings</div>
+                <nav class="settings-nav" id="settings-nav">
+                    <button class="settings-nav-item active" data-panel="general">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                        General
+                    </button>
+                    <button class="settings-nav-item" data-panel="shortcuts">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+                        Keyboard Shortcuts
+                    </button>
+                    <button class="settings-nav-item" data-panel="viewport">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="12" cy="12" r="4"/></svg>
+                        Viewport
+                    </button>
+                    <button class="settings-nav-item" data-panel="camera">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01M2 8s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="8" r="3"/></svg>
+                        Camera
+                    </button>
+                    <button class="settings-nav-item" data-panel="performance">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Performance
+                    </button>
+                    <button class="settings-nav-item" data-panel="graphics">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Graphics
+                    </button>
+                    <button class="settings-nav-item" data-panel="measurement">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M12 2v20"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="18" y1="8" x2="18" y2="16"/></svg>
+                        Measurement
+                    </button>
+                    <button class="settings-nav-item" data-panel="export">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export Defaults
+                    </button>
+                    <button class="settings-nav-item" data-panel="presets">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                        Presets &amp; About
+                    </button>
+                </nav>
+                <div class="settings-sidebar-footer">
+                    <button id="settings-reset-btn" class="settings-reset-btn">Reset to Defaults</button>
+                </div>
+            </div>
+
+            <!-- Main content area -->
+            <div class="settings-body">
+
+                <!-- GENERAL -->
+                <div class="settings-panel active" data-settings-panel="general">
+                    <div class="settings-panel-header">General</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Workspace</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Unit System</span>
+                                <span class="settings-row-desc">Default measurement unit shown in parameters</span>
+                            </div>
+                            <select class="glass-select" id="s-pref-unit" style="width:180px;flex-shrink:0">
+                                <option value="mm">Millimeters (mm)</option>
+                                <option value="cm">Centimeters (cm)</option>
+                                <option value="in">Inches (in)</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Auto-Save</span>
+                                <span class="settings-row-desc">Automatically save project at a set interval</span>
+                            </div>
+                            <select class="glass-select" id="s-pref-autosave" style="width:180px;flex-shrink:0">
+                                <option value="off">Off</option>
+                                <option value="30s">Every 30 seconds</option>
+                                <option value="1min">Every minute</option>
+                                <option value="5min">Every 5 minutes</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Startup Behavior</span>
+                                <span class="settings-row-desc">What to show when you open the Studio</span>
+                            </div>
+                            <select class="glass-select" id="s-pref-startup" style="width:180px;flex-shrink:0">
+                                <option value="library">Show Template Library</option>
+                                <option value="last">Reopen Last Project</option>
+                                <option value="blank">Open Blank Canvas</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KEYBOARD SHORTCUTS -->
+                <div class="settings-panel" data-settings-panel="shortcuts">
+                    <div class="settings-panel-header">Keyboard Shortcuts</div>
+                    <div class="settings-section">
+                        <div class="shortcut-restore-row">
+                            <span class="settings-section-title" style="margin-bottom:0">All Bindings</span>
+                            <button id="shortcuts-restore-defaults" class="settings-link-btn">Restore all to defaults</button>
+                        </div>
+                        <div class="shortcut-table" id="shortcut-table"><!-- Injected by JS --></div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT -->
+                <div class="settings-panel" data-settings-panel="viewport">
+                    <div class="settings-panel-header">Viewport</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Display</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Default Display Mode</span>
+                                <span class="settings-row-desc">Rendering style applied when Studio opens</span>
+                            </div>
+                            <select class="glass-select" id="s-vp-display" style="width:180px;flex-shrink:0">
+                                <option value="shaded">Shaded</option>
+                                <option value="shaded-edges">Shaded + Edges</option>
+                                <option value="wireframe">Wireframe</option>
+                                <option value="wireframe-edges">Wireframe + Edges</option>
+                            </select>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Background</span>
+                                <span class="settings-row-desc">Viewport background color</span>
+                            </div>
+                            <div class="bg-chips" id="s-vp-bg">
+                                <button class="bg-chip" data-bg="default" title="Warm Dark" style="background:#0d0b09;border-color:var(--border-color)"></button>
+                                <button class="bg-chip" data-bg="black" title="Pure Black" style="background:#000000"></button>
+                                <button class="bg-chip" data-bg="gray" title="Mid Gray" style="background:#1a1a1a"></button>
+                                <button class="bg-chip" data-bg="blue" title="Blue-Tinted" style="background:#080d14"></button>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label"><span>Show Grid</span></div>
+                            <label class="switch"><input type="checkbox" id="s-vp-grid"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label">
+                                <span>Grid Cell Size</span>
+                                <span class="settings-row-desc">Size of each grid cell</span>
+                            </div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-vp-gridsize" min="5" max="50" step="5">
+                                <span class="settings-slider-val" id="s-vp-gridsize-val">10mm</span>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Show Axes Indicator</span>
+                                <span class="settings-row-desc">XYZ origin gizmo at scene center</span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="s-vp-axes"><span class="slider-round"></span></label>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Camera Projection</div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label">
+                                <span>Field of View</span>
+                                <span class="settings-row-desc">Perspective camera angle (wider = more context)</span>
+                            </div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-vp-fov" min="45" max="120" step="1">
+                                <span class="settings-slider-val" id="s-vp-fov-val">75°</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMERA -->
+                <div class="settings-panel" data-settings-panel="camera">
+                    <div class="settings-panel-header">Camera Behavior</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Navigation Speed</div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label"><span>Orbit Speed</span></div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-cam-orbit" min="0.25" max="3.0" step="0.05">
+                                <span class="settings-slider-val" id="s-cam-orbit-val">1.0×</span>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label"><span>Zoom Speed</span></div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-cam-zoom" min="0.25" max="3.0" step="0.05">
+                                <span class="settings-slider-val" id="s-cam-zoom-val">1.0×</span>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label"><span>Pan Speed</span></div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-cam-pan" min="0.25" max="3.0" step="0.05">
+                                <span class="settings-slider-val" id="s-cam-pan-val">1.0×</span>
+                            </div>
+                        </div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label">
+                                <span>Damping</span>
+                                <span class="settings-row-desc">Smoothing inertia after releasing a drag</span>
+                            </div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-cam-damp" min="0.01" max="0.20" step="0.01">
+                                <span class="settings-slider-val" id="s-cam-damp-val">0.05</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Behavior</div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Invert Y Orbit</span>
+                                <span class="settings-row-desc">Flip the vertical orbit direction</span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="s-cam-invert"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Auto-Fit After Compile</span>
+                                <span class="settings-row-desc">Fit camera to model bounds after each final render</span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="s-cam-autofit"><span class="slider-round"></span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PERFORMANCE -->
+                <div class="settings-panel" data-settings-panel="performance">
+                    <div class="settings-panel-header">Performance</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Compile Quality</div>
+                        <p class="settings-desc-text">Sets the $fn resolution used during interactive renders. Export always uses high quality.</p>
+                        <div class="settings-quality-radios">
+                            <label class="quality-radio">
+                                <input type="radio" name="s-perf-quality" value="preview">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">Preview</span>
+                                    <span class="quality-radio-desc">$fn = 8 · Fastest</span>
+                                </div>
+                            </label>
+                            <label class="quality-radio">
+                                <input type="radio" name="s-perf-quality" value="balanced">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">Balanced</span>
+                                    <span class="quality-radio-desc">$fn = 24 · Good quality</span>
+                                </div>
+                            </label>
+                            <label class="quality-radio">
+                                <input type="radio" name="s-perf-quality" value="high">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">High</span>
+                                    <span class="quality-radio-desc">$fn = 64 · Slowest</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Recompile</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Auto-Recompile Delay</span>
+                                <span class="settings-row-desc">Wait after a parameter change before triggering recompile</span>
+                            </div>
+                            <select class="glass-select" id="s-perf-delay" style="width:180px;flex-shrink:0">
+                                <option value="200">Fast (200ms)</option>
+                                <option value="500">Normal (500ms)</option>
+                                <option value="1000">Slow (1 second)</option>
+                                <option value="0">Manual only (0ms)</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Worker Threads</span>
+                                <span class="settings-row-desc">OpenSCAD WASM compiler pool size (reload required)</span>
+                            </div>
+                            <select class="glass-select" id="s-perf-workers" style="width:180px;flex-shrink:0">
+                                <option value="auto">Auto (recommended)</option>
+                                <option value="1">1 thread</option>
+                                <option value="2">2 threads</option>
+                                <option value="4">4 threads</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRAPHICS -->
+                <div class="settings-panel" data-settings-panel="graphics">
+                    <div class="settings-panel-header">Graphics</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Rendering</div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Anti-aliasing</span>
+                                <span class="settings-row-desc">Smooth jagged edges — requires page reload to apply</span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="s-gfx-aa"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-slider">
+                            <div class="settings-row-label">
+                                <span>Edge Thickness</span>
+                                <span class="settings-row-desc">Wireframe / edge overlay line width</span>
+                            </div>
+                            <div class="settings-slider-wrap">
+                                <input type="range" id="s-gfx-edge" min="0.5" max="3.0" step="0.5">
+                                <span class="settings-slider-val" id="s-gfx-edge-val">1px</span>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Device Pixel Ratio</span>
+                                <span class="settings-row-desc">Render resolution multiplier — higher is sharper but slower</span>
+                            </div>
+                            <select class="glass-select" id="s-gfx-dpr" style="width:180px;flex-shrink:0">
+                                <option value="device">Device Default</option>
+                                <option value="1">1× (performance)</option>
+                                <option value="1.5">1.5×</option>
+                                <option value="2">2× (quality)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MEASUREMENT -->
+                <div class="settings-panel" data-settings-panel="measurement">
+                    <div class="settings-panel-header">Measurement</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Display</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Display Unit</span>
+                                <span class="settings-row-desc">Unit shown in measurement readouts</span>
+                            </div>
+                            <select class="glass-select" id="s-meas-unit" style="width:180px;flex-shrink:0">
+                                <option value="mm">Millimeters (mm)</option>
+                                <option value="cm">Centimeters (cm)</option>
+                                <option value="in">Inches (in)</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Decimal Places</span>
+                                <span class="settings-row-desc">Precision of measurement readouts</span>
+                            </div>
+                            <select class="glass-select" id="s-meas-decimals" style="width:180px;flex-shrink:0">
+                                <option value="0">0 — e.g. 25mm</option>
+                                <option value="1">1 — e.g. 25.4mm</option>
+                                <option value="2">2 — e.g. 25.40mm</option>
+                                <option value="3">3 — e.g. 25.400mm</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EXPORT DEFAULTS -->
+                <div class="settings-panel" data-settings-panel="export">
+                    <div class="settings-panel-header">Export Defaults</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Format</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Default Export Format</span>
+                                <span class="settings-row-desc">Format pre-selected in the export dialog</span>
+                            </div>
+                            <select class="glass-select" id="s-exp-format" style="width:200px;flex-shrink:0">
+                                <option value="stl">STL — Universal slicer format</option>
+                                <option value="3mf">3MF — Bambu / Orca format</option>
+                                <option value="obj">OBJ — Blender / Maya</option>
+                                <option value="gltf">glTF — Web / AR</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">STL Options</div>
+                        <div class="settings-quality-radios">
+                            <label class="quality-radio">
+                                <input type="radio" name="s-exp-stltype" value="binary">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">Binary STL</span>
+                                    <span class="quality-radio-desc">Smaller file size (recommended)</span>
+                                </div>
+                            </label>
+                            <label class="quality-radio">
+                                <input type="radio" name="s-exp-stltype" value="ascii">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">ASCII STL</span>
+                                    <span class="quality-radio-desc">Human-readable text format</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Export Quality</div>
+                        <div class="settings-quality-radios">
+                            <label class="quality-radio">
+                                <input type="radio" name="s-exp-quality" value="preview">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">Draft</span>
+                                    <span class="quality-radio-desc">$fn = 8 · Fast</span>
+                                </div>
+                            </label>
+                            <label class="quality-radio">
+                                <input type="radio" name="s-exp-quality" value="high">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">High</span>
+                                    <span class="quality-radio-desc">$fn = 64 · Print-ready</span>
+                                </div>
+                            </label>
+                            <label class="quality-radio">
+                                <input type="radio" name="s-exp-quality" value="ultra">
+                                <div class="quality-radio-card">
+                                    <span class="quality-radio-label">Ultra</span>
+                                    <span class="quality-radio-desc">$fn = 128 · Maximum detail</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Filename</div>
+                        <div class="settings-row">
+                            <div class="settings-row-label">
+                                <span>Filename Pattern</span>
+                                <span class="settings-row-desc">How exported files are named</span>
+                            </div>
+                            <select class="glass-select" id="s-exp-filename" style="width:220px;flex-shrink:0">
+                                <option value="{model}">Model name only</option>
+                                <option value="{model}_{date}">Model + date</option>
+                                <option value="{model}_{params}">Model + params hash</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRESETS & ABOUT -->
+                <div class="settings-panel" data-settings-panel="presets">
+                    <div class="settings-panel-header">Presets &amp; About</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Factory Presets</div>
+                        <p class="settings-desc-text">Apply a curated set of settings for a specific workflow. This overwrites your current settings.</p>
+                        <div class="preset-cards">
+                            <button class="preset-card" data-preset="cad-draft">
+                                <div class="preset-card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                </div>
+                                <div class="preset-card-info">
+                                    <span class="preset-card-name">CAD Draft</span>
+                                    <span class="preset-card-desc">Maximum compile speed, grid on, plain background. Best for fast iteration.</span>
+                                </div>
+                            </button>
+                            <button class="preset-card" data-preset="presentation">
+                                <div class="preset-card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="12" cy="12" r="5"/></svg>
+                                </div>
+                                <div class="preset-card-info">
+                                    <span class="preset-card-name">Presentation</span>
+                                    <span class="preset-card-desc">High quality, auto-fit enabled, grid off. Best for screenshots and demos.</span>
+                                </div>
+                            </button>
+                            <button class="preset-card" data-preset="development">
+                                <div class="preset-card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                </div>
+                                <div class="preset-card-info">
+                                    <span class="preset-card-name">Development</span>
+                                    <span class="preset-card-desc">Balanced quality, grid on, FPS and diagnostics visible.</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">Diagnostics</div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label"><span>Show FPS Counter</span></div>
+                            <label class="switch"><input type="checkbox" id="s-diag-fps"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label"><span>Show Polygon Count</span></div>
+                            <label class="switch"><input type="checkbox" id="s-diag-poly"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label"><span>Show Compile Time</span></div>
+                            <label class="switch"><input type="checkbox" id="s-diag-time"><span class="slider-round"></span></label>
+                        </div>
+                        <div class="settings-row settings-row-inline" style="margin-top:4px">
+                            <div class="settings-row-label">
+                                <span>Clear Thumbnail Cache</span>
+                                <span class="settings-row-desc">Free localStorage space used by generated previews</span>
+                            </div>
+                            <button id="s-diag-clear-cache" class="secondary-btn" style="font-size:11px;padding:5px 14px;flex-shrink:0">Clear</button>
+                        </div>
+                        <div class="settings-row settings-row-inline">
+                            <div class="settings-row-label">
+                                <span>Copy Diagnostics</span>
+                                <span class="settings-row-desc">Copy app info + settings to clipboard for bug reports</span>
+                            </div>
+                            <button id="s-diag-copy" class="secondary-btn" style="font-size:11px;padding:5px 14px;flex-shrink:0">Copy</button>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">About ParaForm</div>
+                        <div class="about-grid">
+                            <div class="about-row"><span>Version</span><span class="mono">v0.11</span></div>
+                            <div class="about-row"><span>Engine</span><span class="mono">OpenSCAD WASM</span></div>
+                            <div class="about-row"><span>Renderer</span><span class="mono">Three.js WebGL</span></div>
+                            <div class="about-row"><span>Backend</span><span class="mono">Supabase (PostgreSQL)</span></div>
+                            <div class="about-row"><span>Platform</span><span class="mono">Browser-native · Zero install</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky footer -->
+                <div class="settings-footer">
+                    <button id="settings-close-btn" class="primary-btn">Done</button>
+                </div>
             </div>
         </div>
     </div>

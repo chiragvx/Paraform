@@ -1,0 +1,181 @@
+{
+  "version": 2,
+  "assets": [
+    {
+      "id": "sg90",
+      "kind": "servo",
+      "file": "assets/servos/sg90.scad",
+      "mesh_module": "sg90_mesh",
+      "clearance_module": "sg90_clearance",
+      "label": "SG90 micro servo",
+      "anchor_description": "Origin at center of output spline",
+      "envelope_mm": [32.5, 11.8, 27.7],
+      "connection_points": [
+        {
+          "id": "output_shaft",
+          "name": "Output Shaft",
+          "type": "servo_arm",
+          "position": [0, 0, 0],
+          "normal": [0, 0, 1],
+          "diameter": 4.6
+        },
+        {
+          "id": "mount_fl",
+          "name": "Mount Hole FL",
+          "type": "screw_m2",
+          "position": [-8.75, -3.9, -5.0],
+          "normal": [0, 0, -1],
+          "diameter": 2.0
+        },
+        {
+          "id": "mount_fr",
+          "name": "Mount Hole FR",
+          "type": "screw_m2",
+          "position": [-8.75, 3.9, -5.0],
+          "normal": [0, 0, -1],
+          "diameter": 2.0
+        },
+        {
+          "id": "mount_rl",
+          "name": "Mount Hole RL",
+          "type": "screw_m2",
+          "position": [19.75, -3.9, -5.0],
+          "normal": [0, 0, -1],
+          "diameter": 2.0
+        },
+        {
+          "id": "mount_rr",
+          "name": "Mount Hole RR",
+          "type": "screw_m2",
+          "position": [19.75, 3.9, -5.0],
+          "normal": [0, 0, -1],
+          "diameter": 2.0
+        }
+      ]
+    },
+    {
+      "id": "mg996r",
+      "kind": "servo",
+      "file": "assets/servos/mg996r.scad",
+      "mesh_module": "mg996r_mesh",
+      "clearance_module": "mg996r_clearance",
+      "label": "MG996R standard servo",
+      "anchor_description": "Origin at center of output spline",
+      "envelope_mm": [54.0, 19.7, 50.5],
+      "connection_points": [
+        {
+          "id": "output_shaft",
+          "name": "Output Shaft",
+          "type": "servo_arm",
+          "position": [0, 0, 0],
+          "normal": [0, 0, 1],
+          "diameter": 5.8
+        },
+        {
+          "id": "mount_fl",
+          "name": "Mount Hole FL",
+          "type": "screw_m3",
+          "position": [-14.0, -6.85, -7.6],
+          "normal": [0, 0, -1],
+          "diameter": 3.0
+        },
+        {
+          "id": "mount_fr",
+          "name": "Mount Hole FR",
+          "type": "screw_m3",
+          "position": [-14.0, 6.85, -7.6],
+          "normal": [0, 0, -1],
+          "diameter": 3.0
+        },
+        {
+          "id": "mount_rl",
+          "name": "Mount Hole RL",
+          "type": "screw_m3",
+          "position": [34.0, -6.85, -7.6],
+          "normal": [0, 0, -1],
+          "diameter": 3.0
+        },
+        {
+          "id": "mount_rr",
+          "name": "Mount Hole RR",
+          "type": "screw_m3",
+          "position": [34.0, 6.85, -7.6],
+          "normal": [0, 0, -1],
+          "diameter": 3.0
+        }
+      ]
+    },
+    {
+      "id": "bearing_608zz",
+      "kind": "bearing",
+      "file": "assets/bearings/608zz.scad",
+      "mesh_module": "bearing_608zz_mesh",
+      "clearance_module": "bearing_608zz_clearance",
+      "label": "608ZZ bearing (22×8×7)",
+      "anchor_description": "Origin at center of bore (rotation axis)",
+      "envelope_mm": [22, 22, 7],
+      "connection_points": [
+        {
+          "id": "bore_axis",
+          "name": "Bore Axis",
+          "type": "shaft_bore",
+          "position": [0, 0, 0],
+          "normal": [0, 0, 1],
+          "diameter": 8.0
+        },
+        {
+          "id": "face_front",
+          "name": "Front Face",
+          "type": "press_fit",
+          "position": [0, 0, 3.5],
+          "normal": [0, 0, 1],
+          "diameter": 22.0
+        },
+        {
+          "id": "face_rear",
+          "name": "Rear Face",
+          "type": "press_fit",
+          "position": [0, 0, -3.5],
+          "normal": [0, 0, -1],
+          "diameter": 22.0
+        }
+      ]
+    },
+    {
+      "id": "bolt_m3x12",
+      "kind": "bolt",
+      "file": "assets/bolts/m3x12.scad",
+      "mesh_module": "bolt_m3x12_mesh",
+      "clearance_module": "bolt_m3x12_clearance",
+      "label": "M3 × 12 socket-cap bolt",
+      "anchor_description": "Origin at underside of head, on bolt axis",
+      "envelope_mm": [5.5, 5.5, 15],
+      "connection_points": [
+        {
+          "id": "thread_tip",
+          "name": "Thread Tip",
+          "type": "screw_m3",
+          "position": [0, 0, 12],
+          "normal": [0, 0, 1],
+          "diameter": 3.0
+        },
+        {
+          "id": "mating_face",
+          "name": "Mating Face",
+          "type": "screw_m3",
+          "position": [0, 0, 0],
+          "normal": [0, 0, -1],
+          "diameter": 5.5
+        },
+        {
+          "id": "hex_drive",
+          "name": "Hex Drive",
+          "type": "tool_access",
+          "position": [0, 0, -1.5],
+          "normal": [0, 0, -1],
+          "diameter": 2.5
+        }
+      ]
+    }
+  ]
+}
