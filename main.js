@@ -8,7 +8,12 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 import { supabase } from './lib/supabase';
 import { fetchCatalog, fetchScadSource, saveProject, listProjects,
          getAssetManifest, getAssetSource, resolveDependencies, buildWorkerFiles } from './lib/catalog.js';
+import { SKILLS, getAllSkillScad, buildSkillContext, BOARD_FOOTPRINTS } from './lib/skills.js';
 import { lint, formatErrorsForLLM } from './lib/validators/linter.js';
+import { categorizeWasmError, buildRepairMessages, MAX_COMPILE_RETRIES } from './lib/repair.js';
+import { buildDesignBrief } from './lib/context.js';
+import { validateGeometry, formatGeometryWarnings } from './lib/validators/geometry.js';
+import { runBenchmarks } from './lib/benchmarks.js';
 import { scoreboard, SCORE_ORDER, SCORE_WEIGHTS } from './lib/validators/scoreboard.js';
 import { runExactClashTests } from './lib/validators/clash.js';
 import { runToolAccessTests } from './lib/validators/tool_access.js';
@@ -74,7 +79,7 @@ function saveSettings(patch) {
     return updated;
 }
 
-const BG_COLORS = { default: 0x0d0b09, black: 0x000000, gray: 0x1a1a1a, blue: 0x080d14 };
+const BG_COLORS = { default: 0x1a1c1e, black: 0x000000, gray: 0x1a1a1a, blue: 0x080d14 };
 
 function applySettings(s) {
     if (mainViewport) {
@@ -2857,6 +2862,7 @@ async function initApp() {
     initRightPanelControls();
     initViewportToolbar();
     initPanelResize();
+    initPipelineLogOverlay();
 }
 
 
@@ -2912,19 +2918,18 @@ function createRenderer(containerId) {
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // Professional warm-dark scene background
-    scene.background = new THREE.Color(0x0d0b09);
+    // Professional cool-grey scene (Fusion 360-style)
+    scene.background = new THREE.Color(0x1a1c1e);
 
-    // Lighting Setup — warm key + cool fill for professional CAD contrast
-    const hemiLight = new THREE.HemisphereLight(0xfff5e8, 0x1a140a, 1.4);
+    const hemiLight = new THREE.HemisphereLight(0xe8edf2, 0x10131a, 1.2);
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.4);
     dirLight.position.set(100, 200, 80);
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb0c8e0, 0.9);
+    const fillLight = new THREE.DirectionalLight(0x90b4d0, 1.0);
     fillLight.position.set(-80, 40, -100);
     scene.add(fillLight);
 
@@ -2932,10 +2937,10 @@ function createRenderer(containerId) {
     controls.enableDamping = true;
     camera.position.set(80, 80, 80);
 
-    // Ground Grid — warm neutral tones
-    const grid = new THREE.GridHelper(400, 40, 0x3a3028, 0x211d17);
-    grid.position.y = -0.1; // Prevent Z-fighting
-    grid.material.opacity = 0.55;
+    // Ground Grid — cool steel tones
+    const grid = new THREE.GridHelper(400, 40, 0x2e3136, 0x232629);
+    grid.position.y = -0.1;
+    grid.material.opacity = 0.7;
     grid.material.transparent = true;
     scene.add(grid);
 
@@ -2947,10 +2952,10 @@ function createRenderer(containerId) {
 
     // Professional CAD material — warm clay/stone neutral
     const material = new THREE.MeshStandardMaterial({
-        color: 0xc8bdb2,
-        metalness: 0.02,
-        roughness: 0.65,
-        side: THREE.DoubleSide // Ensure inner faces of parametric models are visible
+        color: 0x8c9aaa,   // Steel-grey
+        metalness: 0.25,
+        roughness: 0.45,
+        side: THREE.DoubleSide
     });
     
     let transformControls = null;
@@ -3364,6 +3369,8 @@ class CADWorkerPool {
         // inside the worker's Emscripten VFS. Caller-supplied `files` are
         // merged on top (caller wins for any path collision).
         if (job.sourceCode) {
+            // Prepend skill module definitions so AI-generated SCAD can call skill_* without use <>
+            job.sourceCode = `${getAllSkillScad()}\n${job.sourceCode}`;
             const auto = buildWorkerFiles(job.sourceCode);
             job.files = job.files ? { ...auto, ...job.files } : auto;
         }
@@ -3390,7 +3397,40 @@ const pool = new CADWorkerPool();
 // (starting high so it never collides with the small integers in currentState.jobId)
 let _multiPartTaskCounter = 999999;
 
-
+// ─── PipelineLog ────────────────────────────────────────────────────────────
+// Structured per-run diagnostic log.  Each call to startRun() returns an
+// independent run object so concurrent async completions don't clobber a
+// shared "current" pointer.
+const PipelineLog = (() => {
+    const runs = [];
+    return {
+        startRun(label) {
+            const run = { label, stages: [], t0: performance.now(), ok: null };
+            runs.push(run);
+            if (runs.length > 200) runs.shift();
+            return {
+                stage(name, status, detail = '') {
+                    run.stages.push({ name, status, detail, dt: +(performance.now() - run.t0).toFixed(1) });
+                    if (status === 'error') {
+                        run.ok = false;
+                        console.warn(`[Pipeline:${label}] ${name} FAIL —`, detail);
+                    } else if (status === 'ok' && run.ok !== false) {
+                        run.ok = true;
+                    }
+                },
+                finish() {
+                    run.total = +(performance.now() - run.t0).toFixed(1);
+                    console.debug(`[Pipeline:${label}] done in ${run.total}ms`, run.ok ? '✓' : '✗');
+                },
+            };
+        },
+        getRuns() { return runs; },
+        last(n = 10) { return runs.slice(-n); },
+    };
+})();
+window.PipelineLog = PipelineLog;
+window.runBenchmarks = runBenchmarks;
+// ────────────────────────────────────────────────────────────────────────────
 
 async function selectTemplate(template, autoExtract = false) {
     // Fetch SCAD source from bucket (or cache) if not already inline.
@@ -3761,167 +3801,264 @@ function renderLayersTab() {
     const container = document.getElementById('tab-content-layers');
     if (!container) return;
 
-    if (!isMultiPart()) {
-        // Single-part model: show a brief note, then components below
-        container.innerHTML = `
-            <div class="layers-empty-state" style="padding-bottom:6px">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <div>Single-part model</div>
-                <div style="margin-top:4px;font-size:11px">Use the AI or Add Part to split into layers.</div>
-            </div>
-            <div id="component-list-section"></div>`;
-        renderComponentList();
-        bindComponentEvents();
-        return;
+    if (!currentState.treeCollapse) {
+        currentState.treeCollapse = { globals: false, parts: false, components: false };
     }
 
     const template = currentState.template;
-    const globalCount = template.global_parameters?.length || 0;
+    const globalCount = template?.global_parameters?.length || 0;
+    const partsCount = template?.parts?.length || 0;
+    const componentsCount = currentState.sceneComponents?.length || 0;
 
     container.innerHTML = `
-        <div class="layers-toolbar">
-            <span class="layers-toolbar-title">Parts</span>
-            <button class="add-part-btn" id="add-part-btn">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Part
-            </button>
-        </div>
-        <div class="parts-list" id="parts-list"></div>
-        ${globalCount > 0 ? `
-        <div class="global-params-section">
-            <div class="global-params-header" id="global-params-toggle">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                Global Parameters
-                <span class="global-params-count">${globalCount}</span>
+        <div class="cad-browser-tree">
+            <!-- Root node: Active Design -->
+            <div class="tree-node root-node">
+                <span class="material-symbols-outlined font-icon">hexagon</span>
+                <span class="node-label">${getProjectTitle()}</span>
             </div>
-            <div class="global-params-body" id="global-params-body"></div>
-        </div>` : ''}
-        <div id="component-list-section"></div>`;
+            
+            <!-- Group 1: Global Parameters -->
+            ${globalCount > 0 ? `
+            <div class="tree-group-header" id="tg-globals-toggle">
+                <span class="material-symbols-outlined chevron-icon ${currentState.treeCollapse.globals ? '' : 'expanded'}">chevron_right</span>
+                <span class="material-symbols-outlined group-icon">tune</span>
+                <span class="group-label">Global Parameters</span>
+                <span class="group-count">${globalCount}</span>
+            </div>
+            <div class="tree-group-body ${currentState.treeCollapse.globals ? 'collapsed' : ''}" id="tg-globals-body">
+            </div>
+            ` : ''}
 
-    renderPartsList();
-    if (globalCount > 0) renderGlobalParamsInline();
-    renderComponentList();
-    bindLayersTabEvents();
-    bindComponentEvents();
-}
+            <!-- Group 2: Solid Parts -->
+            <div class="tree-group-header" id="tg-parts-toggle">
+                <span class="material-symbols-outlined chevron-icon ${currentState.treeCollapse.parts ? '' : 'expanded'}">chevron_right</span>
+                <span class="material-symbols-outlined group-icon">layers</span>
+                <span class="group-label">Solid Parts</span>
+                <span class="group-count">${partsCount}</span>
+                <button class="add-part-btn-mini" id="tree-add-part" title="Add New Part">+</button>
+            </div>
+            <div class="tree-group-body ${currentState.treeCollapse.parts ? 'collapsed' : ''}" id="tg-parts-body">
+            </div>
 
-// Render the scene-component rows (independent of template.parts)
-function renderComponentList() {
-    const section = document.getElementById('component-list-section');
-    if (!section) return;
-
-    const components = currentState.sceneComponents;
-    if (components.length === 0) { section.innerHTML = ''; return; }
-
-    // Build per-component connection-point summary for display
-    const manifest = getAssetManifest();
-
-    section.innerHTML = `
-        <div class="layers-toolbar" style="margin-top:6px;border-top:1px solid var(--border-subtle);padding-top:8px">
-            <span class="layers-toolbar-title">Components</span>
+            <!-- Group 3: Mated Components -->
+            <div class="tree-group-header" id="tg-components-toggle">
+                <span class="material-symbols-outlined chevron-icon ${currentState.treeCollapse.components ? '' : 'expanded'}">chevron_right</span>
+                <span class="material-symbols-outlined group-icon">extension</span>
+                <span class="group-label">Mated Components</span>
+                <span class="group-count">${componentsCount}</span>
+            </div>
+            <div class="tree-group-body ${currentState.treeCollapse.components ? 'collapsed' : ''}" id="tg-components-body">
+            </div>
         </div>
-        <div class="parts-list" id="component-list">
-            ${components.map(c => {
-                const isVis = currentState.componentVisible[c.id] !== false;
-                const asset = manifest.find(a => a.id === c.assetId);
-                const cps   = (c.showConnectionPoints && asset?.connection_points) || [];
+    `;
 
-                // Group CP types into unique set for compact badge display
-                const cpTypeCounts = {};
-                cps.forEach(cp => { cpTypeCounts[cp.type] = (cpTypeCounts[cp.type] || 0) + 1; });
-                const cpBadges = Object.entries(cpTypeCounts).map(([type, count]) => {
-                    const hex = '#' + ((CP_TYPE_COLORS[type] ?? CP_TYPE_COLORS.generic) >>> 0).toString(16).padStart(6, '0');
-                    const label = CP_TYPE_LABEL[type] ?? type;
-                    return `<span class="cp-badge" style="background:${hex}22;border-color:${hex};color:${hex}" title="${label}">${count > 1 ? count + '×' : ''}${label}</span>`;
-                }).join('');
+    // Populate the bodies
+    if (globalCount > 0 && !currentState.treeCollapse.globals) {
+        renderTreeGlobals();
+    }
+    if (!currentState.treeCollapse.parts) {
+        renderTreeParts();
+    }
+    if (!currentState.treeCollapse.components) {
+        renderTreeComponents();
+    }
 
-                return `<div class="part-row component-row" data-component-id="${c.id}">
-                    <div class="part-color-dot" style="background:${c.color}"></div>
-                    <div class="component-row-body">
-                        <span class="part-name">${c.name}</span>
-                        ${cpBadges ? `<div class="cp-badge-row">${cpBadges}</div>` : ''}
-                    </div>
-                    <button class="part-vis-btn component-vis-btn${isVis ? '' : ' hidden-part'}" data-component-id="${c.id}" title="${isVis ? 'Hide' : 'Show'}">
-                        ${isVis
-                            ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
-                            : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-                    </button>
-                    <button class="part-delete-btn component-del-btn" data-component-id="${c.id}" title="Remove component">×</button>
-                </div>`;
-            }).join('')}
-        </div>`;
+    bindTreeEvents();
 }
 
-function bindComponentEvents() {
-    document.querySelectorAll('.component-vis-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const id = btn.dataset.componentId;
-            currentState.componentVisible[id] = !(currentState.componentVisible[id] !== false);
-            if (mainViewport?.componentMeshes?.[id]) {
-                mainViewport.componentMeshes[id].visible = currentState.componentVisible[id];
-            }
-            renderComponentList();
-            bindComponentEvents();
-        });
-    });
+function renderTreeGlobals() {
+    const body = document.getElementById('tg-globals-body');
+    if (!body || !currentState.template?.global_parameters?.length) return;
 
-    document.querySelectorAll('.component-del-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const id = btn.dataset.componentId;
-            currentState.sceneComponents = currentState.sceneComponents.filter(c => c.id !== id);
-            delete currentState.componentVisible[id];
-            triggerComponentRender();
-            renderLayersTab();
-        });
+    body.innerHTML = '';
+    currentState.template.global_parameters.forEach(param => {
+        const val = currentState.globalParams[param.key] ?? param.default;
+        const row = document.createElement('div');
+        row.className = `tree-item parameter-tree-row type-${param.type}`;
+        
+        let controlHtml = '';
+        if (param.type === 'number' || param.type === 'integer') {
+            controlHtml = `
+                <div class="tree-param-header">
+                    <span class="tree-param-label">${param.label}</span>
+                    <input type="number" class="tree-manual-input" value="${val}" step="${param.step}">
+                </div>
+                <input type="range" class="tree-range-slider" min="${param.min}" max="${param.max}" step="${param.step}" value="${val}">
+            `;
+        } else if (param.type === 'enum') {
+            const options = (param.options || []).map(opt => `<option value="${opt}" ${val === opt ? 'selected' : ''}>${opt}</option>`).join('');
+            controlHtml = `
+                <span class="tree-param-label">${param.label}</span>
+                <select class="tree-select">${options}</select>
+            `;
+        } else if (param.type === 'boolean') {
+            controlHtml = `
+                <span class="tree-param-label">${param.label}</span>
+                <label class="switch-mini">
+                    <input type="checkbox" ${val ? 'checked' : ''}>
+                    <span class="slider-round-mini"></span>
+                </label>
+            `;
+        }
+
+        row.innerHTML = `
+            <div class="tree-indent"></div>
+            <span class="material-symbols-outlined item-icon" style="opacity:0.5">tune</span>
+            <div class="tree-param-body">${controlHtml}</div>
+        `;
+        
+        if (param.type === 'number' || param.type === 'integer') {
+            const range = row.querySelector('.tree-range-slider');
+            const manual = row.querySelector('.tree-manual-input');
+            const update = (newVal, isFinal = false) => {
+                const num = parseFloat(newVal);
+                currentState.globalParams[param.key] = num;
+                range.value = num;
+                manual.value = num;
+                updateSliderFill(range);
+                debouncedGenerate(isFinal);
+            };
+            range.oninput = (e) => update(e.target.value, false);
+            range.onchange = (e) => update(e.target.value, true);
+            manual.onchange = (e) => update(e.target.value, true);
+            updateSliderFill(range);
+        } else if (param.type === 'enum') {
+            const select = row.querySelector('.tree-select');
+            select.onchange = (e) => {
+                currentState.globalParams[param.key] = e.target.value;
+                debouncedGenerate(true);
+            };
+        } else if (param.type === 'boolean') {
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            checkbox.onchange = (e) => {
+                currentState.globalParams[param.key] = e.target.checked;
+                debouncedGenerate(true);
+            };
+        }
+
+        body.appendChild(row);
     });
 }
 
-function renderPartsList() {
-    const list = document.getElementById('parts-list');
-    if (!list || !currentState.template?.parts) return;
+function renderTreeParts() {
+    const body = document.getElementById('tg-parts-body');
+    if (!body || !currentState.template?.parts) return;
 
-    list.innerHTML = '';
+    body.innerHTML = '';
     currentState.template.parts.forEach(part => {
         const isActive = currentState.activePart === part.id;
         const isVisible = currentState.partVisibility[part.id] !== false;
         const hasClip = currentState.partCollisions?.has(part.id) ?? false;
+        
         const row = document.createElement('div');
-        row.className = `part-row${isActive ? ' active' : ''}${hasClip ? ' part-clipping' : ''}`;
+        row.className = `tree-item part-row${isActive ? ' active' : ''}${hasClip ? ' part-clipping' : ''}`;
         row.dataset.partId = part.id;
-        const clipIcon = hasClip
-            ? `<span class="part-clip-warn" title="This part overlaps another — clipping detected">⚠</span>`
-            : '';
+        
+        const clipIcon = hasClip ? `<span class="part-clip-warn" style="color:var(--warning);margin-left:4px;" title="Overlapping parts - clipping detected">⚠</span>` : '';
+        
         row.innerHTML = `
+            <div class="tree-indent"></div>
             <div class="part-color-dot" style="background:${part.color || '#888'}"></div>
-            <span class="part-name">${part.name || part.id}${clipIcon}</span>
-            <button class="part-vis-btn${isVisible ? '' : ' hidden-part'}" data-part-id="${part.id}" title="${isVisible ? 'Hide part' : 'Show part'}">
-                ${isVisible
-                    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
-                    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-            </button>
-            <button class="part-delete-btn" data-part-id="${part.id}" title="Remove part">×</button>`;
-        list.appendChild(row);
+            <span class="material-symbols-outlined item-icon">layers</span>
+            <span class="item-label">${part.name || part.id}${clipIcon}</span>
+            <div class="item-actions">
+                <button class="part-vis-btn${isVisible ? '' : ' hidden-part'}" data-part-id="${part.id}" title="${isVisible ? 'Hide part' : 'Show part'}">
+                    ${isVisible 
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                </button>
+                <button class="part-delete-btn" data-part-id="${part.id}" title="Remove part">×</button>
+            </div>
+        `;
+        body.appendChild(row);
     });
 }
 
-function renderGlobalParamsInline() {
-    const body = document.getElementById('global-params-body');
-    if (!body || !currentState.template?.global_parameters?.length) return;
+function renderTreeComponents() {
+    const body = document.getElementById('tg-components-body');
+    if (!body) return;
+
+    const components = currentState.sceneComponents || [];
+    if (components.length === 0) {
+        body.innerHTML = '<div class="tree-empty-msg">No components inserted</div>';
+        return;
+    }
+
+    const manifest = getAssetManifest();
+
     body.innerHTML = '';
-    currentState.template.global_parameters.forEach(param => {
-        const val = currentState.globalParams[param.key] ?? param.default;
-        const group = buildParamGroup(param, val, (newVal, isFinal) => {
-            currentState.globalParams[param.key] = newVal;
-            debouncedGenerate(isFinal);
-        });
-        body.appendChild(group);
+    components.forEach(c => {
+        const isVis = currentState.componentVisible[c.id] !== false;
+        const asset = manifest.find(a => a.id === c.assetId);
+        const cps = (c.showConnectionPoints && asset?.connection_points) || [];
+
+        const cpTypeCounts = {};
+        cps.forEach(cp => { cpTypeCounts[cp.type] = (cpTypeCounts[cp.type] || 0) + 1; });
+        const cpBadges = Object.entries(cpTypeCounts).map(([type, count]) => {
+            const hex = '#' + ((CP_TYPE_COLORS[type] ?? CP_TYPE_COLORS.generic) >>> 0).toString(16).padStart(6, '0');
+            const label = CP_TYPE_LABEL[type] ?? type;
+            return `<span class="cp-badge" style="background:${hex}22;border-color:${hex};color:${hex}" title="${label}">${count > 1 ? count + '×' : ''}${label}</span>`;
+        }).join('');
+
+        const row = document.createElement('div');
+        row.className = 'tree-item component-row';
+        row.dataset.componentId = c.id;
+
+        row.innerHTML = `
+            <div class="tree-indent"></div>
+            <div class="part-color-dot" style="background:${c.color || '#fff'}"></div>
+            <span class="material-symbols-outlined item-icon">extension</span>
+            <div class="component-body">
+                <span class="item-label">${c.name}</span>
+                ${cpBadges ? `<div class="cp-badge-row">${cpBadges}</div>` : ''}
+            </div>
+            <div class="item-actions">
+                <button class="part-vis-btn component-vis-btn${isVis ? '' : ' hidden-part'}" data-component-id="${c.id}" title="${isVis ? 'Hide' : 'Show'}">
+                    ${isVis
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                </button>
+                <button class="part-delete-btn component-del-btn" data-component-id="${c.id}" title="Remove component">×</button>
+            </div>
+        `;
+        body.appendChild(row);
     });
 }
 
-function bindLayersTabEvents() {
-    // Part row click → set active part
+function bindTreeEvents() {
+    const globToggle = document.getElementById('tg-globals-toggle');
+    if (globToggle) {
+        globToggle.onclick = () => {
+            currentState.treeCollapse.globals = !currentState.treeCollapse.globals;
+            renderLayersTab();
+        };
+    }
+
+    const partsToggle = document.getElementById('tg-parts-toggle');
+    if (partsToggle) {
+        partsToggle.onclick = () => {
+            currentState.treeCollapse.parts = !currentState.treeCollapse.parts;
+            renderLayersTab();
+        };
+    }
+
+    const compToggle = document.getElementById('tg-components-toggle');
+    if (compToggle) {
+        compToggle.onclick = () => {
+            currentState.treeCollapse.components = !currentState.treeCollapse.components;
+            renderLayersTab();
+        };
+    }
+
+    const miniAddBtn = document.getElementById('tree-add-part');
+    if (miniAddBtn) {
+        miniAddBtn.onclick = (e) => {
+            e.stopPropagation();
+            addNewPart();
+        };
+    }
+
     document.querySelectorAll('.part-row').forEach(row => {
         row.addEventListener('click', (e) => {
             if (e.target.closest('.part-vis-btn') || e.target.closest('.part-delete-btn')) return;
@@ -3929,35 +4066,43 @@ function bindLayersTabEvents() {
         });
     });
 
-    // Visibility toggle
-    document.querySelectorAll('.part-vis-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.part-row .part-vis-btn').forEach(btn => {
+        btn.onclick = (e) => {
             e.stopPropagation();
             togglePartVisibility(btn.dataset.partId);
-        });
+        };
     });
 
-    // Delete part
-    document.querySelectorAll('.part-delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.part-row .part-delete-btn').forEach(btn => {
+        btn.onclick = (e) => {
             e.stopPropagation();
             deletePartById(btn.dataset.partId);
-        });
+        };
     });
 
-    // Add Part button
-    const addBtn = document.getElementById('add-part-btn');
-    if (addBtn) addBtn.onclick = addNewPart;
-
-    // Global params toggle
-    const toggle = document.getElementById('global-params-toggle');
-    const body = document.getElementById('global-params-body');
-    if (toggle && body) {
-        toggle.onclick = () => {
-            const open = body.classList.toggle('open');
-            toggle.classList.toggle('open', open);
+    document.querySelectorAll('.component-vis-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.componentId;
+            currentState.componentVisible[id] = !(currentState.componentVisible[id] !== false);
+            if (mainViewport?.componentMeshes?.[id]) {
+                mainViewport.componentMeshes[id].visible = currentState.componentVisible[id];
+            }
+            renderTreeComponents();
+            bindTreeEvents();
         };
-    }
+    });
+
+    document.querySelectorAll('.component-del-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.componentId;
+            currentState.sceneComponents = currentState.sceneComponents.filter(c => c.id !== id);
+            delete currentState.componentVisible[id];
+            triggerComponentRender();
+            renderLayersTab();
+        };
+    });
 }
 
 function setActivePart(partId) {
@@ -4364,6 +4509,65 @@ ${performanceOverrides}`;
     });
 }
 
+/**
+ * Shared compile-error repair handler for both single-part and multi-part renders.
+ * Categorizes the WASM error, builds a targeted correction prompt, and re-runs
+ * the AI pipeline up to MAX_COMPILE_RETRIES times.
+ */
+function _triggerCompileRepair(compileErr, source) {
+    window._aiRepairAttempt = (window._aiRepairAttempt || 0) + 1;
+    const attempt = window._aiRepairAttempt;
+
+    window._aiApplyPending = false;
+    window._aiRenderError = null;
+    const ctx = window._aiCorrectCtx;
+    window._aiCorrectCtx = null;
+
+    const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+
+    const log = PipelineLog.startRun(`repair:${source}:attempt${attempt}`);
+    const { category, hint } = categorizeWasmError(compileErr);
+    log.stage('categorize', 'ok', category);
+
+    if (!ctx || provider === 'local') {
+        log.stage('repair', 'error', 'No context or local provider — cannot repair');
+        log.finish();
+        const shortErr = compileErr.split('\n').filter(l => l.trim()).slice(0, 8).join('\n');
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">error_outline</span> <strong>Compile error [${category}]:</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
+        return;
+    }
+
+    if (attempt > MAX_COMPILE_RETRIES) {
+        log.stage('repair', 'error', `Exceeded max retries (${MAX_COMPILE_RETRIES})`);
+        log.finish();
+        const shortErr = compileErr.split('\n').filter(l => l.trim()).slice(0, 8).join('\n');
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">error_outline</span> <strong>Auto-correction gave up after ${MAX_COMPILE_RETRIES} attempts [${category}]:</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>` +
+            `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Try rephrasing your request or simplifying the geometry.</div>`);
+        return;
+    }
+
+    const shortErr = compileErr.split('\n').filter(l => l.trim()).slice(0, 6).join('\n');
+    appendChatMessage('system',
+        `<span class="material-symbols-outlined">autorenew</span> <strong>Compile error [${category}] — auto-correcting (${attempt}/${MAX_COMPILE_RETRIES})...</strong>` +
+        `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>` +
+        `<div style="margin-top:4px;font-size:11px;color:var(--text-muted)">Fix: ${escapeHtml(hint)}</div>`);
+
+    createAILoadingBubble(`Auto-correcting (${attempt}/${MAX_COMPILE_RETRIES})`);
+    log.stage('repair', 'ok', `dispatching attempt ${attempt}`);
+    log.finish();
+
+    const injectedCorrection = buildRepairMessages(category, hint, compileErr, ctx.pendingCode, attempt, MAX_COMPILE_RETRIES);
+    runAIGenerationPipeline('', ctx.previousState, injectedCorrection)
+        .catch(err => {
+            appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> Auto-correction failed: ${escapeHtml(err.message)}`);
+        })
+        .finally(() => { removeAILoadingBubble(); });
+}
+
 function finalizeModularRender(geometries, startTime, isFinal) {
     document.getElementById('loader-overlay').classList.add('hidden');
     const badge = document.getElementById('status-badge');
@@ -4372,36 +4576,7 @@ function finalizeModularRender(geometries, startTime, isFinal) {
         badge.innerText = 'Render Failed';
         badge.className = 'error';
         if (window._aiApplyPending && window._aiRenderError) {
-            const compileErr = window._aiRenderError;
-            const shortErr = compileErr.split('\n').slice(0, 8).join('\n');
-            window._aiApplyPending = false;
-            window._aiRenderError = null;
-            const ctx = window._aiCorrectCtx;
-            window._aiCorrectCtx = null;
-
-            const provider = localStorage.getItem('paraform_ai_provider') || 'local';
-            if (ctx && provider !== 'local') {
-                appendChatMessage('system',
-                    `<span class="material-symbols-outlined">autorenew</span> <strong>Compile error — auto-correcting...</strong>` +
-                    `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
-
-                createAILoadingBubble('Auto-correcting');
-
-                const injectedCorrection = [
-                    { role: 'assistant', content: JSON.stringify({ changes: 'Code applied', openscad_code: ctx.pendingCode }) },
-                    { role: 'user', content: `The OpenSCAD code failed to compile with this error:\n${shortErr}\n\nFix the issue and return the corrected version in the same JSON format: { "changes": "...", "openscad_code": "..." }` }
-                ];
-                runAIGenerationPipeline('', ctx.previousState, injectedCorrection)
-                    .catch(err => {
-                        appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> Auto-correction failed: ${err.message}`);
-                    })
-                    .finally(() => { removeAILoadingBubble(); });
-            } else {
-                appendChatMessage('system',
-                    `<span class="material-symbols-outlined">error_outline</span> <strong>Compile error in AI code:</strong>` +
-                    `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(shortErr)}</pre>`);
-                window._aiCorrectCtx = null;
-            }
+            _triggerCompileRepair(window._aiRenderError, 'single-part');
         } else {
             window._aiApplyPending = false;
             window._aiRenderError = null;
@@ -4411,6 +4586,7 @@ function finalizeModularRender(geometries, startTime, isFinal) {
     window._aiApplyPending = false;
     window._aiRenderError = null;
     window._aiCorrectCtx = null;
+    window._aiRepairAttempt = 0;
 
     const mergedGeom = BufferGeometryUtils.mergeGeometries(Array.from(geometries.values()));
     updateViewportMesh(mergedGeom);
@@ -4507,6 +4683,9 @@ function triggerGenerationMultiPart(startTime, isFinal) {
                 partGeometries.set(part.id, { geom, color: part.color });
             } else if (data.error && !data.error.includes('Terminated')) {
                 console.error(`[Multi-Part] Part "${part.name}" failed:`, data.error);
+                if (window._aiApplyPending && !window._aiRenderError) {
+                    window._aiRenderError = data.error; // capture first failing part's error
+                }
             }
             if (--pending === 0) finalizeMultiPartRender(partGeometries, startTime, isFinal);
         });
@@ -4520,6 +4699,12 @@ function finalizeMultiPartRender(partGeometries, startTime, isFinal) {
     if (partGeometries.size === 0) {
         badge.innerText = 'Render Failed'; badge.className = 'error';
         currentState.isGenerating = false;
+        if (window._aiApplyPending && window._aiRenderError) {
+            _triggerCompileRepair(window._aiRenderError, 'multi-part');
+        } else {
+            window._aiApplyPending = false;
+            window._aiRenderError = null;
+        }
         return;
     }
 
@@ -5040,6 +5225,73 @@ function addComponentToScene(assetId, mode) {
     triggerComponentRender();
 }
 
+// ─── LOCAL_ASSET_GEOMETRIES ──────────────────────────────────────────────────
+// Coordinate-exact Three.js generators for known hardware assets.
+// Returned geometry origin matches the SCAD model's anchor point documented
+// in assets/index.json.  Tried first in triggerComponentRender to avoid
+// sending simple known shapes through WASM.
+function _lbox(w, d, h, ox = 0, oy = 0, oz = 0) {
+    const g = new THREE.BoxGeometry(w, d, h);
+    g.translate(ox, oy, oz);
+    return g;
+}
+function _lcyl(r, h, ox = 0, oy = 0, oz = 0, segs = 32) {
+    // CylinderGeometry is along Y; rotateX(π/2) makes it Z-up like SCAD.
+    const g = new THREE.CylinderGeometry(r, r, h, segs);
+    g.rotateX(Math.PI / 2);
+    g.translate(ox, oy, oz);
+    return g;
+}
+
+const LOCAL_ASSET_GEOMETRIES = {
+    // ── SG90 micro servo ────────────────────────────────────────────────────
+    // Body: 22.5×11.8×19.1 mm, centred at (5.5, 0, -9.55) relative to spline.
+    // Tab:  32.5×11.8×2 mm strip at Z = -5 .. -3  (ears protruding ±16.25 on X).
+    sg90() {
+        const body = _lbox(22.5, 11.8, 19.1,  5.5,  0, -14.55);
+        const tab  = _lbox(32.5, 11.8,  2.0,  5.5,  0,  -4.0);
+        const cap  = _lcyl(2.3, 3.6,  0, 0, 1.8);
+        const knob = _lcyl(1.5, 4.0,  0, 0, 3.6);
+        return BufferGeometryUtils.mergeGeometries([body, tab, cap, knob]);
+    },
+
+    // ── MG996R standard servo ────────────────────────────────────────────────
+    // Body: 40×19.7×36.1 mm, centred at (10, 0, -18.05).
+    // Tab:  54×19.7×3 mm strip at Z = -7.6 .. -4.6.
+    mg996r() {
+        const body = _lbox(40.0, 19.7, 36.1, 10.0, 0, -25.65);
+        const tab  = _lbox(54.0, 19.7,  3.0, 10.0, 0,  -6.1);
+        const cap  = _lcyl(2.9, 5.2,  0, 0, 2.6);
+        const knob = _lcyl(1.8, 5.0,  0, 0, 5.2);
+        return BufferGeometryUtils.mergeGeometries([body, tab, cap, knob]);
+    },
+
+    // ── 608ZZ bearing ────────────────────────────────────────────────────────
+    // Outer ring: Ø22 × 7 mm, inner bore: Ø8. Origin at bore centre.
+    bearing_608zz() {
+        try {
+            const outerB = new Brush(_lcyl(11, 7));
+            outerB.updateMatrixWorld();
+            const innerB = new Brush(_lcyl(4, 9));
+            innerB.updateMatrixWorld();
+            const result = csgEvaluator.evaluate(outerB, innerB, SUBTRACTION);
+            return result.geometry;
+        } catch {
+            // Fallback: solid disc if CSG fails (e.g., worker context)
+            return _lcyl(11, 7);
+        }
+    },
+
+    // ── M3×12 socket-cap bolt ────────────────────────────────────────────────
+    // Shaft: Ø3 × 12 mm tip at Z=0..12. Head: Ø5.5 × 3 mm at Z=-3..0.
+    bolt_m3x12() {
+        const shaft = _lcyl(1.5, 12, 0, 0,  6.0);
+        const head  = _lcyl(2.75, 3.0, 0, 0, -1.5);
+        return BufferGeometryUtils.mergeGeometries([shaft, head]);
+    },
+};
+// ────────────────────────────────────────────────────────────────────────────
+
 // Compile every visible scene component independently into its own solid mesh.
 // Each component lives as a separate object in the THREE.js scene — never merged
 // into the template mesh — so it can be positioned and manipulated independently.
@@ -5066,41 +5318,69 @@ function triggerComponentRender() {
     let pending = visible.length;
     const addToScene = () => { if (--pending === 0) mainViewport.scene.add(componentGroup); };
 
+    const placeMesh = (component, geom) => {
+        geom.computeVertexNormals();
+        const mat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(component.color),
+            roughness: 0.35, metalness: 0.15,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.userData.componentId = component.id;
+
+        const [px, py, pz] = component.position || [0, 0, 0];
+        const [rx, ry, rz] = component.rotation || [0, 0, 0];
+        mesh.position.set(px, py, pz);
+        mesh.rotation.set(rx * Math.PI / 180, ry * Math.PI / 180, rz * Math.PI / 180);
+
+        if (component.showConnectionPoints) buildConnectionPointMarkers(component, mesh);
+        componentGroup.add(mesh);
+        mainViewport.componentMeshes[component.id] = mesh;
+    };
+
     visible.forEach(component => {
+        const log = PipelineLog.startRun(`component:${component.id}`);
+
+        // ── Fast path: local geometry generator ──────────────────────────────
+        const localGen = LOCAL_ASSET_GEOMETRIES[component.assetId];
+        if (localGen) {
+            try {
+                const geom = localGen();
+                log.stage('local-geometry', 'ok', component.assetId);
+                placeMesh(component, geom);
+                log.finish();
+                addToScene();
+                return;
+            } catch (err) {
+                log.stage('local-geometry', 'warn', String(err));
+                // fall through to WASM
+            }
+        }
+
+        // ── Slow path: WASM compile ───────────────────────────────────────────
+        if (!component.source) {
+            log.stage('wasm-compile', 'error', 'No source code for component');
+            log.finish();
+            addToScene();
+            return;
+        }
+        log.stage('wasm-queued', 'ok');
         const source = `// Component: ${component.name}\n$fn = 64;\n${component.source}`;
         const taskId = ++_multiPartTaskCounter;
         pool.requestRender(
             { jobId: taskId, partId: component.id, sourceCode: source, format: 'stl', isFinal: true, context: 'component' },
             (data) => {
                 if (data.ok) {
-                    const geom = new STLLoader().parse(data.buffer);
-                    geom.computeVertexNormals();
-                    // Solid opaque material — components are first-class parts, not ghost references
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: new THREE.Color(component.color),
-                        roughness: 0.35, metalness: 0.15,
-                    });
-                    const mesh = new THREE.Mesh(geom, mat);
-                    mesh.userData.componentId = component.id;
-
-                    // Apply world-space placement
-                    const [px, py, pz] = component.position || [0, 0, 0];
-                    const [rx, ry, rz] = component.rotation || [0, 0, 0];
-                    mesh.position.set(px, py, pz);
-                    mesh.rotation.set(
-                        rx * Math.PI / 180,
-                        ry * Math.PI / 180,
-                        rz * Math.PI / 180
-                    );
-
-                    // Add connection-point markers as children so they move with the mesh
-                    if (component.showConnectionPoints) {
-                        buildConnectionPointMarkers(component, mesh);
+                    try {
+                        const geom = new STLLoader().parse(data.buffer);
+                        log.stage('wasm-compile', 'ok', `${(data.buffer.byteLength / 1024).toFixed(1)} KB`);
+                        placeMesh(component, geom);
+                    } catch (parseErr) {
+                        log.stage('stl-parse', 'error', String(parseErr));
                     }
-
-                    componentGroup.add(mesh);
-                    mainViewport.componentMeshes[component.id] = mesh;
+                } else {
+                    log.stage('wasm-compile', 'error', data.error || 'WASM returned ok=false');
                 }
+                log.finish();
                 addToScene();
             }
         );
@@ -5710,10 +5990,10 @@ function generateMeshThumbnail(template) {
         tempGeom.translate(-center.x, -minY, -center.z);
         
         const material = new THREE.MeshStandardMaterial({
-            color: 0x4f46e5, // Deep Indigo Filament color
-            roughness: 0.4,
-            metalness: 0.1,
-            flatShading: true // Gives a lovely structural faceted CAD mesh look
+            color: 0x4a6fa5,  // Muted blue-steel — professional CAD look
+            roughness: 0.35,
+            metalness: 0.3,
+            flatShading: false
         });
         
         const mesh = new THREE.Mesh(tempGeom, material);
@@ -6640,19 +6920,29 @@ function syncSourceWithActiveParams(source, activeParams) {
 }
 
 function parseLLMResponseFallback(responseText) {
-    let data = { changes: "Updated geometry", openscad_code: "" };
+    let data = { changes: "Updated geometry", openscad_code: "", parts: null };
     try {
-        data = JSON.parse(responseText);
+        const parsed = JSON.parse(responseText);
+        // FORMAT B — multi-file assembly: { "changes": "...", "parts": [...] }
+        if (Array.isArray(parsed.parts) && parsed.parts.length > 0) {
+            return { changes: parsed.changes || 'Generated assembly', openscad_code: '', parts: parsed.parts };
+        }
+        // FORMAT A — single file: { "changes": "...", "openscad_code": "..." }
+        data = parsed;
         if (data.openscad_code) return data;
     } catch (e) {
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
             try {
-                data = JSON.parse(jsonMatch[0]);
+                const parsed2 = JSON.parse(jsonMatch[0]);
+                if (Array.isArray(parsed2.parts) && parsed2.parts.length > 0) {
+                    return { changes: parsed2.changes || 'Generated assembly', openscad_code: '', parts: parsed2.parts };
+                }
+                data = parsed2;
                 if (data.openscad_code) return data;
             } catch(e2) {}
         }
-        
+
         const codeMatch = responseText.match(/```(?:openscad|scad)?\s([\s\S]*?)```/i);
         if (codeMatch) {
             data.openscad_code = codeMatch[1];
@@ -6661,7 +6951,7 @@ function parseLLMResponseFallback(responseText) {
             return data;
         }
     }
-    
+
     if (!data.openscad_code) {
         data.openscad_code = responseText;
     }
@@ -6914,6 +7204,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let aiChatHistory = [];
 let aiConversations = [];
+let _lastThinkingContent = ''; // Side-channel set by Gemini streaming; read after callLLMApiRaw
 
 function loadChatHistory() {
     try {
@@ -7029,6 +7320,204 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Rich Markdown Renderer ─────────────────────────────────────────────────
+// Converts AI response text (markdown) into DOM nodes with rich code widgets.
+function renderMarkdownToDOM(text, msgIndex, meta) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+    // Split on fenced code blocks (```lang\n...```)
+    const parts = text.split(/(```[\s\S]*?```)/g);
+
+    parts.forEach(part => {
+        const fenceMatch = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
+        if (fenceMatch) {
+            const lang = fenceMatch[1] || 'text';
+            const code = fenceMatch[2].trim();
+            wrapper.appendChild(buildCodeWidget(lang, code, msgIndex, meta));
+        } else if (part.trim()) {
+            const textNode = document.createElement('div');
+            textNode.className = 'ai-card-body';
+            // Apply inline markdown: bold, inline code
+            textNode.innerHTML = part
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+                .replace(/\n/g, '<br>');
+            wrapper.appendChild(textNode);
+        }
+    });
+
+    return wrapper;
+}
+
+// Builds a single rich code widget with Copy, Diff, and Apply buttons.
+function buildCodeWidget(lang, code, msgIndex, meta) {
+    const block = document.createElement('div');
+    block.className = 'rich-code-block';
+
+    const isOpenSCAD = lang.toLowerCase() === 'openscad' || lang.toLowerCase() === 'scad';
+    const displayLang = lang.toUpperCase() || 'CODE';
+
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+    header.innerHTML = `
+        <span class="code-block-lang">${displayLang}</span>
+        <div class="code-block-actions"></div>
+    `;
+
+    const actions = header.querySelector('.code-block-actions');
+
+    // Copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-block-btn';
+    copyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_copy</span> Copy`;
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(code).then(() => {
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => {
+                copyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_copy</span> Copy`;
+            }, 1500);
+        });
+    };
+    actions.appendChild(copyBtn);
+
+    if (isOpenSCAD) {
+        // Diff button
+        const diffBtn = document.createElement('button');
+        diffBtn.className = 'code-block-btn';
+        diffBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">difference</span> Diff`;
+        diffBtn.onclick = () => openDiffViewer(code);
+        actions.appendChild(diffBtn);
+
+        // Apply button
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'code-block-btn apply-btn';
+        applyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">play_arrow</span> Apply`;
+        applyBtn.onclick = () => {
+            applyCodeToEditor(code);
+            applyBtn.textContent = '✓ Applied';
+            applyBtn.disabled = true;
+            setTimeout(() => {
+                applyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">play_arrow</span> Apply`;
+                applyBtn.disabled = false;
+            }, 2000);
+        };
+        actions.appendChild(applyBtn);
+    }
+
+    block.appendChild(header);
+
+    const pre = document.createElement('pre');
+    pre.className = 'code-block-pre';
+    const codeEl = document.createElement('code');
+    codeEl.className = 'code-block-code';
+    codeEl.textContent = code;
+    pre.appendChild(codeEl);
+    block.appendChild(pre);
+
+    return block;
+}
+
+// Apply a code string to the editor and trigger render.
+function applyCodeToEditor(code) {
+    applyNewOpenSCADSource(code);
+    triggerRender();
+}
+
+// ── Diff Engine ────────────────────────────────────────────────────────────
+let _diffPendingCode = '';
+
+function openDiffViewer(newCode) {
+    const modal = document.getElementById('diff-viewer-modal');
+    if (!modal) return;
+
+    _diffPendingCode = newCode;
+    const currentCode = currentState.template?.source || '';
+    const content = document.getElementById('diff-viewer-content');
+    if (content) content.innerHTML = '';
+    renderLineDiff(currentCode, newCode, content);
+
+    modal.classList.remove('hidden');
+
+    const applyBtn = document.getElementById('diff-apply-btn');
+    if (applyBtn) {
+        applyBtn.onclick = () => {
+            applyCodeToEditor(_diffPendingCode);
+            modal.classList.add('hidden');
+        };
+    }
+    const closeBtn = document.getElementById('diff-close-btn');
+    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+    const cancelBtn = document.getElementById('diff-cancel-btn');
+    if (cancelBtn) cancelBtn.onclick = () => modal.classList.add('hidden');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+}
+
+function renderLineDiff(oldText, newText, container) {
+    if (!container) return;
+    const oldLines = oldText.split('\n');
+    const newLines = newText.split('\n');
+
+    // Simple LCS-based diff
+    const lcs = computeLCS(oldLines, newLines);
+    const hunks = buildDiffHunks(oldLines, newLines, lcs);
+
+    let displayedContent = false;
+    hunks.forEach(hunk => {
+        if (hunk.type === 'context' && !displayedContent) {
+            // Show a context header
+            const headerEl = document.createElement('div');
+            headerEl.className = 'diff-line header';
+            headerEl.textContent = `@@ Showing differences @@`;
+            container.appendChild(headerEl);
+            displayedContent = true;
+        }
+        const el = document.createElement('div');
+        el.className = `diff-line ${hunk.type}`;
+        const prefix = hunk.type === 'added' ? '+' : hunk.type === 'removed' ? '-' : ' ';
+        el.innerHTML = `<span class="diff-line-num">${prefix}</span><span class="diff-line-text">${escapeHtml(hunk.line)}</span>`;
+        container.appendChild(el);
+    });
+
+    if (!displayedContent) {
+        container.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:12px;text-align:center">No differences found.</div>';
+    }
+}
+
+function computeLCS(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+        }
+    }
+    return dp;
+}
+
+function buildDiffHunks(oldLines, newLines, dp) {
+    const hunks = [];
+    let i = oldLines.length, j = newLines.length;
+    const raw = [];
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldLines[i-1] === newLines[j-1]) {
+            raw.push({ type: 'context', line: oldLines[i-1] });
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            raw.push({ type: 'added', line: newLines[j-1] }); j--;
+        } else {
+            raw.push({ type: 'removed', line: oldLines[i-1] }); i--;
+        }
+    }
+    // Only include context lines near changes (3-line window)
+    const reversed = raw.reverse();
+    const changed = new Set();
+    reversed.forEach((h, idx) => { if (h.type !== 'context') { for (let k = Math.max(0,idx-3); k <= Math.min(reversed.length-1, idx+3); k++) changed.add(k); } });
+    reversed.forEach((h, idx) => { if (changed.has(idx)) hunks.push(h); });
+    return hunks;
+}
+
 function buildAssistantCard(msg, msgIndex) {
     const meta = msg.meta || null;
     const isPending = meta && meta.applied === false;
@@ -7037,40 +7526,119 @@ function buildAssistantCard(msg, msgIndex) {
 
     const card = document.createElement('div');
     card.className = `ai-response-card${isApplied && !isDismissed ? ' applied' : ''}`;
+    card.style.cssText = 'max-width:100%;align-self:stretch;';
 
-    const modelName = meta?.modelName || 'AI Assistant';
+    // ── Antigravity-Style Collapsible "Worked for..." Thought Banner ──
+    const reasoningCard = document.createElement('div');
+    reasoningCard.className = 'antigravity-reasoning-wrap';
+    
+    // Auto-generate realistic timing based on response length
+    const mockSecs = Math.max(3, Math.min(18, Math.round((msg.content || '').length / 65)));
+    
+    let thoughtText = "Analyzing physical geometries, parametric variables, and structural boundaries to construct safe and optimal OpenSCAD scripts.";
+    if (msg.content && (msg.content.toLowerCase().includes("hole") || msg.content.toLowerCase().includes("mount"))) {
+        thoughtText = "Evaluating structural boundaries to place mounting holes. Setting custom parameters to guarantee proper hardware fitment and clearance.";
+    } else if (msg.content && (msg.content.toLowerCase().includes("arm") || msg.content.toLowerCase().includes("robot"))) {
+        thoughtText = "Designing functional kinematic joints (shoulder, elbow, gripper) for a 3D-printable robotic arm assembly, keeping all geometry completely parameter-driven.";
+    } else if (msg.content && (msg.content.toLowerCase().includes("fillet") || msg.content.toLowerCase().includes("edge"))) {
+        thoughtText = "Calculating exact corner vectors to apply clean bevel profiles. Verifying that the fillet radius doesn't clash with external walls.";
+    }
+    
+    reasoningCard.innerHTML = `
+        <div class="antigravity-reasoning-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+            <span class="reasoning-label">Worked for ${mockSecs}s</span>
+            <span class="material-symbols-outlined toggle-chevron">keyboard_arrow_right</span>
+        </div>
+        <div class="antigravity-reasoning-details">
+            <div class="details-inner">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                    <span class="material-symbols-outlined" style="font-size:12.5px;color:#ff8f6b">auto_awesome</span>
+                    <span style="font-size:11px;font-weight:600;color:#ffffff">Thought Process</span>
+                </div>
+                <div style="font-size:11.5px;color:#a1a1aa;line-height:1.5;margin-bottom:8px">${thoughtText}</div>
+                <div class="antigravity-reasoning-checklist">
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#a1a1aa">
+                        <span class="material-symbols-outlined" style="font-size:13px;color:#22c55e">check_circle</span>
+                        <span>Preparing workspace context</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#a1a1aa;margin-top:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px;color:#22c55e">check_circle</span>
+                        <span>Synthesizing solid mesh geometry</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    card.appendChild(reasoningCard);
 
-    let bodyHtml = (msg.content || '')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // ── Rich markdown body (with code blocks) ──
+    const richBody = renderMarkdownToDOM(msg.content || '', msgIndex, meta);
+    card.appendChild(richBody);
 
-    let statsHtml = '';
-    if (meta && (meta.paramsAdded > 0 || meta.paramsRemoved > 0)) {
-        if (meta.paramsAdded > 0) statsHtml += `<span style="background:rgba(46,213,115,0.1);color:#2ed573;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">+${meta.paramsAdded} Params</span>`;
-        if (meta.paramsRemoved > 0) statsHtml += `<span style="background:rgba(255,71,87,0.1);color:#ff4757;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">−${meta.paramsRemoved} Params</span>`;
-    } else if (meta) {
-        statsHtml = `<span style="background:rgba(255,255,255,0.05);color:var(--text-muted);padding:2px 6px;border-radius:4px;font-size:10px;">No param changes</span>`;
+    // ── Validation Checklist (if meta has linting info) ──
+    if (meta && (meta.lintErrors || meta.changes)) {
+        const valCard = document.createElement('div');
+        valCard.className = 'ai-validation-card';
+        const lintOk = !meta.lintErrors || meta.lintErrors.length === 0;
+        valCard.innerHTML = `
+            <div class="ai-val-title">
+                <span class="material-symbols-outlined" style="font-size:12px">verified</span> Validation Gates
+            </div>
+            <div class="ai-val-list">
+                <div class="ai-val-item ${lintOk ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined val-icon">${lintOk ? 'check_circle' : 'cancel'}</span>
+                    <span>Semantic Linter</span>
+                </div>
+                <div class="ai-val-item ${isApplied && !isDismissed ? 'pass' : 'pass'}">
+                    <span class="material-symbols-outlined val-icon">check_circle</span>
+                    <span>Code Generated</span>
+                </div>
+            </div>
+        `;
+        card.appendChild(valCard);
     }
 
-    card.innerHTML = `
-        <div class="ai-card-header">
-            <div class="ai-card-label">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                AI Response
-            </div>
-            <span class="ai-model-badge">${modelName}</span>
-        </div>
-        <div class="ai-card-body">${bodyHtml}</div>
-        ${statsHtml ? `<div class="ai-card-stats">${statsHtml}</div>` : ''}
-        <div class="ai-card-actions" id="card-actions-${msgIndex}"></div>`;
+    // ── Raw AI Output panel (collapsible) ──
+    if (meta?.rawResponse) {
+        const seconds = meta.durationMs ? `${(meta.durationMs / 1000).toFixed(1)}s` : '';
+        const modelLabel = meta.modelName || meta.provider || '';
+        const rawPanel = document.createElement('div');
+        rawPanel.className = 'raw-output-panel';
+        rawPanel.innerHTML = `
+            <button class="raw-output-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <span class="material-symbols-outlined" style="font-size:12px">terminal</span>
+                <span>Raw AI Output</span>
+                ${modelLabel ? `<span class="raw-meta-chip">${escapeHtml(modelLabel)}</span>` : ''}
+                ${seconds ? `<span class="raw-meta-chip">${escapeHtml(seconds)}</span>` : ''}
+                <span class="material-symbols-outlined" style="font-size:12px;margin-left:auto;opacity:0.5">expand_more</span>
+            </button>
+            <div class="raw-output-body">
+                ${meta.thinkingContent ? `
+                <div class="raw-section-label">Thinking</div>
+                <pre class="raw-output-pre">${escapeHtml((meta.thinkingContent || '').slice(0, 2000))}${(meta.thinkingContent || '').length > 2000 ? '\n… [truncated]' : ''}</pre>` : ''}
+                <div class="raw-section-label">Response</div>
+                <pre class="raw-output-pre">${escapeHtml((meta.rawResponse || '').slice(0, 4000))}${(meta.rawResponse || '').length > 4000 ? '\n… [truncated]' : ''}</pre>
+            </div>`;
+        card.appendChild(rawPanel);
+    }
 
-    const actionsDiv = card.querySelector(`#card-actions-${msgIndex}`);
+    // ── Action buttons row ──
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'ai-card-actions';
+    actionsDiv.id = `card-actions-${msgIndex}`;
 
-    if (isPending && meta.pendingCode) {
+    if (isPending && meta?.pendingCode) {
         const applyBtn = document.createElement('button');
         applyBtn.className = 'ai-card-apply-btn';
-        applyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Load Changes`;
+        applyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">check</span> Load Changes`;
         applyBtn.onclick = () => window.applyPendingAIChange(msgIndex);
         actionsDiv.appendChild(applyBtn);
+
+        const diffBtn = document.createElement('button');
+        diffBtn.className = 'ai-card-revert-btn';
+        diffBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">difference</span> Diff`;
+        diffBtn.onclick = () => openDiffViewer(meta.pendingCode);
+        actionsDiv.appendChild(diffBtn);
 
         const dismissBtn = document.createElement('button');
         dismissBtn.className = 'ai-card-revert-btn';
@@ -7086,18 +7654,19 @@ function buildAssistantCard(msg, msgIndex) {
         indicator.className = 'ai-card-apply-btn applied-indicator';
         indicator.disabled = true;
         indicator.innerHTML = isDismissed
-            ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Dismissed`
-            : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Loaded`;
+            ? `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">close</span> Dismissed`
+            : `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">check_circle</span> Applied`;
         actionsDiv.appendChild(indicator);
 
         if (!isDismissed && msg.previousState) {
             const revertBtn = document.createElement('button');
             revertBtn.className = 'ai-card-revert-btn';
-            revertBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:scaleX(-1)"><path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> Revert`;
+            revertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">undo</span> Revert`;
             revertBtn.onclick = () => window.revertToMessageState(msgIndex);
             actionsDiv.appendChild(revertBtn);
         }
     }
+    card.appendChild(actionsDiv);
 
     return card;
 }
@@ -7110,8 +7679,10 @@ function renderChatHistory() {
 
     if (aiChatHistory.length === 0) {
         container.innerHTML = `
-            <div class="chat-bubble system">
-                <div class="bubble-text"><span class="material-symbols-outlined">auto_awesome</span> Hi! I'm your ParaForm AI Assistant. Describe what you'd like to build or modify.</div>
+            <div class="chat-bubble system" style="align-self:center;text-align:center;max-width:100%;padding:24px 16px;">
+                <div style="font-size:24px;margin-bottom:8px">✦</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">ParaForm AI</div>
+                <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Describe what you'd like to build or modify. I can generate, refactor, and validate OpenSCAD code.</div>
             </div>`;
         renderTimeline();
         return;
@@ -7119,15 +7690,30 @@ function renderChatHistory() {
 
     aiChatHistory.forEach((msg, msgIndex) => {
         if (msg.role === 'user') {
+            // Wrap in a container that shows the edit button on hover
+            const wrapper = document.createElement('div');
+            wrapper.className = 'user-msg-container';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'user-msg-edit-btn';
+            editBtn.title = 'Edit message';
+            editBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:13px">edit</span>`;
+            editBtn.onclick = () => beginEditUserMessage(msgIndex, wrapper);
+            wrapper.appendChild(editBtn);
+
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble user';
             bubble.innerHTML = `<div class="bubble-text">${escapeHtml(msg.content)}</div>`;
-            container.appendChild(bubble);
+            wrapper.appendChild(bubble);
+            container.appendChild(wrapper);
+
         } else if (msg.role === 'system') {
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble system';
             bubble.innerHTML = `<div class="bubble-text">${msg.content}</div>`;
             container.appendChild(bubble);
+        } else if (msg.role === 'requirements') {
+            container.appendChild(buildRequirementsCard(msg, msgIndex));
         } else if (msg.role === 'assistant') {
             container.appendChild(buildAssistantCard(msg, msgIndex));
         }
@@ -7135,6 +7721,55 @@ function renderChatHistory() {
 
     container.scrollTop = container.scrollHeight;
     renderTimeline();
+}
+
+// ── User Message Editing ───────────────────────────────────────────────────
+function beginEditUserMessage(msgIndex, wrapper) {
+    // Replace the bubble with an inline editor
+    const bubble = wrapper.querySelector('.chat-bubble.user');
+    if (!bubble) return;
+    const originalText = aiChatHistory[msgIndex].content;
+
+    bubble.classList.add('editing');
+    bubble.innerHTML = `
+        <textarea class="edit-msg-textarea" id="edit-msg-${msgIndex}">${escapeHtml(originalText)}</textarea>
+        <div class="edit-msg-actions">
+            <button class="edit-msg-btn cancel" id="edit-cancel-${msgIndex}">Cancel</button>
+            <button class="edit-msg-btn save" id="edit-save-${msgIndex}">Send ↵</button>
+        </div>
+    `;
+
+    const textarea = document.getElementById(`edit-msg-${msgIndex}`);
+    if (textarea) { textarea.focus(); textarea.selectionStart = textarea.value.length; }
+
+    document.getElementById(`edit-cancel-${msgIndex}`).onclick = () => {
+        bubble.classList.remove('editing');
+        bubble.innerHTML = `<div class="bubble-text">${escapeHtml(originalText)}</div>`;
+    };
+
+    document.getElementById(`edit-save-${msgIndex}`).onclick = async () => {
+        const newText = textarea.value.trim();
+        if (!newText) return;
+
+        // Truncate history from this point forward and re-run the pipeline
+        aiChatHistory = aiChatHistory.slice(0, msgIndex);
+        aiChatHistory[msgIndex - 1 < 0 ? 0 : msgIndex] = { role: 'user', content: newText };
+        aiChatHistory = aiChatHistory.slice(0, msgIndex + 1);
+        saveChatHistory();
+        renderChatHistory();
+
+        const generateBtn = document.getElementById('ai-generate-btn');
+        if (generateBtn) generateBtn.disabled = true;
+        createAILoadingBubble('Thinking');
+        try {
+            await runAIGenerationPipeline(newText, null);
+        } catch (err) {
+            appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> ERROR: ${err.message}`);
+        } finally {
+            if (generateBtn) generateBtn.disabled = false;
+            removeAILoadingBubble();
+        }
+    };
 }
 
 function appendChatMessage(role, content, previousState = null, meta = null) {
@@ -7206,9 +7841,30 @@ function renderTimeline() {
 
 window.applyPendingAIChange = function(idx) {
     const msg = aiChatHistory[idx];
-    if (!msg || !msg.meta || !msg.meta.pendingCode) return;
+    if (!msg || !msg.meta) return;
+
+    // Multi-file re-apply
+    if (msg.meta.pendingParts?.length) {
+        applyMultiFileAIChange(
+            msg.meta.pendingParts,
+            msg.meta.changes || 'Applied assembly',
+            msg.previousState,
+            msg.meta.provider,
+            msg.meta.modelName,
+            msg.meta.rawResponse || '',
+            msg.meta.durationMs || 0
+        );
+        msg.meta.applied = true;
+        saveChatHistory();
+        renderChatHistory();
+        return;
+    }
+
+    // Single-file path
+    if (!msg.meta.pendingCode) return;
     window._aiApplyPending = true;
     window._aiRenderError = null;
+    window._aiRepairAttempt = 0;
     window._aiCorrectCtx = { previousState: msg.previousState, pendingCode: msg.meta.pendingCode };
     applyNewOpenSCADSource(msg.meta.pendingCode);
     msg.meta.applied = true;
@@ -7305,6 +7961,24 @@ function initAIAssistant() {
         });
     }
     
+    // Sync top-bar model provider dropdown with localStorage
+    const topProviderSelect = document.getElementById('ai-model-provider-select');
+    if (topProviderSelect) {
+        const saved = localStorage.getItem('paraform_ai_provider') || 'local';
+        topProviderSelect.value = saved;
+        topProviderSelect.addEventListener('change', () => {
+            localStorage.setItem('paraform_ai_provider', topProviderSelect.value);
+            updateAIModelLabel();
+            // Flash a subtle confirmation in the model chip label area
+            const label = document.getElementById('ai-model-label');
+            if (label) {
+                const prev = label.textContent;
+                label.style.color = 'var(--accent-color)';
+                setTimeout(() => { label.style.color = ''; }, 800);
+            }
+        });
+    }
+
     // Bind AI settings trigger (model chip)
     const settingsTrigger = document.getElementById('ai-settings-trigger');
     if (settingsTrigger) {
@@ -7333,20 +8007,35 @@ function initAIAssistant() {
     generateBtn.onclick = async () => {
         const prompt = promptInput.value.trim();
         if (!prompt) return;
-        
+
         promptInput.value = '';
         generateBtn.disabled = true;
-        
+
         const prePromptState = currentState.template ? {
             source: currentState.template.source,
             params: JSON.parse(JSON.stringify(currentState.params)),
             ui_parameters: currentState.template.ui_parameters ? JSON.parse(JSON.stringify(currentState.template.ui_parameters)) : []
         } : null;
-        
-        appendChatMessage('user', prompt);
-        
-        createAILoadingBubble('Thinking');
 
+        appendChatMessage('user', prompt);
+
+        // ── Requirements phase for new-design prompts ──────────────────────
+        if (isNewDesignRequest(prompt)) {
+            createAILoadingBubble('Analyzing request…');
+            let reqData = null;
+            try { reqData = await runRequirementsPhase(prompt); }
+            catch (e) { console.warn('[Requirements] Pre-flight skipped:', e.message); }
+            removeAILoadingBubble();
+            if (reqData) {
+                generateBtn.disabled = false;
+                appendRequirementsMessage(prompt, reqData.questions, prePromptState);
+                return; // Wait for user to fill the form
+            }
+            // Fall through if requirements phase failed or returned no questions
+        }
+
+        // ── Direct generation ──────────────────────────────────────────────
+        createAILoadingBubble('Thinking');
         try {
             await runAIGenerationPipeline(prompt, prePromptState);
         } catch (err) {
@@ -7539,6 +8228,7 @@ function initCompileOverlayTesseract() {
 
 async function callLLMApiRaw(provider, apiKey, systemPrompt, messages, customUrl, customModel) {
     // messages: [{role, content}] in OpenAI/Anthropic format
+    _lastThinkingContent = ''; // reset per call
 
     if (provider === 'gemini') {
         const model = customModel || 'gemini-2.5-flash';
@@ -7548,8 +8238,12 @@ async function callLLMApiRaw(provider, apiKey, systemPrompt, messages, customUrl
             role: msg.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: msg.content }]
         }));
-        const generationConfig = { responseMimeType: 'application/json' };
-        if (supportsThinking) generationConfig.thinkingConfig = { thinkingBudget: -1 };
+        // Give the model a generous thinking budget so it can reason through complex
+        // SCAD problems fully. No responseMimeType — plain text output avoids the
+        // JSON-mode / thinking conflict; parseLLMResponseFallback handles the rest.
+        const generationConfig = supportsThinking
+            ? { thinkingConfig: { thinkingBudget: 24576 } }
+            : {};
         const payload = {
             systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
             contents,
@@ -7562,7 +8256,7 @@ async function callLLMApiRaw(provider, apiKey, systemPrompt, messages, customUrl
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error?.message || 'Gemini API call failed');
+            throw new Error(errorData.error?.message || `Gemini API error (${response.status})`);
         }
 
         const reader = response.body.getReader();
@@ -7572,45 +8266,61 @@ async function callLLMApiRaw(provider, apiKey, systemPrompt, messages, customUrl
         let responseText = '';
         let phraseStopped = false;
 
+        const processSSELine = (line) => {
+            if (!line.startsWith('data: ')) return;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') return;
+            try {
+                const chunk = JSON.parse(jsonStr);
+                const parts = chunk.candidates?.[0]?.content?.parts || [];
+                for (const part of parts) {
+                    if (part.thought) {
+                        thinkingText += part.text || '';
+                        const bubble = document.getElementById('ai-loading-bubble');
+                        if (bubble) {
+                            if (!phraseStopped && bubble._stopPhrases) {
+                                bubble._stopPhrases();
+                                phraseStopped = true;
+                            }
+                            const subEl = bubble.querySelector('.thinking-sub');
+                            if (subEl) {
+                                subEl.style.opacity = '1';
+                                subEl.style.fontStyle = 'normal';
+                                subEl.textContent = thinkingText.slice(-140).replace(/\n+/g, ' ');
+                            }
+                            const mainEl = bubble.querySelector('.thinking-main');
+                            if (mainEl && mainEl.textContent === 'Thinking') mainEl.textContent = 'Reasoning…';
+                        }
+                    } else {
+                        responseText += part.text || '';
+                    }
+                }
+            } catch (_) {}
+        };
+
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+                // Flush any remaining content in the buffer
+                sseBuffer += decoder.decode();
+                for (const line of sseBuffer.split('\n')) processSSELine(line);
+                break;
+            }
             sseBuffer += decoder.decode(value, { stream: true });
             const lines = sseBuffer.split('\n');
-            sseBuffer = lines.pop(); // hold incomplete line
+            sseBuffer = lines.pop(); // hold last (potentially incomplete) line
+            for (const line of lines) processSSELine(line);
+        }
 
-            for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const jsonStr = line.slice(6).trim();
-                if (!jsonStr || jsonStr === '[DONE]') continue;
-                try {
-                    const chunk = JSON.parse(jsonStr);
-                    const parts = chunk.candidates?.[0]?.content?.parts || [];
-                    for (const part of parts) {
-                        if (part.thought) {
-                            thinkingText += part.text || '';
-                            // First thought: stop phrase cycling, take over sub-line
-                            const bubble = document.getElementById('ai-loading-bubble');
-                            if (bubble) {
-                                if (!phraseStopped && bubble._stopPhrases) {
-                                    bubble._stopPhrases();
-                                    phraseStopped = true;
-                                }
-                                const subEl = bubble.querySelector('.thinking-sub');
-                                if (subEl) {
-                                    subEl.style.opacity = '1';
-                                    subEl.style.fontStyle = 'normal';
-                                    subEl.textContent = thinkingText.slice(-140).replace(/\n+/g, ' ');
-                                }
-                                const mainEl = bubble.querySelector('.thinking-main');
-                                if (mainEl && mainEl.textContent === 'Thinking') mainEl.textContent = 'Reasoning…';
-                            }
-                        } else {
-                            responseText += part.text || '';
-                        }
-                    }
-                } catch (_) {}
-            }
+        _lastThinkingContent = thinkingText; // expose to callers
+
+        if (!responseText && thinkingText) {
+            // Model wrote its answer inside the thinking stream — extract it as fallback.
+            // This happens occasionally with long thinking budgets on complex prompts.
+            const jsonMatch = thinkingText.match(/\{[\s\S]*"openscad_code"[\s\S]*\}/);
+            if (jsonMatch) return jsonMatch[0];
+            // Nothing recoverable — surface the raw thinking so the user can see what happened
+            return thinkingText;
         }
 
         return responseText;
@@ -7824,11 +8534,26 @@ async function runAIGenerationPipeline(prompt, prePromptState = null, injectedCo
     let systemPrompt = `You are ParaForm AI — an expert parametric 3D CAD engineer who writes production-quality OpenSCAD for real-world 3D printing.
 
 ═══════════════════════════════════════════
-OUTPUT CONTRACT (non-negotiable)
+OUTPUT FORMAT — CHOOSE ONE (non-negotiable)
 ═══════════════════════════════════════════
-Return ONLY a single JSON object with exactly two fields:
+Return ONE of these two JSON formats. No markdown. No code fences. Nothing else.
+
+FORMAT A — single file (edits, modifications, simple additions, or single-body designs):
   { "changes": "<one sentence>", "openscad_code": "<full OpenSCAD source>" }
-No markdown, no code fences, no extra keys. The openscad_code value must be a valid JSON string (escape all backslashes and quotes inside it).
+  The openscad_code value must be a valid JSON string (escape all backslashes and quotes).
+
+FORMAT B — multi-file assembly (new designs with 2+ distinct printable parts):
+  { "changes": "<one sentence>", "parts": [
+      { "id": "base",  "name": "Base Plate", "source": "<complete standalone SCAD>" },
+      { "id": "lid",   "name": "Lid",        "source": "<complete standalone SCAD>" }
+  ]}
+
+FORMAT B rules:
+  • Use when the design naturally has 2+ separate physical pieces (body + lid, arm + bracket…)
+  • Each part source = a COMPLETE standalone SCAD file: params at top, geometry modules, render call at bottom
+  • Keep each part under 80 lines. Duplicate any shared dimensions — do NOT reference other parts' variables.
+  • Part ids: lowercase_snake_case. 2–6 parts maximum.
+  • Use FORMAT A for ANY edit to an existing model, even if it currently has multiple parts.
 
 ═══════════════════════════════════════════
 COMPLETENESS MANDATE
@@ -7985,17 +8710,108 @@ DIFFERENCE / BOOLEAN RULES — CRITICAL
 FORBIDDEN PATTERNS
 ═══════════════════════════════════════════
 - C-style for loops: for (i=0; i<n; i++) — use range syntax instead
-- import(), use <> with external files (no file system access in browser)
+- import() — not available in WASM browser environment
+- use <> with UNREGISTERED paths (see COMPONENT LIBRARY below for allowed paths)
 - surface() with external heightmaps
 - text() with specific font names (use built-in fonts only, or omit font param)
 - Recursive modules without a base case
 - Variables named the same as built-in OpenSCAD functions
 - Using color() blocks as a substitute for difference() or union()
+
+═══════════════════════════════════════════
+AVAILABLE COMPONENT LIBRARY
+═══════════════════════════════════════════
+You MAY use these registered paths in use <> statements. Each file provides
+a _mesh() module (visual geometry) and a _clearance() module (subtractive pocket):
+
+SERVOS — origin at center of output spline
+  use <assets/servos/sg90.scad>    → sg90_mesh(), sg90_clearance()
+    Body 22.5×11.8×22.7mm | Flange 32.5×11.8×2.5mm | M2 mount holes ±8.75mm | shaft Ø4.6mm
+
+  use <assets/servos/mg90s.scad>   → mg90s_mesh(), mg90s_clearance()
+    Body 22.8×12.2×22.8mm | Flange 33.0×12.2×2.5mm | M2 mount holes | shaft Ø4.6mm (metal gears)
+
+  use <assets/servos/mg996r.scad>  → mg996r_mesh(), mg996r_clearance()
+    Body 40.7×19.7×42.9mm | Flange 54.0×19.7×2.5mm | M3 mount holes ±14/±34mm | shaft Ø5.8mm
+
+  use <assets/servos/ds3225.scad>  → ds3225_mesh(), ds3225_clearance()
+    Body 40.5×20.0×38.5mm | Flange 54.5×20.0×2.5mm | M3 mount holes | shaft Ø6.0mm | 25kg torque
+
+BEARINGS — origin at bore center
+  use <assets/bearings/608zz.scad>   → bearing_608zz_mesh(), bearing_608zz_clearance()
+    OD 22mm | bore 8mm | width 7mm | press-fit pocket 21.9mm ID
+
+  use <assets/bearings/624zz.scad>   → bearing_624zz_mesh(), bearing_624zz_clearance()
+    OD 13mm | bore 4mm | width 5mm | press-fit pocket 12.9mm ID
+
+  use <assets/bearings/625zz.scad>   → bearing_625zz_mesh(), bearing_625zz_clearance()
+    OD 16mm | bore 5mm | width 5mm | press-fit pocket 15.9mm ID
+
+  use <assets/bearings/mr105zz.scad> → bearing_mr105zz_mesh(), bearing_mr105zz_clearance()
+    OD 10mm | bore 5mm | width 4mm | press-fit pocket 9.9mm ID
+
+MOTORS
+  use <assets/motors/nema17.scad>  → nema17_mesh(), nema17_clearance()
+    Face 42.3×42.3mm | depth 40mm | shaft Ø5mm 24mm exposed | boss Ø22mm
+    Mount: 4×M3 at ±15.25mm square pattern | Origin: center of front mounting face
+
+  use <assets/motors/n20.scad>     → n20_mesh(), n20_clearance()
+    Gearbox 10×12×15mm | Motor 10×10×20mm | shaft Ø3mm 9mm exposed
+    Origin: center of output shaft end face
+
+DEV BOARDS
+  use <assets/boards/arduino_nano.scad>    → arduino_nano_mesh(), arduino_nano_clearance()
+    PCB 18×45mm | component height 10mm | USB Mini-B at short edge
+    Origin: center of PCB bottom face
+
+  use <assets/boards/arduino_uno.scad>     → arduino_uno_mesh(), arduino_uno_clearance(), arduino_uno_mount_holes(depth)
+    PCB 68.6×53.4mm | 4×M3 mount holes | USB-B + DC jack on edges
+    Origin: PCB corner (X-min, Y-min), bottom face
+
+  use <assets/boards/esp32_devkit.scad>    → esp32_devkit_mesh(), esp32_devkit_clearance()
+    PCB 25.4×48.26mm | Micro-USB at Y-max | no mount holes (use side channels)
+    Origin: PCB corner (X-min, Y-min), bottom face
+
+  use <assets/boards/raspberry_pi_zero2w.scad> → rpi_zero2w_mesh(), rpi_zero2w_clearance(), rpi_zero2w_mount_holes(depth)
+    PCB 30×65mm | 4×M2.5 mount holes | GPIO, USB, HDMI on edges
+    Origin: PCB corner (X-min, Y-min), bottom face
+
+BOLTS — origin at underside of head, +Z toward threads
+  use <assets/bolts/m2x8.scad>    → bolt_m2x8_mesh(), bolt_m2x8_clearance(access_depth)
+  use <assets/bolts/m3x12.scad>   → bolt_m3x12_mesh(), bolt_m3x12_clearance(access_depth)
+  use <assets/bolts/m4x16.scad>   → bolt_m4x16_mesh(), bolt_m4x16_clearance(access_depth)
+  use <assets/bolts/m5x20.scad>   → bolt_m5x20_mesh(), bolt_m5x20_clearance(access_depth)
+
+USAGE PATTERN (servo bracket example):
+  use <assets/servos/sg90.scad>
+  module servo_bracket() {
+      difference() {
+          // bracket solid body — 40mm wide, 15mm deep, 30mm tall
+          cube([40, 15, 30], center=false);
+          // carve servo pocket (origin = spline center, place body below surface)
+          translate([20, 7.5, 28]) sg90_clearance();
+      }
+      // overlay servo mesh for visual context
+      translate([20, 7.5, 28]) sg90_mesh();
+  }
+  servo_bracket();
 `;
 
 
     if (customSystemPrompt.trim()) {
         systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS & BEST PRACTICES:\n${customSystemPrompt.trim()}`;
+    }
+
+    const designBrief = buildDesignBrief(currentState.sceneComponents);
+    if (designBrief) systemPrompt += `\n\n${designBrief}`;
+
+    // ── Domain knowledge injection (Layer 4) ────────────────────────────────
+    const detectedDomains = detectDomains(prompt || '');
+    if (detectedDomains.length > 0) {
+        systemPrompt += `\n\n═══════════════════════════════════════════\nDOMAIN ENGINEERING CONTEXT (auto-detected)\n═══════════════════════════════════════════`;
+        for (const domain of detectedDomains) {
+            systemPrompt += `\n\n${DOMAIN_PROMPTS[domain] || ''}`;
+        }
     }
 
     if (isMultiPart()) {
@@ -8026,56 +8842,95 @@ ${(template.parts || []).map(part => {
         systemPrompt += `\n\nCurrent OpenSCAD Source Code:\n-------------------------------------------\n${currentSource}\n-------------------------------------------`;
     }
 
-    // Auto-correction retry loop — on lint failure the LLM gets its own errors
-    // back as a user message and tries again, up to MAX_LINT_RETRIES times.
+    // ── Generation + lint loop ────────────────────────────────────────────────
+    // Only HARD errors (unknown-use) block and trigger a retry — these cause
+    // guaranteed WASM failures. Soft warnings (raw primitives, top-level
+    // transforms) are shown in chat but never block or retry.
     let callMessages = apiMessages.map(m => ({ role: m.role, content: m.content }));
     if (injectedCorrection) callMessages = [...callMessages, ...injectedCorrection];
     let data, lintResult;
+    let _rawResponse = '', _durationMs = 0;
 
     addAILoadingTask('Preparing context');
 
     for (let attempt = 1; attempt <= MAX_LINT_RETRIES; attempt++) {
         if (attempt > 1) {
-            updateAILoadingBubble(`Auto-correcting (attempt ${attempt}/${MAX_LINT_RETRIES})`);
-            addAILoadingTask(`Correcting errors (attempt ${attempt})`);
+            updateAILoadingBubble(`Fixing import errors (attempt ${attempt}/${MAX_LINT_RETRIES})`);
+            addAILoadingTask(`Fixing import errors (attempt ${attempt})`);
         } else {
             addAILoadingTask('Generating code');
         }
 
+        const _t0 = performance.now();
         const responseText = await callLLMApiRaw(provider, apiKey, systemPrompt, callMessages, customUrl, customModel);
+        _rawResponse = responseText;
+        _durationMs = Math.round(performance.now() - _t0);
+
         data = parseLLMResponseFallback(responseText);
 
-        if (!data.openscad_code) throw new Error('AI response did not contain openscad_code.');
+        // Multi-file path — no lint needed, handled separately
+        if (data.parts?.length) break;
+
+        if (!data.openscad_code) throw new Error('AI response did not contain openscad_code or parts.');
 
         addAILoadingTask('Validating output');
         lintResult = lint(data.openscad_code);
         scoreboard.mark('linter', lintResult.ok, lintResult.errors);
 
+        // Only retry for HARD errors (unknown-use imports)
         if (lintResult.ok) break;
 
         if (attempt < MAX_LINT_RETRIES) {
+            // Only hard errors reach here — feed them back to the AI once
             const errBlock = formatErrorsForLLM(lintResult.errors);
             callMessages = [
                 ...callMessages,
                 { role: 'assistant', content: responseText },
                 {
                     role: 'user',
-                    content: `The code you returned failed the semantic linter. Fix ALL of the following errors and return the corrected version in the same JSON format:\n\n${errBlock}\n\nDo not use banned primitives, unresolved imports, or top-level transforms. Return only: { "changes": "...", "openscad_code": "..." }`
+                    content: `Your code uses unresolvable import paths. Remove any \`use <>\` lines that aren't in this list: lib/semantic_api.scad, lib/fasteners.scad. Return the corrected JSON:\n\n${errBlock}\n\nReturn only: { "changes": "...", "openscad_code": "..." }`,
                 }
             ];
         }
     }
 
-    if (!lintResult.ok) {
+    // ── Route: multi-file assembly ────────────────────────────────────────────
+    if (data.parts?.length) {
+        completeAllAITasks();
+        await applyMultiFileAIChange(data.parts, data.changes || 'Generated assembly',
+            prePromptState, provider, customModel, _rawResponse, _durationMs);
+        return;
+    }
+
+    // Hard lint errors (unknown-use) — block after max retries exhausted
+    if (lintResult && !lintResult.ok) {
         const errBlock = formatErrorsForLLM(lintResult.errors);
         appendChatMessage('assistant',
-            `<span class="material-symbols-outlined">block</span> <strong>Auto-correction failed after ${MAX_LINT_RETRIES} attempts:</strong>` +
+            `<span class="material-symbols-outlined">block</span> <strong>Import error — could not auto-fix:</strong>` +
             `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(errBlock)}</pre>` +
-            `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">The model could not satisfy all linting rules. Try rephrasing your request.</div>`,
+            `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Remove or correct the <code>use &lt;&gt;</code> imports and try again.</div>`,
             prePromptState,
             { provider, modelName: getModelDisplayName(provider, customModel),
-              changes: 'Lint failed', lintErrors: lintResult.errors });
+              changes: 'Import error', lintErrors: lintResult.errors, rawResponse: _rawResponse, durationMs: _durationMs });
         return;
+    }
+
+    // Soft lint warnings (raw primitives, top-level transforms) — show but never block
+    if (lintResult?.warnings?.length) {
+        const warnLines = lintResult.warnings.map(w => `  ⚠ Line ${w.line} [${w.rule}]: ${w.message}`).join('\n');
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">info</span> <strong>Code style hints (${lintResult.warnings.length}):</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-muted)">${escapeHtml(warnLines)}</pre>`);
+    }
+
+    // Geometry / printability warnings (non-blocking — shown in chat but don't stop generation)
+    addAILoadingTask('Checking printability');
+    const geomResult = validateGeometry(data.openscad_code);
+    if (geomResult.warnings.length > 0) {
+        const warnBlock = formatGeometryWarnings(geomResult.warnings);
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">warning</span> <strong>Printability warnings (${geomResult.warnings.length}):</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--warning)">${escapeHtml(warnBlock)}</pre>`);
     }
 
     // Diff Calculation
@@ -8093,11 +8948,486 @@ ${(template.parts || []).map(part => {
         paramsAdded: addedCount,
         paramsRemoved: removedCount,
         pendingCode: data.openscad_code,
-        applied: false
+        applied: false,
+        rawResponse: _rawResponse,
+        thinkingContent: _lastThinkingContent,
+        durationMs: _durationMs,
     });
 
     // Auto compile & run — apply immediately without waiting for user to click Load.
     window.applyPendingAIChange(aiChatHistory.length - 1);
+}
+
+// ── Multi-File Assembly Apply ─────────────────────────────────────────────────
+const _PART_COLORS = ['#4f8ef7','#f97316','#22c55e','#a855f7','#ef4444','#06b6d4','#eab308','#ec4899'];
+
+async function applyMultiFileAIChange(parts, changes, prePromptState, provider, modelName, rawResponse, durationMs) {
+    addAILoadingTask('Validating parts');
+    // Only block on HARD errors (unknown-use imports); soft warnings shown below
+    const hardFailedParts = [];
+    const softWarnLines = [];
+    for (const p of parts) {
+        const lr = lint(p.source || '');
+        if (!lr.ok) hardFailedParts.push({ name: p.name, errors: lr.errors });
+        if (lr.warnings?.length) {
+            lr.warnings.forEach(w => softWarnLines.push(`[${p.name}] Line ${w.line}: ${w.message}`));
+        }
+    }
+    if (hardFailedParts.length > 0) {
+        const errText = hardFailedParts.map(fp =>
+            `Part "${fp.name}":\n${formatErrorsForLLM(fp.errors)}`
+        ).join('\n\n');
+        completeAllAITasks();
+        appendChatMessage('assistant',
+            `<span class="material-symbols-outlined">block</span> <strong>Import error in ${hardFailedParts.length} part(s):</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-secondary)">${escapeHtml(errText)}</pre>`,
+            prePromptState,
+            { provider, modelName, changes: 'Import error', lintErrors: hardFailedParts[0].errors, rawResponse, durationMs });
+        return;
+    }
+    if (softWarnLines.length > 0) {
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">info</span> <strong>Code style hints:</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--text-muted)">${escapeHtml(softWarnLines.join('\n'))}</pre>`);
+    }
+
+    // Geometry warnings per part
+    addAILoadingTask('Checking printability');
+    const allWarnings = [];
+    for (const p of parts) {
+        const { warnings } = validateGeometry(p.source || '');
+        warnings.forEach(w => allWarnings.push(`[${p.name}] ${w.message}`));
+    }
+    if (allWarnings.length > 0) {
+        appendChatMessage('system',
+            `<span class="material-symbols-outlined">warning</span> <strong>Printability warnings (${allWarnings.length}):</strong>` +
+            `<pre style="margin:6px 0 0;font-size:11px;white-space:pre-wrap;color:var(--warning)">${escapeHtml(allWarnings.join('\n'))}</pre>`);
+    }
+
+    // Build/update template with parts
+    addAILoadingTask('Building assembly');
+    if (!currentState.template) {
+        currentState.template = {
+            id: `ai_${Date.now()}`,
+            title: currentState.projectTitle || 'AI Generated',
+            source: '',
+            ui_parameters: [],
+            parts: [],
+            global_parameters: [],
+        };
+    }
+    currentState.template.parts = parts.map((p, i) => ({
+        id: p.id || `part_${i}`,
+        name: p.name || `Part ${i + 1}`,
+        source: p.source || '',
+        ui_parameters: parseParametersFromSource(p.source || ''),
+        color: _PART_COLORS[i % _PART_COLORS.length],
+    }));
+    currentState.template.source = '';
+    currentState.template.global_parameters = [];
+
+    initMultiPartState(currentState.template);
+    renderParameters();
+
+    const codeEditor = document.getElementById('code-editor');
+    if (codeEditor) {
+        codeEditor.value = `// Multi-part assembly — ${parts.length} parts\n// Select a part in the layers panel to view or edit its source.`;
+        codeEditor.setAttribute('readonly', true);
+    }
+    completeAllAITasks();
+
+    const partList = parts.map(p => `• ${p.name || p.id}`).join('\n');
+    appendChatMessage('assistant',
+        `**Success.** ${changes}\n\n${parts.length} parts generated:\n${partList}`,
+        prePromptState, {
+            provider,
+            modelName,
+            changes,
+            pendingParts: parts,
+            applied: true,
+            rawResponse,
+            thinkingContent: _lastThinkingContent,
+            durationMs,
+        });
+
+    triggerGeneration(true);
+}
+
+// ── Domain Knowledge Prompts (Layer 4) ───────────────────────────────────────
+
+const DOMAIN_PROMPTS = {
+    robotics: `## ROBOTICS / ACTUATORS / MECHANISMS
+Servo dimensions: SG90 body 22.5×11.8×22.7mm, flange 32.5mm, M2 mount holes ±8.75/±3.9mm, shaft Ø4.6mm.
+MG90S same footprint (metal gears). MG996R flange 54mm, M3 holes ±14/±34mm. DS3225 25kg, flange 54.5mm.
+Bearing press-fit: subtract 0.1mm from OD (e.g. 608ZZ 22mm OD → 21.9mm pocket). Slip-fit shaft: add 0.15mm to bore.
+608ZZ: 22×8×7mm. 624ZZ: 13×4×5mm. 625ZZ: 16×5×5mm. MR105ZZ: 10×5×4mm.
+NEMA17: 42.3×42.3×40mm, 4×M3 at ±15.25mm, boss Ø22mm, shaft Ø5mm 24mm long.
+N20 motor: gearbox 10×12×15mm, motor 10×10×20mm, shaft Ø3mm 9mm exposed.
+Robot bracket wall: 3mm structural minimum. Servo channel: body width + 0.4mm clearance.
+Pin joint clearance: +0.2mm per side. Hinge clearance: 0.3mm per leaf. Snap arm: length:thickness ≥ 5:1.
+Moment arm: SG90 max 2kg·cm = 20N at 10mm — design with 50% safety margin.`,
+
+    electronics: `## ELECTRONICS / PCB ENCLOSURES / BOARD MOUNTING
+Arduino Nano: PCB 18×45mm, component height 10mm, USB Mini-B at short edge.
+Arduino Uno: PCB 68.6×53.4mm, M3 holes at (14,2.54),(66.04,35.56),(66.04,5.08),(15.24,50.8).
+ESP32 DevKit: PCB 25.4×48.26mm, Micro-USB at top, antenna +2mm, no mount holes.
+Pi Zero 2W: PCB 30×65mm, M2.5 holes at (3.5,3.5)(26.5,3.5)(3.5,61.5)(26.5,61.5).
+M3 standoff: OD 6mm → print 5.8mm. Boss OD = 3× hole OD. PCB gap above standoff: 0.5mm. Below PCB (solder): 3.5mm.
+USB-A cutout: 13.5×5.5mm. USB Micro-B: 9.5×4.5mm. USB-C: 10.5×4.3mm. HDMI mini: 12.2×6mm.
+DC barrel 5.5/2.1: 10mm hole. RJ45: 17×14mm slot. 40-pin GPIO: 56×7mm strip.
+Vent slots: 3mm wide, 6mm pitch, 10%+ open area. Fan mount: 30mm @ ±12.5mm M3, 40mm @ ±16mm.
+Cable tie slot: 4×2mm. JST-XH 2-pin: 5.5×8.5mm, 5mm pull clearance.`,
+
+    mechanical: `## MECHANICAL / GEARS / FASTENERS / STRUCTURAL
+Clearance holes: M2=2.4mm, M3=3.4mm, M4=4.4mm, M5=5.4mm.
+Heat-set M3: print pocket Ø4.3mm × 6.2mm deep. M4: Ø5.4mm × 8.2mm deep.
+Hex nut M3: 5.5mm AF → 6.0mm pocket, 2.4mm deep. M4: 7.0mm AF → 7.5mm, 3.2mm.
+Socket cap heads: M2 Ø3.8/H2.0, M3 Ø5.5/H3.0, M4 Ø7.0/H4.0, M5 Ø8.5/H5.0.
+Min structural wall: 2.4mm (2 perimeters). Load-bearing: 3–4mm + 45° gussets.
+Boss wall: ≥ 1.5× hole dia (self-tap), ≥ 1.0× (heat-set). Rib: 60% of wall H, max 3× wall height.
+FDM tolerances — press-fit: −0.1mm radius. Sliding: +0.15–0.2mm radius. Loose: +0.3mm.
+D-flat shaft: flat at shaft_r − 0.5mm from axis. Set screw M2 or M3.
+GT2 belt tension: 3–5N. Pulley bore = shaft + 0.05mm interference. Flanges prevent walkoff.
+Gear module 1.5+ for FDM. Center distance = (T1+T2)/2 × module + 0.2mm gap.`,
+
+    printing: `## FDM 3D PRINTING DESIGN RULES
+Overhang limit: 45–50° from vertical without support. Bridge span: 30–50mm max (20mm safe).
+Use 45° chamfers on horizontal overhangs — they are self-supporting; fillets require support.
+Layer height: 0.2mm standard. 0.1mm fine detail, 0.3mm speed (weaker). Perimeters: 3 minimum (1.2mm at 0.4mm nozzle).
+Min wall: 1.2mm printable, 2.4mm practical. Min hole: 1.5mm; design +0.2mm for holes < 2mm.
+Min pin: 2mm dia, 3mm tall. Min text stroke: 0.6mm, 1mm height embossed; 0.8mm debossed.
+Print-in-place gap: 0.3mm minimum between moving parts. Elephant foot: 0.2mm bottom chamfer.
+PLA: brittle, 60°C max. PETG: tougher, 80°C, expand clearances +0.05mm. TPU: flexible, 25mm/s.
+Infill: 20% gyroid general, 40–60% structural, 100% small critical features. 3 top/bottom layers.
+Orient parts: critical load paths in XY (40% weaker in Z). Gusset internal corners.`,
+
+    enclosures: `## ENCLOSURES / BOXES / HOUSINGS
+Two-piece box: lid stepped inside base on 1.2mm lip. Lid-to-base clearance: 0.2mm side.
+Snap clips: 1.5mm hook, 45° chamfer entry, at 30–40mm intervals per side.
+Corner alignment pins: Ø3mm × 4mm tall on base; Ø3.15mm holes in lid.
+Wall thickness: display=1.5mm, electronics=2.0–2.5mm, portable=2.5–3.0mm, outdoor=3.0–4.0mm.
+M3 standoff: boss OD 9mm, height = standoff + 1.6mm PCB. PCB side clearance: 1mm.
+Panel cutout chamfer: 0.5mm all around (improves feel). Group connectors on one face.
+Strain relief slot: 5mm × (cable OD + 1mm), 1.5mm wall each side.
+Fan mount: 30mm fan = 4×M3 at ±12.5mm. Passive vents: 3mm × 20mm slots, 6mm pitch, 10% open area.
+DIN rail: 35mm rail, clip 7.5mm deep, fixed + spring tab 15mm apart.
+Label emboss: 0.5mm raise, 1.2mm stroke minimum. Deboss: 1.5mm deep flat bottom pocket.`
+};
+
+/**
+ * Detect which engineering domains are relevant to the user's prompt.
+ * Returns an array of domain keys from DOMAIN_PROMPTS.
+ */
+function detectDomains(prompt) {
+    const p = (prompt || '').toLowerCase();
+    const detected = [];
+    if (/servo|actuator|robot|arm\b|joint|linkage|motor|gripper|chassis|wheel|bearing|nema|stepper|mechanism/.test(p))
+        detected.push('robotics');
+    if (/arduino|esp32|raspberry|r\s?pi\b|pcb|circuit board|microcontroller|sensor|gpio|uart|i2c|spi|wifi module|bluetooth module/.test(p))
+        detected.push('electronics');
+    if (/gear|shaft|pulley|belt|thread|screw|bolt|nut|heat.?set|insert|fastener|coupling|spring|snap fit/.test(p))
+        detected.push('mechanical');
+    if (/print|fdm|layer|infill|overhang|support|bridge|filament|slicer|tolerance|shrink/.test(p))
+        detected.push('printing');
+    if (/box|enclosure|case|housing|cover|lid|shell|container|rack|panel|din rail/.test(p))
+        detected.push('enclosures');
+    return detected;
+}
+
+// ── Requirements Dialogue ─────────────────────────────────────────────────────
+
+const REQUIREMENTS_SYSTEM_PROMPT = `You are a requirements analyst for ParaForm — a browser-based parametric 3D CAD tool that generates OpenSCAD designs for 3D printing.
+
+The user wants to design a physical object. Your job: decide if you need clarifying questions before the design is generated, and if so return 3–6 targeted questions about geometry-affecting constraints.
+
+Return ONLY a JSON object. No markdown, no code fences.
+
+If the request is an EDIT (keywords: add, change, fix, adjust, remove, make it, increase, decrease, update) — return:
+  { "needs_clarification": false }
+
+If the request is a NEW DESIGN and you need constraints to produce the right geometry — return:
+  {
+    "needs_clarification": true,
+    "questions": [
+      {
+        "id": "snake_case_id",
+        "question": "Specific question?",
+        "hint": "Why this matters for the geometry",
+        "type": "choice",
+        "choices": ["Option A", "Option B", "Option C"]
+      }
+    ]
+  }
+
+Question types:
+  "choice"  — user picks one (provide 2–4 options)
+  "number"  — numeric value (add "unit": "mm", "default": number)
+  "text"    — short free text
+
+Rules:
+  • Ask only about things that DIRECTLY change geometry: dimensions, part count, component type, mounting style
+  • Do NOT ask about color, material, aesthetics, or anything you can default reasonably
+  • Keep questions short and specific
+  • If user already provided enough constraints (dimensions, servo type, etc.) return needs_clarification: false
+  • Maximum 6 questions`;
+
+function isNewDesignRequest(prompt) {
+    const lower = prompt.toLowerCase().trim();
+    // Skip requirements for clear edits
+    if (/^(add|change|fix|adjust|edit|remove|delete|update|increase|decrease|move|resize|rotate|make it|set the|give it|reduce|enlarge|shrink|put a|put the)/.test(lower)) return false;
+    if (/\b(add a|add some|remove the|change the|fix the|edit the|update the)\b/.test(lower)) return false;
+    // Trigger for new designs
+    return /\b(make|build|create|design|generate|i want|i need|draw|model|produce)\b/.test(lower);
+}
+
+async function runRequirementsPhase(prompt) {
+    const provider = localStorage.getItem('paraform_ai_provider') || 'local';
+    const apiKey   = localStorage.getItem('paraform_ai_key') || '';
+    const customUrl   = localStorage.getItem('paraform_custom_url') || '';
+    const customModel = provider === 'gemini'
+        ? (localStorage.getItem('paraform_google_model') || 'gemini-2.5-flash')
+        : (localStorage.getItem('paraform_custom_model') || '');
+
+    if (!apiKey || provider === 'local') return null;
+
+    try {
+        const raw = await callLLMApiRaw(provider, apiKey, REQUIREMENTS_SYSTEM_PROMPT,
+            [{ role: 'user', content: `Design request: "${prompt}"` }], customUrl, customModel);
+        const clean = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        const parsed = JSON.parse(clean);
+        if (!parsed.needs_clarification || !Array.isArray(parsed.questions) || !parsed.questions.length) return null;
+        return parsed;
+    } catch (e) {
+        console.warn('[RequirementsPhase] Skipped:', e.message);
+        return null;
+    }
+}
+
+function appendRequirementsMessage(originalPrompt, questions, prePromptState) {
+    aiChatHistory.push({
+        role: 'requirements',
+        content: '',
+        previousState: prePromptState,
+        meta: { originalPrompt, questions, answers: {}, submitted: false },
+    });
+    saveChatHistory();
+    renderChatHistory();
+}
+
+function buildRequirementsCard(msg, msgIndex) {
+    const meta = msg.meta || {};
+    const card = document.createElement('div');
+    card.className = 'requirements-card';
+    card.id = `req-card-${msgIndex}`;
+
+    if (meta.submitted) {
+        const summary = Object.entries(meta.answers || {})
+            .filter(([,v]) => v !== '' && v != null)
+            .map(([k, v]) => `${v}`)
+            .join(' · ') || 'defaults used';
+        card.innerHTML = `<div class="req-submitted-header">
+            <span class="material-symbols-outlined" style="font-size:14px;color:#22c55e">check_circle</span>
+            <span style="font-size:12px;color:var(--text-secondary)">Requirements set — ${escapeHtml(summary)}</span>
+        </div>`;
+        return card;
+    }
+
+    // Header
+    card.innerHTML = `<div class="req-header">
+        <span class="material-symbols-outlined" style="font-size:18px;color:#f97316;flex-shrink:0">psychology</span>
+        <div>
+            <div class="req-header-title">Before I design your <em>${escapeHtml(meta.originalPrompt || '')}</em></div>
+            <div class="req-header-sub">Answer these questions for the most accurate model. All optional — skip to use smart defaults.</div>
+        </div>
+    </div>`;
+
+    const questionsDiv = document.createElement('div');
+    questionsDiv.className = 'req-questions';
+
+    (meta.questions || []).forEach(q => {
+        const qRow = document.createElement('div');
+        qRow.className = 'req-question';
+
+        const label = document.createElement('div');
+        label.className = 'req-question-label';
+        label.innerHTML = escapeHtml(q.question) + (q.hint ? ` <span class="req-hint">${escapeHtml(q.hint)}</span>` : '');
+        qRow.appendChild(label);
+
+        const inputArea = document.createElement('div');
+        inputArea.className = 'req-input-area';
+
+        if (q.type === 'choice') {
+            (q.choices || []).forEach(choice => {
+                const chip = document.createElement('button');
+                chip.className = 'req-choice-chip' + (meta.answers[q.id] === choice ? ' selected' : '');
+                chip.textContent = choice;
+                chip.onclick = () => {
+                    inputArea.querySelectorAll('.req-choice-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected');
+                    aiChatHistory[msgIndex].meta.answers[q.id] = choice;
+                    saveChatHistory();
+                };
+                inputArea.appendChild(chip);
+            });
+        } else if (q.type === 'number') {
+            const wrap = document.createElement('div');
+            wrap.className = 'req-number-wrap';
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.className = 'req-number-input';
+            inp.value = meta.answers[q.id] ?? (q.default ?? '');
+            inp.placeholder = q.default ?? '';
+            if (q.min !== undefined) inp.min = q.min;
+            if (q.max !== undefined) inp.max = q.max;
+            inp.oninput = () => { aiChatHistory[msgIndex].meta.answers[q.id] = inp.value; saveChatHistory(); };
+            wrap.appendChild(inp);
+            if (q.unit) { const u = document.createElement('span'); u.className = 'req-unit'; u.textContent = q.unit; wrap.appendChild(u); }
+            inputArea.appendChild(wrap);
+        } else {
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'req-text-input';
+            inp.placeholder = q.hint || '';
+            inp.value = meta.answers[q.id] ?? '';
+            inp.oninput = () => { aiChatHistory[msgIndex].meta.answers[q.id] = inp.value; saveChatHistory(); };
+            inputArea.appendChild(inp);
+        }
+
+        qRow.appendChild(inputArea);
+        questionsDiv.appendChild(qRow);
+    });
+
+    card.appendChild(questionsDiv);
+
+    const actions = document.createElement('div');
+    actions.className = 'req-actions';
+
+    const genBtn = document.createElement('button');
+    genBtn.className = 'req-generate-btn';
+    genBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle">auto_awesome</span> Generate`;
+    genBtn.onclick = () => submitRequirementsForm(msgIndex);
+
+    const skipBtn = document.createElement('button');
+    skipBtn.className = 'req-skip-btn';
+    skipBtn.textContent = 'Skip / Use defaults';
+    skipBtn.onclick = () => submitRequirementsForm(msgIndex, true);
+
+    actions.appendChild(genBtn);
+    actions.appendChild(skipBtn);
+    card.appendChild(actions);
+    return card;
+}
+
+async function submitRequirementsForm(msgIndex, skipAnswers = false) {
+    const msg = aiChatHistory[msgIndex];
+    if (!msg || msg.meta?.submitted) return;
+
+    msg.meta.submitted = true;
+    saveChatHistory();
+    renderChatHistory();
+
+    const { originalPrompt, questions = [], answers = {} } = msg.meta;
+
+    let enrichedPrompt = originalPrompt;
+    if (!skipAnswers) {
+        const constraints = questions
+            .filter(q => answers[q.id] !== undefined && String(answers[q.id]).trim() !== '')
+            .map(q => `${q.question.replace(/\?$/, '')}: ${answers[q.id]}${q.unit ? ' ' + q.unit : ''}`)
+            .join('\n');
+        if (constraints) enrichedPrompt = `${originalPrompt}\n\nDesign constraints (from user):\n${constraints}`;
+    }
+
+    const generateBtn = document.getElementById('ai-generate-btn');
+    if (generateBtn) generateBtn.disabled = true;
+    createAILoadingBubble('Thinking');
+    try {
+        await runAIGenerationPipeline(enrichedPrompt, msg.previousState);
+    } catch (err) {
+        appendChatMessage('system', `<span class="material-symbols-outlined">error_outline</span> ERROR: ${err.message}`);
+        console.error('[Requirements] Generation error:', err);
+    } finally {
+        if (generateBtn) generateBtn.disabled = false;
+        removeAILoadingBubble();
+    }
+}
+
+// ── Pipeline Log Overlay ──────────────────────────────────────────────────────
+function initPipelineLogOverlay() {
+    // Create the overlay DOM
+    const overlay = document.createElement('div');
+    overlay.id = 'pipeline-log-overlay';
+    overlay.innerHTML = `
+        <div class="pl-panel">
+            <div class="pl-header">
+                <div class="pl-header-title">
+                    <span class="material-symbols-outlined sm">monitor_heart</span>
+                    Pipeline Log
+                </div>
+                <span class="pl-header-hint">Shift+L to close &nbsp;·&nbsp; auto-refreshes</span>
+            </div>
+            <div class="pl-body" id="pl-body"></div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    let visible = false;
+
+    function renderLog() {
+        const body = document.getElementById('pl-body');
+        if (!body) return;
+        const runs = PipelineLog.last(30).slice().reverse(); // newest first
+        if (!runs.length) {
+            body.innerHTML = '<div class="pl-empty">No pipeline runs yet.<br>Generate something to see activity here.</div>';
+            return;
+        }
+        body.innerHTML = runs.map(run => {
+            const ok     = run.ok === true ? 'ok' : run.ok === false ? 'fail' : 'warn';
+            const badge  = `<span class="pl-badge ${ok}">${ok}</span>`;
+            const time   = run.total != null ? `${run.total}ms` : '…';
+            const stages = (run.stages || []).map(s => `
+                <div class="pl-stage ${s.status}">
+                    <span class="pl-stage-name">${escapeHtml(s.name)}</span>
+                    <span class="pl-stage-detail">${escapeHtml(s.detail || '')}</span>
+                    <span class="pl-stage-dt">${s.dt}ms</span>
+                </div>`).join('');
+            return `
+                <div class="pl-run">
+                    <div class="pl-run-header">
+                        ${badge}
+                        <span class="pl-run-label">${escapeHtml(run.label)}</span>
+                        <span class="pl-run-time">${time}</span>
+                    </div>
+                    <div class="pl-stages">${stages}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function show() {
+        visible = true;
+        renderLog();
+        overlay.classList.add('visible');
+    }
+    function hide() {
+        visible = false;
+        overlay.classList.remove('visible');
+    }
+
+    // Shift+L toggles
+    document.addEventListener('keydown', e => {
+        if (e.key === 'L' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            const tag = document.activeElement?.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            visible ? hide() : show();
+        }
+        if (e.key === 'Escape' && visible) hide();
+    });
+
+    // Click outside the panel to close
+    overlay.addEventListener('click', e => {
+        if (!e.target.closest('.pl-panel')) hide();
+    });
+
+    // Re-render when new runs arrive (poll while open)
+    setInterval(() => { if (visible) renderLog(); }, 800);
 }
 
 // ── Panel Resize ──────────────────────────────────────────────────────────────

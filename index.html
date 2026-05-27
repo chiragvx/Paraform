@@ -608,16 +608,13 @@
             </button>
             <div class="config-tabs">
                 <button class="right-tab-btn active" data-right-tab="params">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
-                    Parameters
+                    <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:2px;">chevron_left</span> Parameters
                 </button>
                 <button class="right-tab-btn" data-right-tab="ai">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                    AI Assistant
+                    <span class="material-symbols-outlined sparkle-gem-icon" style="font-size:13px;vertical-align:middle;margin-right:4px;">auto_awesome</span> AI Assistant
                 </button>
                 <button class="right-tab-btn" data-right-tab="assets">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                    Assets
+                    <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">grid_view</span> Assets
                 </button>
                 <!-- Transform & Scene hidden for now — keep HTML for future use -->
                 <button class="right-tab-btn" data-right-tab="transform" style="display:none">Transform</button>
@@ -644,6 +641,22 @@
         <!-- AI ASSISTANT TAB -->
         <div id="right-tab-ai" class="tab-content hidden">
             <div class="ai-chat-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+                
+                <!-- AI Model Selector Header Bar -->
+                <div class="ai-header-bar">
+                    <select id="ai-model-provider-select" class="ai-header-select">
+                        <option value="local">Local Agent</option>
+                        <option value="gemini">Gemini (Google)</option>
+                        <option value="openai">GPT-4 (OpenAI)</option>
+                        <option value="anthropic">Claude (Anthropic)</option>
+                        <option value="openrouter">OpenRouter</option>
+                    </select>
+                    <div class="ai-header-actions">
+                        <button id="ai-header-settings-btn" class="ai-header-action-btn" title="AI Settings">
+                            <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle">settings</span>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Chat History / Messages -->
                 <div id="ai-chat-history" class="ai-chat-history" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px;">
@@ -678,24 +691,24 @@
 
                         <div class="ai-input-card-toolbar">
                             <div class="ai-toolbar-left">
-                                <button id="ai-history-btn" class="ai-toolbar-icon-btn" title="Past Conversations">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <button id="ai-history-btn" class="ai-toolbar-icon-btn attachment-btn" title="Add Assets">
+                                    <span class="material-symbols-outlined" style="font-size:20px;">add</span>
                                 </button>
-                                <button id="ai-clear-chat-btn" class="ai-toolbar-icon-btn" title="New Conversation">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                <button id="ai-clear-chat-btn" class="ai-toolbar-icon-btn scribble-btn" title="New Session / Draw">
+                                    <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
                                 </button>
                             </div>
                             <div class="ai-toolbar-right">
                                 <button class="ai-model-chip" id="ai-settings-trigger" title="AI Settings">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                                    <span id="ai-model-label">AI Assistant</span>
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:#ff8f6b;margin-right:2px;">auto_awesome</span>
+                                    <span id="ai-model-label">Gemma 4 31B</span>
+                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;margin-left:2px;">keyboard_arrow_down</span>
                                 </button>
-                                <button class="ai-toolbar-icon-btn ai-mic-btn" title="Voice input" disabled>
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                <button class="ai-toolbar-icon-btn ai-mic-btn" title="Voice input">
+                                    <span class="material-symbols-outlined" style="font-size:18px;">mic</span>
                                 </button>
                                 <button id="ai-generate-btn" class="ai-send-btn">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                                    <span class="material-symbols-outlined" style="font-size:18px;color:#fff;">arrow_upward</span>
                                 </button>
                             </div>
                         </div>
@@ -1503,6 +1516,29 @@
                 <div class="settings-footer">
                     <button id="settings-close-btn" class="primary-btn">Done</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIFF VIEWER MODAL -->
+    <div id="diff-viewer-modal" class="modal-overlay hidden">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Compare Code Differences</h3>
+                <button class="close-modal" id="diff-close-btn">×</button>
+            </div>
+            <div class="modal-body" style="padding:0; overflow:hidden; display:flex; flex-direction:column; height: 60vh;">
+                <div class="diff-header-labels" style="display:flex; border-bottom:1px solid var(--border-color); background:var(--panel-header-bg); font-size:11px; font-weight:600; color:var(--text-secondary); height:28px; align-items:center;">
+                    <div style="flex:1; padding-left:16px; border-right:1px solid var(--border-color);">Current Script</div>
+                    <div style="flex:1; padding-left:16px;">AI Suggested Script</div>
+                </div>
+                <div id="diff-viewer-content" style="flex:1; overflow-y:auto; font-family:var(--font-mono); font-size:11.5px; line-height:1.5; background:#111; color:#bbb;">
+                    <!-- Line diff list -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="diff-cancel-btn" class="secondary-btn">Cancel</button>
+                <button id="diff-apply-btn" class="primary-btn">Apply Suggested Code</button>
             </div>
         </div>
     </div>
