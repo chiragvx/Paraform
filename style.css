@@ -4245,3 +4245,87 @@ input:checked + .slider-round-mini:before { transform: translateX(10px); backgro
 }
 
 
+
+
+/* ── Toast notifications ─────────────────────────────────────────────── */
+.paraform-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--surface-elevated, #2a2d32);
+    color: var(--text-primary, #e8edf2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    border-left: 3px solid transparent;
+    opacity: 0;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    z-index: 10000;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: calc(100vw - 40px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.paraform-toast--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.paraform-toast--success { border-left-color: #34d399; }
+.paraform-toast--error   { border-left-color: #ef4444; }
+.paraform-toast--info    { border-left-color: #60a5fa; }
+
+/* ── Auth modal panel ────────────────────────────────────────────────── */
+.auth-modal-content {
+    max-width: 420px;
+    width: 90%;
+}
+.auth-provider-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+    color: var(--text-tertiary, #5a6272);
+    font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+}
+.auth-footnote {
+    font-size: 11px;
+    color: var(--text-tertiary, #5a6272);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.5;
+}
+.auth-email-group { display: flex; flex-direction: column; gap: 0; }
+.full-width { width: 100%; box-sizing: border-box; }
+
+/* ── Navbar account button ───────────────────────────────────────────── */
+.nav-account-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 180px;
+    overflow: hidden;
+}
+.nav-account-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+}

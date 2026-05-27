@@ -8,6 +8,8 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 import { supabase } from './lib/supabase';
 import { fetchCatalog, fetchScadSource, saveProject, listProjects,
          getAssetManifest, getAssetSource, resolveDependencies, buildWorkerFiles } from './lib/catalog.js';
+import { isCloudEnabled, cloudSaveProject, cloudListProjects, cloudDeleteProject,
+         mergeProjects, cloudSaveChatSession, cloudLoadChatSession } from './lib/cloud.js';
 import { SKILLS, getAllSkillScad, buildSkillContext, BOARD_FOOTPRINTS } from './lib/skills.js';
 import { lint, formatErrorsForLLM } from './lib/validators/linter.js';
 import { categorizeWasmError, buildRepairMessages, MAX_COMPILE_RETRIES } from './lib/repair.js';
@@ -138,6 +140,76 @@ function restartAutoSave() {
         const source = document.getElementById('code-editor')?.value || currentState.template.source || '';
         saveProject({ id: currentState.template.id, title: currentState.projectTitle || currentState.template.title, templateId: currentState.template.id, source, params: { ...currentState.params } });
     }, interval);
+}
+
+// --- Cloud auto-sync timer (2-min background sync) ---
+let _cloudSyncTimer = null;
+function restartCloudAutoSync() {
+    clearInterval(_cloudSyncTimer);
+    _cloudSyncTimer = setInterval(() => {
+        if (!currentState.user || !isCloudEnabled() || !currentState.template) return;
+        const payload = buildCloudProjectPayload();
+        cloudSaveProject(currentState.user.id, payload).catch(() => {});
+        // Also flush any pending debounced chat sync
+        if (_chatSyncTimer !== null) {
+            clearTimeout(_chatSyncTimer);
+            _chatSyncTimer = null;
+            cloudSaveChatSession(
+                currentState.user.id,
+                aiChatHistory,
+                currentState.template?.id ?? null
+            ).catch(() => {});
+        }
+    }, 2 * 60 * 1000); // 2 minutes
+}
+
+// ─── Toast notification ───────────────────────────────────────────────────────
+
+/**
+ * Show a non-blocking, self-removing toast at the bottom of the screen.
+ * @param {string} message
+ * @param {'success'|'error'|'info'} type
+ * @param {number} durationMs
+ */
+function showToast(message, type = 'success', durationMs = 3000) {
+    document.querySelectorAll('.paraform-toast').forEach(t => t.remove());
+    const el = document.createElement('div');
+    el.className = `paraform-toast paraform-toast--${type}`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('paraform-toast--visible'));
+    setTimeout(() => {
+        el.classList.remove('paraform-toast--visible');
+        el.addEventListener('transitionend', () => el.remove(), { once: true });
+    }, durationMs);
+}
+
+// ─── Cloud project payload builder ───────────────────────────────────────────
+
+/**
+ * Assemble the full project payload from current editor/template state.
+ * Captures multi-part fields when the template has parts[].
+ * @param {string} [overrideSource] - use code editor value if omitted
+ */
+function buildCloudProjectPayload(overrideSource) {
+    const t = currentState.template;
+    const source = overrideSource
+        || document.getElementById('code-editor')?.value
+        || t?.source
+        || '';
+    return {
+        id:           t?.id || `proj_${Date.now()}`,
+        title:        currentState.projectTitle || t?.title || 'Untitled Project',
+        templateId:   t?.id ?? null,
+        source,
+        params:       { ...(currentState.params || {}) },
+        parts:        t?.parts?.length ? JSON.parse(JSON.stringify(t.parts)) : null,
+        globalParams: Object.keys(currentState.globalParams || {}).length
+                        ? { ...currentState.globalParams } : null,
+        partParams:   Object.keys(currentState.partParams || {}).length
+                        ? JSON.parse(JSON.stringify(currentState.partParams)) : null,
+        savedAt:      Date.now(),
+    };
 }
 
 // --- FPS tracking ---
@@ -2509,6 +2581,9 @@ async function initApp() {
         updateUser(null);
     }
 
+    // 1b. Bind the sign-in overlay modal (always, even if Supabase is unconfigured)
+    bindAuthModal();
+
     // 2. Fetch Templates (bucket catalog → DEFAULT_TEMPLATES fallback)
     try {
         await fetchTemplates();
@@ -2638,21 +2713,35 @@ async function initApp() {
 
                 const saveDesignBtn = document.getElementById('menu-save-design');
                 if (saveDesignBtn) {
-                    saveDesignBtn.onclick = (e) => {
+                    saveDesignBtn.onclick = async (e) => {
                         e.preventDefault();
                         closeAllMenus();
                         if (!currentState.template) return;
-                        const source = document.getElementById('code-editor')?.value
-                            || currentState.template.source || '';
-                        const project = saveProject({
-                            id: currentState.template.id,
-                            title: currentState.projectTitle || currentState.template.title,
-                            templateId: currentState.template.id,
-                            source,
-                            params: { ...currentState.params }
+
+                        // Build full payload (captures multi-part state)
+                        const payload = buildCloudProjectPayload();
+
+                        // 1. Always save locally first (synchronous, instant)
+                        saveProject({
+                            id:         payload.id,
+                            title:      payload.title,
+                            templateId: payload.templateId,
+                            source:     payload.source,
+                            params:     payload.params,
                         });
-                        const ts = new Date(project.savedAt).toLocaleTimeString();
-                        alert(`"${project.title}" saved locally at ${ts}.`);
+
+                        // 2. Push to cloud if logged in (non-blocking)
+                        if (currentState.user && isCloudEnabled()) {
+                            try {
+                                await cloudSaveProject(currentState.user.id, payload);
+                                showToast(`"${payload.title}" saved to cloud ☁`, 'success');
+                            } catch {
+                                showToast(`"${payload.title}" saved locally only.`, 'info');
+                            }
+                        } else {
+                            const ts = new Date(payload.savedAt).toLocaleTimeString();
+                            showToast(`"${payload.title}" saved locally at ${ts}.`, 'info');
+                        }
                     };
                 }
 
@@ -2743,6 +2832,7 @@ async function initApp() {
             // Apply persisted settings to viewport/camera as soon as Studio is entered
             applySettings(getSettings());
             restartAutoSave();
+            restartCloudAutoSync();
 
             const actionsTarget = ribbonActions || navActions;
             if (actionsTarget) {
@@ -2796,14 +2886,31 @@ async function initApp() {
             }
 
             if (navActions) {
+                const userEmail = currentState.user?.email || currentState.user?.user_metadata?.full_name || 'Account';
                 navActions.innerHTML = `
                     <a href="#/create" class="primary-btn">Launch Studio</a>
+                    ${currentState.user
+                        ? `<button id="nav-sign-out-btn" class="secondary-btn nav-account-btn" title="${userEmail}">
+                               <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle">account_circle</span>
+                               <span class="nav-account-label">${userEmail}</span>
+                           </button>`
+                        : `<button id="nav-sign-in-btn" class="secondary-btn">
+                               <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle">cloud_sync</span>
+                               Sign In
+                           </button>`
+                    }
                     <button id="mobile-menu-toggle" class="icon-btn mobile-only">
                         <span></span>
                         <span></span>
                         <span></span>
                     </button>
                 `;
+
+                document.getElementById('nav-sign-in-btn')?.addEventListener('click', () => openAuthModal());
+                document.getElementById('nav-sign-out-btn')?.addEventListener('click', async () => {
+                    await supabase.auth.signOut();
+                    showToast('Signed out successfully.', 'info');
+                });
 
                 // Re-bind mobile menu toggle
                 const mobileToggle = document.getElementById('mobile-menu-toggle');
@@ -2866,26 +2973,65 @@ async function initApp() {
 }
 
 
-async function login() {
-    const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: { redirectTo: window.location.origin }
-    });
-    if (error) alert('Login error: ' + error.message);
+// ─── Auth modal ───────────────────────────────────────────────────────────────
+
+function openAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.getElementById('modal-magic-link-email')?.focus();
 }
 
-async function loginWithMagicLink() {
-    const email = document.getElementById('magic-link-email').value;
-    if (!email) return alert('Please enter your email');
-    
-    const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin }
-    });
-    
-    if (error) alert('Error: ' + error.message);
-    else alert('Check your email for the magic link!');
+function closeAuthModal() {
+    document.getElementById('auth-modal')?.classList.add('hidden');
 }
+
+/**
+ * Bind all auth modal interactions. Called once inside initApp().
+ */
+function bindAuthModal() {
+    document.getElementById('auth-modal-close')?.addEventListener('click', closeAuthModal);
+    document.getElementById('auth-modal')?.addEventListener('click', e => {
+        if (e.target.id === 'auth-modal') closeAuthModal();
+    });
+
+    document.getElementById('modal-github-login')?.addEventListener('click', async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'github',
+            options: { redirectTo: window.location.origin },
+        });
+        if (error) showToast('GitHub login error: ' + error.message, 'error');
+    });
+
+    const magicBtn = document.getElementById('modal-magic-link-btn');
+    const magicInput = document.getElementById('modal-magic-link-email');
+    if (magicBtn && magicInput) {
+        const sendMagicLink = async () => {
+            const email = magicInput.value.trim();
+            if (!email) { showToast('Please enter your email address.', 'error'); return; }
+            magicBtn.disabled = true;
+            magicBtn.textContent = 'Sending…';
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: window.location.origin },
+            });
+            magicBtn.disabled = false;
+            magicBtn.textContent = 'Send Magic Link';
+            if (error) {
+                showToast('Error: ' + error.message, 'error');
+            } else {
+                showToast('Magic link sent! Check your email.', 'success', 6000);
+                closeAuthModal();
+            }
+        };
+        magicBtn.addEventListener('click', sendMagicLink);
+        magicInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
+    }
+}
+
+// Keep old function names as shims so any inline HTML onclick="" still works
+async function login() { openAuthModal(); }
+async function loginWithMagicLink() { openAuthModal(); }
 
 async function fetchTemplates() {
     // Try the public bucket catalog first
@@ -7088,14 +7234,59 @@ function onViewChange(hash) {
 }
 
 function updateUser(user) {
+    const wasLoggedOut = !currentState.user;
     currentState.user = user;
-    
+
     // Dispatch hashchange to force global handleRoute() to redraw the correct context-based navbar instantly
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
-    // Hide unfinished auth route
-    if (window.location.hash === '#/auth') {
-        window.location.hash = '#/';
+    // Hide unfinished auth route; close sign-in modal if open
+    if (window.location.hash === '#/auth') window.location.hash = '#/';
+    if (user) closeAuthModal();
+
+    // On first login in this session: pull cloud data and merge with local
+    if (user && wasLoggedOut) {
+        syncOnLogin(user).catch(e => console.warn('[Cloud] Login sync failed:', e));
+    }
+}
+
+/**
+ * Called once after successful login.
+ * Pulls projects + chat session from Supabase and merges with localStorage.
+ */
+async function syncOnLogin(user) {
+    if (!isCloudEnabled()) return;
+
+    // Pull projects + chat in parallel
+    const [local, cloud] = await Promise.all([
+        Promise.resolve(listProjects()),
+        cloudListProjects(user.id),
+    ]);
+
+    // Merge and persist
+    const { merged, toUpload } = mergeProjects(local, cloud);
+    localStorage.setItem('paraform_projects', JSON.stringify(merged));
+
+    // Push local-only or local-newer projects up to cloud
+    for (const p of toUpload) {
+        cloudSaveProject(user.id, p).catch(() => {});
+    }
+
+    // Pull cloud chat only if the current session is empty (don't clobber active work)
+    if (aiChatHistory.length === 0) {
+        const cloudMessages = await cloudLoadChatSession(user.id);
+        if (cloudMessages.length > 0) {
+            aiChatHistory = cloudMessages;
+            saveChatHistory();
+            if (typeof renderChatHistory === 'function') renderChatHistory();
+        }
+    }
+
+    const newCount = cloud.filter(cp => !local.find(lp => lp.id === cp.id)).length;
+    if (newCount > 0) {
+        showToast(`Synced ${newCount} project(s) from cloud.`, 'info', 4000);
+    } else if (toUpload.length > 0) {
+        showToast(`Uploaded ${toUpload.length} local project(s) to cloud.`, 'info', 4000);
     }
 }
 
@@ -7205,6 +7396,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let aiChatHistory = [];
 let aiConversations = [];
 let _lastThinkingContent = ''; // Side-channel set by Gemini streaming; read after callLLMApiRaw
+let _chatSyncTimer = null;     // Debounce handle for cloud chat sync
 
 function loadChatHistory() {
     try {
@@ -7216,7 +7408,21 @@ function loadChatHistory() {
 }
 
 function saveChatHistory() {
+    // 1. Synchronous localStorage write (unchanged behavior)
     localStorage.setItem('paraform_ai_chat_history', JSON.stringify(aiChatHistory));
+
+    // 2. Debounced cloud push — 5-second delay to batch rapid message updates
+    if (currentState.user && isCloudEnabled()) {
+        clearTimeout(_chatSyncTimer);
+        _chatSyncTimer = setTimeout(() => {
+            _chatSyncTimer = null;
+            cloudSaveChatSession(
+                currentState.user.id,
+                aiChatHistory,
+                currentState.template?.id ?? null
+            ).catch(() => {});
+        }, 5000);
+    }
 }
 
 // ── Conversation Archive ──────────────────────────────────────────
