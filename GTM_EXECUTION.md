@@ -91,24 +91,30 @@ merges to main in one motion.)*
 - [x] `plan` column scaffolding: `profiles` (auto-created on signup, plan
       free/maker/lifetime) + `usage_daily` + RPC appended to
       `supabase_schema.sql` (RLS owner-read; writes service-role only)
-- [ ] ⚠ Manual remainder: run the appended schema block in the Supabase SQL
-      editor, then one real sign-in → compile round-trip with
-      `REQUIRE_AUTH=1` + `VITE_REQUIRE_AUTH=1`
+- [ ] ⚠ Manual remainder (user): apply the appended `supabase_schema.sql`
+      block to the live project — either authorize the Supabase MCP
+      (Claude can then run it) or paste it into the SQL editor — then one
+      real sign-in → compile round-trip with `REQUIRE_AUTH=1` +
+      `VITE_REQUIRE_AUTH=1`. This is the first item of Phase 4 (deploy)
+      anyway; not a code blocker.
 
 **Merge:**
 - [x] Full battery green: build, document suites, measure api 17/17,
       pytest auth gate 13/13, eval baseline Δ 0.0%, browser trim check.
       Live kernel probe: gate ON → 401 on execute/measure/ai-chat (health
       open); gate OFF → identical to before
-- [x] Merge `ai-assembly-phases` → `main` (55e2a6d, clean; battery re-run
-      green on main)
-- [ ] ⚠ **Push blocked — needs user decision.** GitHub rejects the push:
-      unpushed commit `c22a3ab` (v0.22) committed PyInstaller sidecar
-      artifacts (`b123d_server/build/…pkg` 550 MB, `src-tauri/binaries/…exe`
-      550 MB) over the 100 MB hard limit. Fix requires rewriting the 127
-      never-pushed local commits to drop those paths (pushed history stays
-      byte-identical; no force-push). Claude's sandbox denied git
-      history-rewrite tools — run the rewrite manually or grant permission.
+- [x] Merge `ai-assembly-phases` → `main` (local 55e2a6d, clean; battery
+      re-run green on main)
+- [x] **Pushed to GitHub as a squashed delivery commit** (`c79cf50` on
+      origin/main). Direct push was impossible: local commit `c22a3ab`
+      (v0.22) had committed 550 MB PyInstaller sidecar artifacts, over
+      GitHub's 100 MB hard limit (artifacts now untracked + gitignored;
+      kept on disk). Rather than rewrite history, the exact final tree was
+      committed fresh on top of origin/main and pushed normally. Granular
+      146-commit history is preserved locally on `backup-main-full` and
+      `ai-assembly-phases` (local-only — do NOT push those branches; they
+      still contain the fat blobs in history). Local `main` now tracks
+      origin/main at the delivery commit.
 
 ## Phase 3 — billing (GTM Day 2)
 
@@ -162,3 +168,11 @@ merges to main in one motion.)*
   auth gate + caps**: auth lands on the branch and merges to main in one
   motion (no point merging an open `/execute` to main first). Later phases
   renumbered: billing→3, deploy→4, landing→5, dogfood→6, launch→7.
+- 2026-06-13 — **Phase 2 complete.** Working set committed (4 logical
+  commits), trim browser-verified both ways (1 leak found+fixed), auth
+  gate + caps built and live-probed (401/429 correct, auth-off identical),
+  merged to main, **delivered to GitHub** (`c79cf50`) as a squash commit
+  after 550 MB sidecar artifacts in old local history blocked a direct
+  push. Artifacts untracked+gitignored; granular history kept on local
+  backup branches. Open: user applies Supabase schema + live sign-in test
+  (folded into Phase 4 deploy). Next: Phase 3 — billing.
