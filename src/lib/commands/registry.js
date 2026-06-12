@@ -675,7 +675,8 @@ export const COMMANDS = [
       // husk (child components survive via first-child promotion).
       for (const id of ids) { try { v4.deleteFeatureCascade(id); } catch {} }
     } },
-  { id: 'edit.reset',  title: 'New Document',            group: 'Edit', keywords: 'reset clear empty', run: () => v4.resetDocument() },
+  // Removed duplicate "New Document" (edit.reset) — doc.new is the single
+  // entry, and it confirms before discarding unsaved changes.
   { id: 'edit.clearSaved', title: 'Clear Saved State',   group: 'Edit', keywords: 'forget storage reload', run: () => clearSavedDocument() },
 
   // ── Document file persistence (E5.1 / E5.4) ───────────────────────────
@@ -861,7 +862,7 @@ export const COMMANDS = [
   },
 
   // Foundation 6 / commit 2 — quick sanity check while the browser UI lands.
-  { id: 'debug.activeComponent', title: 'Show Active Component', group: 'App', keywords: 'component debug active', run: () => console.info('[component] active:', studio.activeComponentId) },
+  { id: 'debug.activeComponent', title: 'Show Active Component', group: 'App', keywords: 'component debug active', v1Hidden: true, run: () => console.info('[component] active:', studio.activeComponentId) },
 
   // ── E1.1 Sketch → Solid stubs ─────────────────────────────────────────
   // Profile + path are feature-id text fields for now; v2 polish is a real

@@ -25,6 +25,7 @@
   import GraphicsPanel from './settings/GraphicsPanel.svelte';
   import MeasurementPanel from './settings/MeasurementPanel.svelte';
   import ExportPanel from './settings/ExportPanel.svelte';
+  import AIPanel from './settings/AIPanel.svelte';
   import PresetsPanel from './settings/PresetsPanel.svelte';
   import ManufacturingPanel from './settings/ManufacturingPanel.svelte';
 
@@ -42,6 +43,7 @@
     graphics: GraphicsPanel,
     measurement: MeasurementPanel,
     export: ExportPanel,
+    ai: AIPanel,
     manufacturing: ManufacturingPanel,
     presets: PresetsPanel,
   };

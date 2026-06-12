@@ -34,6 +34,7 @@
   import { getPickingSelection } from '../../../../lib/picking/selection.js';
   import { COMMANDS, MARKING_MENU_ACTIONS, pickedBodyIds } from '$lib/commands/registry.js';
   import { loadMarkingMenuBindings, MARKING_MENU_SECTORS } from '$lib/viewport/shortcuts.js';
+  import { dialogs } from '$lib/dialogs/dialogs.svelte.js';
   // E3 v2 — Press-Pull drag-handle gizmo. The math is in this module;
   // the Viewport wires it to pointermove/up when a face is selected and
   // the press-pull tool is active. See press_pull_gizmo.js for the
@@ -42,6 +43,7 @@
   import ViewCubeMount from './ViewCubeMount.svelte';
   import SectionPlaneMount from './SectionPlaneMount.svelte';
   import ViewportHudMount from './ViewportHudMount.svelte';
+  import MeasureToolMount from './MeasureToolMount.svelte';
   import { libraryDrag } from './LibraryPalette.svelte';
   import { placeLibraryPart } from '$lib/library/place.js';
   import { computeRolledOrigin } from '$lib/library/orient.js';
@@ -61,7 +63,25 @@
 
   let root;
   let kernelError = $state(null);
+  // True when the current kernelError is a "kernel server unreachable" network
+  // failure rather than a CAD compile error — drives friendlier banner copy.
+  let kernelOffline = $state(false);
   let hasBodies = $state(false);
+  // Platform-aware modifier glyph for keyboard hints. ⌘ on macOS, "Ctrl+"
+  // everywhere else (Windows/Linux). Detected from the UA/platform string.
+  const _isMac = typeof navigator !== 'undefined'
+    && /mac/i.test(navigator.platform || navigator.userAgent || '');
+  const modKeyLabel = _isMac ? '⌘' : 'Ctrl+';
+  // Transient hint surfaced from the marking menu (e.g. a disabled wedge's
+  // reason). Auto-clears after a few seconds; also dismissible.
+  let markingToast = $state(null);
+  let _markingToastTimer = 0;
+  function showMarkingToast(msg) {
+    if (!msg) return;
+    markingToast = String(msg);
+    if (_markingToastTimer) clearTimeout(_markingToastTimer);
+    _markingToastTimer = setTimeout(() => { markingToast = null; }, 3200);
+  }
 
   // ── E4 — Viewport-owned state machines ──────────────────────────────────
   // Measure tool + section plane state are now owned by MeasureToolMount /
@@ -536,9 +556,23 @@
   // — we want the inner `error` field, falling back to the first line.
   function summariseError(raw) {
     const s = String(raw ?? '');
+    // Network / fetch failures mean the kernel HTTP server isn't reachable —
+    // not a CAD compile error. Map them to an actionable hint instead of the
+    // raw "TypeError: Failed to fetch".
+    if (isKernelOfflineError(s)) {
+      return '3D engine offline — start it with: npm run kernel';
+    }
     const m = s.match(/"error"\s*:\s*"([^"]+)"/);
     if (m) return m[1];
     return s.split('\n')[0].slice(0, 200);
+  }
+
+  // True for browser fetch/network failures (kernel server down / unreachable),
+  // as opposed to a real kernel compile error returned over HTTP.
+  function isKernelOfflineError(raw) {
+    return /failed to fetch|networkerror|load failed|err_connection|fetch failed|econnrefused|connection refused|net::/i.test(
+      String(raw ?? ''),
+    );
   }
 
   onMount(() => {
@@ -910,12 +944,36 @@
     // Double-MMB tap in CADCameraControls fires 'fit' — wire to viewController.
     try { viewport.controls.addEventListener?.('fit', () => views.fit()); } catch {}
 
-    // After the first body lands, auto-fit so the seeded cube isn't lost.
+    // ── Auto-frame the scene ──────────────────────────────────────────────
+    // The studio boots empty (no seed box) with the camera at its default
+    // pose — content the AI builds can land off-screen. We frame the camera:
+    //   (a) once, the first time geometry actually appears (empty→non-empty),
+    //   (b) whenever a NEW top-level body shows up (a placement or AI tool
+    //       result), so freshly added features aren't invisible.
+    // We DON'T refit on every recompute — that would fight a user who's
+    // carefully framed their own view while editing existing geometry.
+    //
+    // "Body count" = direct children of the kernel root (one GLB wrap per
+    // emitted body group). Empty == 0.
+    function topLevelBodyCount() {
+      const r = documentBoot.bridge?._root;
+      return r ? r.children.length : 0;
+    }
     let firstFitDone = false;
+    let _lastBodyCount = 0;
     const offFirstFit = documentBoot.bridge.onRender(() => {
-      if (firstFitDone) return;
-      firstFitDone = true;
-      setTimeout(() => views.fit(), 50);
+      const count = topLevelBodyCount();
+      // Don't frame an empty scene — wait for the first real geometry.
+      if (count === 0) { _lastBodyCount = 0; return; }
+      const isFirstContent = !firstFitDone;
+      const grew = count > _lastBodyCount;
+      _lastBodyCount = count;
+      if (isFirstContent) firstFitDone = true;
+      // Frame on first content, or when a new top-level body appears. The
+      // tween runs a tick later so the just-rendered geometry's AABB is live.
+      if (isFirstContent || grew) {
+        setTimeout(() => { try { views.fit(); } catch (err) { console.warn('[viewport] auto-fit failed:', err); } }, 50);
+      }
     });
 
     // Reapply display mode after each kernel render (meshes get replaced).
@@ -955,14 +1013,17 @@
     const offError = documentBoot.onKernelError(({ error }) => {
       if (isEmptyResultError(error)) {
         kernelError = null;
+        kernelOffline = false;
         return;
       }
+      kernelOffline = isKernelOfflineError(error);
       kernelError = summariseError(error);
     });
 
     // Clear the error chip on the next successful render.
     const offRenderClear = documentBoot.bridge.onRender(() => {
       if (kernelError) kernelError = null;
+      if (kernelOffline) kernelOffline = false;
     });
 
     // Track body-source presence so the empty hint can suggest a next step.
@@ -1131,11 +1192,11 @@
         const c = cmdById[id];
         if (!c) return false;
         if (c.form) {
-          // Form-driven commands open via the dialog system in palette/Toolbar.
-          // Marking menu fires direct-run commands only; for form commands we
-          // surface a brief log and bail.
-          console.info('[marking-menu] form command — open via palette:', id);
-          return false;
+          // Form-driven commands open via the dialog system — same path the
+          // command palette / Toolbar use. Route the wedge straight to it so
+          // the menu actually fires the command instead of silently bailing.
+          try { dialogs.openForm(c); return true; }
+          catch (err) { console.error('[marking-menu] openForm failed', err); return false; }
         }
         try { c.run(ctx); return true; } catch (err) { console.error('[marking-menu]', err); return false; }
       },
@@ -1154,7 +1215,7 @@
           const b = loadMarkingMenuBindings();
           return MARKING_MENU_SECTORS.map((s) => b[s] || MARKING_MENU_ACTIONS[s] || null);
         },
-        toast: (msg) => console.info('[marking-menu]', msg),
+        toast: (msg) => { console.info('[marking-menu]', msg); showMarkingToast(msg); },
       });
     } catch (err) {
       console.warn('[viewport] marking menu disabled:', err?.message || err);
@@ -1290,6 +1351,7 @@
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
+      if (_markingToastTimer) clearTimeout(_markingToastTimer);
       // E4 — tear down rubber-band + marking menu + section + interference.
       try {
         viewport.renderer.domElement.removeEventListener('pointermove', onSnapPointerMove);
@@ -1363,17 +1425,25 @@
   -->
   <div class="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 flex-col items-center gap-1.5">
     {#if kernelError}
-      <div class="pointer-events-auto max-w-sm rounded border border-destructive/40 bg-destructive/15 px-3 py-2 text-xs text-foreground shadow-sm backdrop-blur-sm">
+      <div class={`pointer-events-auto max-w-sm rounded border px-3 py-2 text-xs text-foreground shadow-sm backdrop-blur-sm ${kernelOffline ? 'border-amber-500/40 bg-amber-500/15' : 'border-destructive/40 bg-destructive/15'}`}>
         <div class="flex items-center justify-between gap-3">
-          <span class="font-medium">Kernel error</span>
+          <span class="font-medium">{kernelOffline ? '3D engine offline' : 'Kernel error'}</span>
           <button
-            onclick={() => (kernelError = null)}
+            onclick={() => { kernelError = null; kernelOffline = false; }}
             class="text-foreground/60 hover:text-foreground"
             aria-label="Dismiss"
           >✕</button>
         </div>
         <div class="mt-0.5 break-words opacity-80">{kernelError}</div>
-        <div class="mt-1 text-[10px] opacity-60">Undo (Ctrl+Z) to revert the bad feature.</div>
+        <div class="mt-1 text-[10px] opacity-60">
+          {kernelOffline ? 'Run the kernel server, then your edits will compile.' : 'Undo (Ctrl+Z) to revert the bad feature.'}
+        </div>
+      </div>
+    {/if}
+
+    {#if markingToast}
+      <div class="pointer-events-auto max-w-sm rounded border border-border bg-card/95 px-3 py-1.5 text-xs text-foreground shadow-sm backdrop-blur-sm">
+        {markingToast}
       </div>
     {/if}
 
@@ -1427,16 +1497,21 @@
 
   {#if !kernelError && !hasBodies && !isSketchActive()}
     <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded border border-border bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
-      <div class="font-medium text-foreground">No bodies in this document</div>
+      <div class="font-medium text-foreground">Nothing here yet</div>
       <div class="mt-1 opacity-70">
-        Press <kbd class="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">⌘K</kbd>
-        and pick "Add Box", or extrude a sketch.
+        Describe what to build in the AI panel
+        <span aria-hidden="true">→</span>
+      </div>
+      <div class="mt-1 text-[10px] opacity-50">
+        or press <kbd class="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">{modKeyLabel}K</kbd>
+        for the command palette.
       </div>
     </div>
   {/if}
 
   <ViewCubeMount />
   <ViewportHudMount />
+  <MeasureToolMount />
 
   <!-- Section view (Fusion-style "Section Analysis"). Sits between the
        ViewCube and the display-mode column at right-3. -->

@@ -46,6 +46,23 @@
     doc = getDocumentStore().doc;
   }
 
+  // Slider drags fire `input` per pixel; committing+recompiling on every one
+  // is a recompute storm. Debounce so the chain articulates smoothly but the
+  // ops pipeline only sees ~20 commits/sec. The number-field still commits
+  // immediately on `change` (release / blur) via onDrive.
+  let _driveTimer = null;
+  let _pendingDrive = null;
+  function onDriveDebounced(j, raw) {
+    _pendingDrive = { j, raw };
+    if (_driveTimer) return;
+    _driveTimer = setTimeout(() => {
+      _driveTimer = null;
+      const p = _pendingDrive;
+      _pendingDrive = null;
+      if (p) onDrive(p.j, p.raw);
+    }, 50);
+  }
+
   function statusColor(status) {
     if (status === 'over-constrained') return 'text-destructive';
     if (status === 'mobile') return 'text-emerald-500';
@@ -100,7 +117,8 @@
             max={j.limits?.max ?? 180}
             step={j.kind === 'revolute' ? 1 : 0.5}
             value={val}
-            oninput={(e) => onDrive(j, e.currentTarget.value)}
+            oninput={(e) => onDriveDebounced(j, e.currentTarget.value)}
+            onchange={(e) => onDrive(j, e.currentTarget.value)}
           />
           <div class="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
             <span>{j.limits?.min ?? -180}{unitOf(j)}</span>

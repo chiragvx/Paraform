@@ -167,7 +167,9 @@
   });
 </script>
 
-<AppLoader />
+{#if router.route === 'studio'}
+  <AppLoader />
+{/if}
 
 {#if router.route === 'studio' && studioAllowed}
   <div class="flex h-full flex-col">

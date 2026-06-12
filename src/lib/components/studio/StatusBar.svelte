@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { getDocumentStore } from '../../../../lib/document/index.js';
+  import { getDocumentStore, getDocumentExecutor } from '../../../../lib/document/index.js';
   import { persistence } from '$lib/document/persistence.svelte.js';
   import { studio } from '$lib/studio/runtime.svelte.js';
   import { dfmStatus } from './inspector/DfmPanel.svelte';
@@ -8,6 +8,9 @@
   import { assumptionStatus } from './inspector/AssumptionsManifestPanel.svelte';
 
   let featureCount = $state(0);
+  // True while one or more kernel compiles are in flight. Driven by the
+  // executor's start/terminal events (executed/failed/stale/cancelled).
+  let compiling = $state(false);
 
   function readFromStore(store) {
     featureCount = Object.keys(store.doc.features || {}).length;
@@ -17,7 +20,21 @@
     const store = getDocumentStore();
     readFromStore(store);
     const unsub = store.subscribe((_doc, _evt, s) => readFromStore(s));
-    return unsub;
+
+    // Track in-flight kernel compiles. The executor fires a `start` event per
+    // run and exactly one terminal event (executed/failed/stale/cancelled).
+    const executor = getDocumentExecutor();
+    let inFlight = 0;
+    const offExec = executor.subscribe((evt) => {
+      if (evt.type === 'start') inFlight++;
+      else if (evt.type === 'executed' || evt.type === 'failed'
+            || evt.type === 'stale' || evt.type === 'cancelled') {
+        inFlight = Math.max(0, inFlight - 1);
+      }
+      compiling = inFlight > 0;
+    });
+
+    return () => { unsub?.(); offExec?.(); };
   });
 
   // Show whichever build123d the live kernel reports. Falls back gracefully
@@ -55,6 +72,14 @@
   </span>
   <span class="opacity-30">|</span>
   <span>{featureCount} feature{featureCount === 1 ? '' : 's'}</span>
+
+  {#if compiling}
+    <span class="opacity-30">|</span>
+    <span class="flex items-center gap-1.5">
+      <span class="size-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+      Compiling…
+    </span>
+  {/if}
 
   {#if persistence.mismatchWarning}
     <span class="opacity-30">|</span>

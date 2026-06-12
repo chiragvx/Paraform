@@ -53,15 +53,14 @@
     const camera = studio.viewport?.camera;
     const controls = studio.viewport?.controls;
     if (!camera || !controls) return;
-    const targetPos = new THREE.Vector3(...b.position);
-    const targetTarget = new THREE.Vector3(...b.target);
-    const targetUp = new THREE.Vector3(...b.up);
     try {
-      tweenTo({ camera, controls, targetPos, targetTarget, targetUp, durationMs: 280 });
+      // tweenTo (app/sketch_3d/camera_anim.js) takes plain [x,y,z] arrays as
+      // toPosition / toTarget / toUp — NOT Vector3s or target* names.
+      tweenTo({ camera, controls, toPosition: b.position, toTarget: b.target, toUp: b.up, durationMs: 280 });
     } catch (err) {
-      camera.position.copy(targetPos);
-      camera.up.copy(targetUp);
-      controls.target.copy(targetTarget);
+      camera.position.set(...b.position);
+      camera.up.set(...b.up);
+      controls.target.set(...b.target);
       controls.update?.();
       console.warn('[view-cube bookmarks] tween failed, hard-set instead:', err);
     }

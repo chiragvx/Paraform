@@ -7,14 +7,22 @@
 
   const categories = ['Mechanical', 'Brackets', 'Enclosures', 'Fixtures', 'Custom'];
 
+  // `thumb` points at a PNG in /thumbnails (served from public/, survives the
+  // build into dist/thumbnails). Cards without a real render fall back to the
+  // placeholder cube. Only cards backed by an actual rendered template get a
+  // thumbnail — no invented mappings.
   const templates = [
-    { name: 'L-Bracket', dims: '60 × 40 × 4 mm', category: 'Brackets' },
-    { name: 'Hex Standoff', dims: 'M3 × 12 mm', category: 'Mechanical' },
-    { name: 'Project Box', dims: '100 × 60 × 30 mm', category: 'Enclosures' },
-    { name: 'Drill Jig', dims: '80 × 50 × 10 mm', category: 'Fixtures' },
-    { name: 'Vented Lid', dims: '120 × 80 × 6 mm', category: 'Enclosures' },
-    { name: 'Universal Mount', dims: '70 × 70 × 8 mm', category: 'Custom' },
+    { name: 'Rugged Box', dims: '120 × 80 × 55 mm', category: 'Enclosures', thumb: '/thumbnails/rugged_box_v1.png' },
+    { name: 'Raspberry Pi 3 Case', dims: '95 × 65 × 30 mm', category: 'Enclosures', thumb: '/thumbnails/rpi3_case_v1.png' },
+    { name: 'BeagleBone Case', dims: '90 × 60 × 28 mm', category: 'Enclosures', thumb: '/thumbnails/bbb_case_v1.png' },
+    { name: 'Music Box', dims: '70 × 70 × 50 mm', category: 'Mechanical', thumb: '/thumbnails/music_box_v1.png' },
+    { name: 'Wall Hanger', dims: '80 × 30 × 6 mm', category: 'Brackets', thumb: '/thumbnails/hanger_v1.png' },
+    { name: 'Test Box', dims: '40 × 40 × 40 mm', category: 'Custom', thumb: '/thumbnails/testbox_v1.png' },
   ];
+
+  // Per-card flag flipped on <img> error so we gracefully drop back to the
+  // placeholder cube rather than showing a broken image.
+  let imgFailed = $state({});
 
   let query = $state('');
   let activeCategory = $state('All');
@@ -69,8 +77,18 @@
     <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {#each filtered as t (t.name)}
         <article class="rounded-lg border border-border bg-card overflow-hidden flex flex-col">
-          <div class="aspect-[4/3] bg-muted flex items-center justify-center border-b border-border">
-            <Box class="size-12 text-muted-foreground/60" />
+          <div class="aspect-[4/3] bg-muted flex items-center justify-center border-b border-border overflow-hidden">
+            {#if t.thumb && !imgFailed[t.name]}
+              <img
+                src={t.thumb}
+                alt={t.name}
+                loading="lazy"
+                class="h-full w-full object-cover"
+                onerror={() => (imgFailed = { ...imgFailed, [t.name]: true })}
+              />
+            {:else}
+              <Box class="size-12 text-muted-foreground/60" />
+            {/if}
           </div>
           <div class="p-4 flex flex-col gap-3 flex-1">
             <div class="flex items-start justify-between gap-3">

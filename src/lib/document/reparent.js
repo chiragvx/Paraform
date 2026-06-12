@@ -1,7 +1,7 @@
 /**
  * E6 — drag-to-reparent helpers.
  *
- * Pure validators consumed by ComponentBrowserPanel.svelte's HTML5 DnD
+ * Pure validators consumed by the document tree's (Sidebar.svelte) HTML5 DnD
  * handlers. The actual reassignment happens via `setFeatureComponent` (for
  * feature → component drops) or by a new component-tree reparent change
  * (currently only feature-into-component is supported; component-into-component

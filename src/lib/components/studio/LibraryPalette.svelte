@@ -36,6 +36,7 @@
   import Spline from '@lucide/svelte/icons/spline';      // misc
   import Cylinder from '@lucide/svelte/icons/cylinder';  // standoff
   import Boxes from '@lucide/svelte/icons/boxes';        // composite
+  import GripVertical from '@lucide/svelte/icons/grip-vertical'; // drag affordance
 
   const CATEGORY_ICON = {
     fastener:  Bolt,
@@ -101,7 +102,18 @@
     const c = part.connectors[0];
     const sz = c.size && c.size.nominal;
     if (sz == null) return '';
-    return String(sz);
+    // Fasteners/nuts size in metric thread (M-prefix); anything else just
+    // shows the nominal millimetre value with a unit.
+    const cat = part.category;
+    if (cat === 'fastener' || cat === 'nut' || cat === 'washer' || cat === 'standoff') {
+      return `M${sz}`;
+    }
+    return `${sz} mm`;
+  }
+
+  function prettyCategory(cat) {
+    if (!cat) return '';
+    return cat.charAt(0).toUpperCase() + cat.slice(1);
   }
 </script>
 
@@ -148,7 +160,7 @@
             draggable="true"
             ondragstart={(e) => onDragStart(e, part)}
             ondragend={onDragEnd}
-            title={part.id}
+            title={`${part.name} — drag into the viewport to place`}
           >
             <div class="flex size-6 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
               {#if part.source === 'composite'}
@@ -160,12 +172,17 @@
             <div class="flex-1 truncate">
               <div class="truncate text-xs font-medium text-foreground">{part.name}</div>
               <div class="truncate text-[10px] text-muted-foreground">
-                {part.category}{#if sizeBadge(part)} · {sizeBadge(part)}{/if}
+                {prettyCategory(part.category)}{#if sizeBadge(part)} · {sizeBadge(part)}{/if}
               </div>
             </div>
             {#if part.source === 'composite'}
               <span class="rounded bg-accent px-1.5 py-0.5 text-[9px] uppercase text-foreground/70">comp</span>
             {/if}
+            <!-- Drag affordance: appears on hover to signal the row is draggable -->
+            <GripVertical
+              class="size-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden="true"
+            />
           </li>
         {/each}
       </ul>

@@ -28,9 +28,9 @@ const _saved = _load();
 export const panels = $state({
   left:      _saved?.left      ?? false,
   inspector: _saved?.inspector ?? false,
-  // The AI chat starts collapsed: it was wide by default and crowded the 3D
-  // viewport. One click on the rail opens it.
-  chat:      _saved?.chat      ?? true,
+  // The AI chat is the primary surface (describe-a-machine flow), so a
+  // first-run user gets it OPEN. A returning user's saved choice wins.
+  chat:      _saved?.chat      ?? false,
 });
 
 function _persist() {

@@ -20,41 +20,49 @@
   let host;
   let hud = null;
 
-  onMount(() => {
+  function buildHud() {
+    if (hud) return true;
+    const viewport = studio.viewport;
+    if (!viewport || !viewport.renderer || !viewport.camera) return false;
+    const selection = getPickingSelection();
+    const pickProxies = studio.viewport.pickProxies || null;
+    hud = new ViewportHud({
+      host,
+      viewport,
+      pickProxies,
+      selection,
+      getUnitLabel: () => units.unit,
+    });
+    return true;
+  }
+
+  function teardownHud() {
+    try { hud?.dispose(); } catch {}
+    hud = null;
+  }
+
+  // The debug HUD (FPS / Unit / Sel / cursor-XYZ) is OFF by default — it's a
+  // developer diagnostic. Build it only while studio.debugHudVisible is true,
+  // and tear it down (so its rAF loop stops) when toggled back off.
+  $effect(() => {
+    const want = studio.debugHudVisible;
+    if (!host) return;
+    if (!want) { teardownHud(); return; }
+    // Poll briefly for viewport readiness, then construct.
     let cancelled = false;
     const start = performance.now();
     let pollId = 0;
-
-    function attach() {
-      const viewport = studio.viewport;
-      if (!viewport || !viewport.renderer || !viewport.camera) return false;
-      const selection = getPickingSelection();
-      const pickProxies = studio.viewport.pickProxies || null;
-      hud = new ViewportHud({
-        host,
-        viewport,
-        pickProxies,
-        selection,
-        getUnitLabel: () => units.unit,
-      });
-      return true;
-    }
-
-    function tick() {
+    const tick = () => {
       if (cancelled) return;
-      if (attach()) return;
+      if (buildHud()) return;
       if (performance.now() - start > 3000) return;
       pollId = requestAnimationFrame(tick);
-    }
-    pollId = requestAnimationFrame(tick);
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(pollId);
-      try { hud?.dispose(); } catch {}
-      hud = null;
     };
+    pollId = requestAnimationFrame(tick);
+    return () => { cancelled = true; cancelAnimationFrame(pollId); };
   });
+
+  onMount(() => () => teardownHud());
 </script>
 
 <div bind:this={host} class="pointer-events-none absolute inset-0"></div>

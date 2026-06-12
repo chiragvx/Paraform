@@ -52,12 +52,15 @@
 
     <div class="mt-10 rounded-lg border border-border bg-card p-6">
       {#if !configured}
-        <p class="text-sm text-muted-foreground text-center">
-          Sign-in isn't configured on this deployment. Set
-          <code class="text-xs">VITE_SUPABASE_URL</code> and
-          <code class="text-xs">VITE_SUPABASE_PUBLISHABLE_KEY</code> to enable
-          accounts — or head straight to the studio and work locally.
-        </p>
+        <div class="space-y-4 text-center">
+          <p class="text-sm text-muted-foreground">
+            Accounts aren't set up yet — you can keep working locally. Your
+            project stays on this device.
+          </p>
+          <Button class="w-full" onclick={() => navigate('studio')}>
+            Continue to the studio
+          </Button>
+        </div>
       {:else if sent}
         <div class="text-center space-y-2">
           <Mail class="size-8 mx-auto text-primary" />

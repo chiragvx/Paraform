@@ -217,7 +217,7 @@ const FULL_SETTINGS_SCHEMA = [
               ]),
         ],
       },
-      { key: 'stlBinary', label: 'STL binary', kind: 'boolean' },
+      // stlBinary has no consumer in the exporter (always binary) — field removed.
       { key: 'filenamePattern', label: 'Filename pattern', kind: 'text' },
     ],
   },
@@ -250,7 +250,6 @@ const FULL_SETTINGS_SCHEMA = [
           { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
           { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
           { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-          { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
         ],
       },
       {
@@ -260,7 +259,7 @@ const FULL_SETTINGS_SCHEMA = [
         options: [
           { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
           { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
-          { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+          { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
         ],
       },
       { key: 'maxTokens', label: 'Max output tokens', kind: 'number', min: 256, max: 32000, step: 256 },
@@ -287,7 +286,9 @@ const FULL_SETTINGS_SCHEMA = [
 ];
 
 /** Panels hidden behind the v1 launch flag (code retained, UI gated). */
-const V1_HIDDEN_PANELS = new Set(['manufacturing', 'markingMenu', 'shortcuts']);
+// 'performance' panel holds only autoRecompileMs + workerThreads, neither of
+// which has a consumer yet — hide it in v1 rather than show dead controls.
+const V1_HIDDEN_PANELS = new Set(['manufacturing', 'markingMenu', 'shortcuts', 'performance']);
 
 /**
  * The UI-facing schema — the single choke point the settings dialog, nav,

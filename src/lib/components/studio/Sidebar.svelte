@@ -52,7 +52,7 @@
     renameComponent,
     setComponentParent,
     setFeatureEnabled,
-    deleteFeature,
+    deleteFeatureCascade,
     setFeatureComponent,
     renameFeatureChange,
   } from '../../../../lib/document/index.js';
@@ -253,7 +253,9 @@
 
   function onDeleteFeature(e, feature) {
     e.stopPropagation();
-    deleteFeature(feature.id);
+    // Cascade: removing a placed part's body also removes its empty component
+    // husk (same path the palette delete + Del key use).
+    deleteFeatureCascade(feature.id);
   }
 
   function openAddPalette() {
@@ -350,11 +352,15 @@
     e.stopPropagation();
     let items;
     if (row.kind === 'feature') {
+      // "Edit…" only for features with a real edit surface (the BuildScript
+      // dialog). Other types had it open a palette pre-filtered by type name,
+      // which matched zero commands for most (e.g. StandardPart) — a dead item.
+      const canEdit = row.feature?.type === 'BuildScript';
       items = [
         { id: 'rename', label: 'Rename' },
         { id: 'toggleSuppress', label: row.feature.enabled === false ? 'Unsuppress' : 'Suppress' },
         { id: 'rollbackTo', label: 'Roll back to here' },
-        { id: 'edit', label: 'Edit…' },
+        ...(canEdit ? [{ id: 'edit', label: 'Edit…' }] : []),
         { divider: true },
         { id: 'delete', label: 'Delete', danger: true },
       ];
@@ -408,17 +414,15 @@
     } else if (action === 'ungroup') {
       ungroupRow(row);
     } else if (action === 'delete') {
-      if (row.kind === 'feature') deleteFeature(feature.id);
+      // Cascade so deleting a placed part's body also drops its empty
+      // component husk (matches palette delete + Del key).
+      if (row.kind === 'feature') deleteFeatureCascade(feature.id);
       else if (row.kind === 'component' && row.isGroup) deleteGroup(row);
       else deletePromoting(row);
     } else if (action === 'edit') {
-      // Dispatch to the BuildScript dialog for scripts, palette for others.
+      // Only offered for BuildScript (see openContextMenu) — open its dialog.
       if (feature?.type === 'BuildScript') {
         try { dialogs.openScript(feature.id); } catch {}
-      } else if (feature) {
-        store?.selectFeature(feature.id);
-        palette.query = (feature.type || '') + ' ';
-        palette.open = true;
       }
     }
   }
@@ -494,13 +498,10 @@
   }
 
   function onPlaneSketch(plane) {
+    // V1 hides the sketcher entirely — clicking a plane row must not drop the
+    // user into it. The row's visibility/eye toggle stays live (separate button).
+    if (V1) return;
     enterSketch(plane);
-  }
-
-  function onOriginClick() {
-    // Visual hint only — flash a console line. Could later select all 3
-    // stock planes when reference-plane features land.
-    console.info('[sidebar] origin clicked (stock planes)');
   }
 
   function openParameters() {
@@ -724,26 +725,31 @@
               </button>
             </summary>
 
-            <button
-              type="button"
-              onclick={onOriginClick}
-              class="flex w-full items-center gap-2 py-1 pr-3 text-left text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            <div
+              class="flex w-full items-center gap-2 py-1 pr-3 text-left text-muted-foreground"
               style="padding-left: 44px"
             >
-              <Crosshair class="size-3.5 shrink-0" />
+              <Crosshair class="size-3.5 shrink-0 opacity-60" />
               <span class="truncate">Origin</span>
-            </button>
+            </div>
 
             {#each [{ id: 'XY', label: 'Top' }, { id: 'XZ', label: 'Front' }, { id: 'YZ', label: 'Right' }] as p (p.id)}
               <div class="group flex items-center gap-2 pr-3 hover:bg-accent/50" style="padding-left: 44px">
-                <button
-                  type="button"
-                  onclick={() => onPlaneSketch(p.id)}
-                  class="flex flex-1 items-center gap-2 py-1 text-left text-muted-foreground hover:text-foreground"
-                >
-                  <Square class="size-3.5 shrink-0 opacity-60" />
-                  <span class="truncate">{p.label}</span>
-                </button>
+                {#if V1}
+                  <span class="flex flex-1 items-center gap-2 py-1 text-muted-foreground">
+                    <Square class="size-3.5 shrink-0 opacity-60" />
+                    <span class="truncate">{p.label}</span>
+                  </span>
+                {:else}
+                  <button
+                    type="button"
+                    onclick={() => onPlaneSketch(p.id)}
+                    class="flex flex-1 items-center gap-2 py-1 text-left text-muted-foreground hover:text-foreground"
+                  >
+                    <Square class="size-3.5 shrink-0 opacity-60" />
+                    <span class="truncate">{p.label}</span>
+                  </button>
+                {/if}
                 <button
                   type="button"
                   onclick={() => {

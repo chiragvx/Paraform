@@ -3,6 +3,7 @@
   import UploadCloud from '@lucide/svelte/icons/cloud-upload';
   import File from '@lucide/svelte/icons/file';
   import MoreHorizontal from '@lucide/svelte/icons/ellipsis';
+  import { V1 } from '$lib/flags.js';
 
   const recent = [
     { name: 'gearbox_housing.step', size: '1.4 MB', when: '2 minutes ago' },
@@ -26,6 +27,31 @@
   }
 </script>
 
+{#if V1}
+  <!-- Launch build: the upload pipeline is not wired yet (the UI below is a
+       stub). Show a simple placeholder until it ships. The full stub stays
+       available under VITE_FULL_UI for dev. -->
+  <div class="h-full overflow-y-auto bg-background text-foreground">
+    <div class="container max-w-6xl mx-auto px-6 py-12">
+      <header class="mb-8">
+        <h1 class="text-3xl font-semibold tracking-tight">Manage uploads</h1>
+        <p class="mt-2 text-muted-foreground">
+          Upload reference geometry and parametric templates.
+        </p>
+      </header>
+      <div class="rounded-lg border border-dashed border-border bg-card px-6 py-20 flex flex-col items-center justify-center text-center">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <UploadCloud class="size-7" />
+        </div>
+        <h2 class="mt-4 text-lg font-medium text-card-foreground">Coming soon</h2>
+        <p class="mt-1 max-w-md text-sm text-muted-foreground">
+          Uploading your own reference geometry and templates is on the way.
+          For now, start from a built-in template or describe your machine in Studio.
+        </p>
+      </div>
+    </div>
+  </div>
+{:else}
 <div class="h-full overflow-y-auto bg-background text-foreground">
   <div class="container max-w-6xl mx-auto px-6 py-12">
     <header class="mb-8">
@@ -85,3 +111,4 @@
     </section>
   </div>
 </div>
+{/if}

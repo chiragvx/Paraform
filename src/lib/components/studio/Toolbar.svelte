@@ -239,6 +239,7 @@
 
   <!-- ── 4. Sketch → Solid ──────────────────────────────────────────── -->
   <div class="flex items-center gap-0.5">
+    {#if !V1}
     <button
       type="button"
       class={toolBtn}
@@ -257,7 +258,6 @@
     >
       <RotateCcw class="size-4" />
     </button>
-    {#if !V1}
     <button
       type="button"
       class={toolBtn}
@@ -573,11 +573,8 @@
         bind:value={searchValue}
         onfocus={onSearchFocus}
         onkeydown={onSearchKey}
-        class="h-7 w-56 rounded border border-input bg-transparent pl-7 pr-10 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-7 w-56 rounded border border-input bg-transparent pl-7 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
       />
-      <kbd
-        class="pointer-events-none absolute right-1.5 rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground"
-      >Alt+C</kbd>
     </div>
   </div>
 </div>

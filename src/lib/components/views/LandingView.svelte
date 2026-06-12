@@ -9,13 +9,13 @@
   const features = [
     {
       icon: Cpu,
-      title: 'Real-time CAD kernel',
-      body: 'build123d + OCCT compiles your parametric code into solids in milliseconds.',
+      title: 'Describe it, build it',
+      body: 'A plain-English brief becomes a parametric assembly — parts that mate and snap-fit connectors that line up.',
     },
     {
       icon: Layers,
-      title: 'Parametric model history',
-      body: 'Every feature is a first-class node — edit any step and the model reflows.',
+      title: 'A case that fits',
+      body: 'ParaForm sizes an enclosure around your assembly automatically, then lets you tune any dimension and watch it reflow.',
     },
     {
       icon: FileDown,
@@ -25,8 +25,8 @@
   ];
 
   const steps = [
-    { n: 1, t: 'Sketch or script', d: 'Draw 2D profiles or write parametric build123d code.' },
-    { n: 2, t: 'Build features', d: 'Extrude, revolve, fillet — stack operations into a history tree.' },
+    { n: 1, t: 'Describe your machine', d: 'Tell the assistant what you want to build, in plain English.' },
+    { n: 2, t: 'Get an assembly', d: 'ParaForm builds the parts, mates them, and fits a case around them.' },
     { n: 3, t: 'Inspect & iterate', d: 'Tune dimensions, watch the model rebuild live in the viewport.' },
     { n: 4, t: 'Export & make', d: 'Send STL to your printer or STEP to a manufacturer.' },
   ];
@@ -41,12 +41,13 @@
         Now in early preview
       </div>
       <h1 class="text-4xl sm:text-6xl font-semibold tracking-tight">
-        ParaForm <span class="text-muted-foreground">—</span>
-        <span class="text-primary">The Parametric 3D Platform</span>
+        Describe a machine. <span class="text-muted-foreground">Get a</span>
+        <span class="text-primary">printable assembly with a fitted case.</span>
       </h1>
       <p class="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-        Build production-ready 3D parts with code, sketches, and a feature history that
-        never breaks. From first principle to final STL.
+        ParaForm turns a plain-English brief into a real parametric assembly —
+        parts that mate, snap-fit connectors, and an enclosure sized to fit. Tune
+        any dimension and export STL or STEP straight to your printer.
       </p>
       <div class="mt-10 flex items-center justify-center gap-3">
         <Button size="lg" onclick={() => navigate('studio')}>
@@ -62,10 +63,10 @@
     <!-- Features -->
     <section class="py-16 border-t border-border">
       <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-center">
-        Built for parametric workflows
+        From brief to buildable
       </h2>
       <p class="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-        Every interaction is reversible, scriptable, and exportable.
+        AI does the first pass; the parametric kernel keeps it editable and exportable.
       </p>
       <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         {#each features as f}

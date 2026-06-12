@@ -10,13 +10,15 @@ import * as v4 from '../../../lib/document/index.js';
  * - With no kernel reachable, commits still succeed; the viewport just stays
  *   empty until a kernel endpoint is set or comes online.
  */
-export function bootDocument({ scene, seedIfEmpty = true } = {}) {
+export function bootDocument({ scene, seedIfEmpty = false } = {}) {
   const store = v4.getDocumentStore();
   const bridge = v4.getViewportBridge({ scene });
 
-  if (seedIfEmpty && Object.keys(store.doc.features).length === 0) {
-    v4.addBox({ length: 40, width: 40, height: 40 });
-  }
+  // New documents start EMPTY (no demo Box). The AI assembly then builds
+  // visibly into a clean scene and the viewport's empty-state hint shows.
+  // We keep the `seedIfEmpty` knob for callers/tests that opt back in, but
+  // it now defaults off and is no longer driven by the persistence path.
+  void seedIfEmpty;
 
   const errorHandlers = new Set();
   const offError = bridge.onError(({ error, doc }) => {

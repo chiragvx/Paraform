@@ -15,9 +15,9 @@ import { loadAllSettings } from '../settings/schema.js';
  *    rescaled internally to multiply the rad/px constant, the others are
  *    used as direct multipliers.
  *  - `damping` flips `enableDamping` on/off based on whether the user picked
- *    a non-zero value and stores `dampingFactor`. CADCameraControls accepts
- *    these for API parity but currently treats damping as a no-op; we still
- *    persist them so the day damping lands we don't have to re-wire the UI.
+ *    a non-zero value and stores `dampingFactor`. `dampingFactor` scales the
+ *    orbit inertial-coast duration (schema default 0.08 ≈ the stock feel;
+ *    higher coasts longer). See CADCameraControls `_startCoast`.
  *  - `invertY` calls the `setInvertY(bool)` method on the controls (added
  *    alongside this wiring).
  *  - `autoFit` is NOT applied here — it gates first-render framing in

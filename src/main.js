@@ -27,15 +27,29 @@ loadTheme();
 try { loadAndApplySettings(); } catch (e) { console.warn('[main] settings boot failed:', e); }
 
 // Honor the user's launch-view preference. `restore` (default) loads the last
-// document from localStorage; anything else ('blank'/'landing'/'library')
-// means "always start with a fresh seed" — skip the restore so bootDocument
-// drops a default primitive in the scene instead.
+// document from localStorage; anything else ('landing'/'library') means
+// "always start with a fresh seed" — skip the restore so bootDocument drops a
+// default primitive in the scene instead — AND navigate accordingly:
+//   - 'landing' → route to the landing page (#/)
+//   - 'library' → stay in the studio but pop the part-library dialog on boot
 let launchView = 'restore';
 try { launchView = loadAllSettings().general?.launchView ?? 'restore'; }
 catch (e) { console.warn('[main] launchView read failed:', e); }
 
 if (launchView === 'restore') {
   try { restoreDocument(); } catch (e) { console.warn('[main] restore failed:', e); }
+} else if (launchView === 'landing') {
+  // Force the landing route regardless of any persisted/last hash.
+  try {
+    if (typeof window !== 'undefined' && window.location.hash !== '#/') {
+      window.location.hash = '#/';
+    }
+  } catch (e) { console.warn('[main] landing nav failed:', e); }
+} else if (launchView === 'library') {
+  // Open the studio library dialog once the app has mounted.
+  import('./lib/dialogs/extras.svelte.js')
+    .then((m) => queueMicrotask(() => { try { m.openLibrary(); } catch (e) { console.warn('[main] openLibrary failed:', e); } }))
+    .catch((e) => console.warn('[main] library import failed:', e));
 }
 
 // Autosave runs in both modes — even on a blank launch the user will commit

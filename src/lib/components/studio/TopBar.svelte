@@ -29,6 +29,15 @@
 
   const store = getDocumentStore();
 
+  // Platform-aware modifier glyph: ⌘ on macOS, "Ctrl" everywhere else.
+  // navigator.userAgentData?.platform is the modern hook; fall back to the
+  // legacy navigator.platform string.
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /mac/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '');
+  const modKey = isMac ? '⌘' : 'Ctrl';
+  const modLabel = isMac ? '⌘K' : 'Ctrl+K';
+
   // Bump on every store commit so derived getters re-evaluate.
   let tick = $state(0);
 
@@ -195,12 +204,12 @@
     <button
       type="button"
       class="inline-flex h-7 items-center gap-1.5 rounded border border-border bg-transparent px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-      title="Open command palette (Ctrl+K)"
+      title="Open command palette ({modLabel})"
       onclick={() => palette.toggle()}
     >
       <Search class="size-3" />
       <span>Search</span>
-      <kbd class="ml-1 rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">⌘K</kbd>
+      <kbd class="ml-1 rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">{modKey}K</kbd>
     </button>
 
     <div class="mx-1 h-5 w-px bg-border"></div>

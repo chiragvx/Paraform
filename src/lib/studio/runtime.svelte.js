@@ -117,7 +117,16 @@ class StudioRuntime {
   // studio.startSection?.(), studio.runInterference?.(ids). Each hook is a
   // plain function reference so the viewport's `onMount` cleanup nulls it
   // and palette commands silently no-op when the viewport is unmounted.
-  startMeasure = $state(null);     // () => void
+  startMeasure = $state(null);     // () => void — toggles the measure tool
+  // True while the measure tool is armed. MeasureToolMount keeps this in
+  // lock-step with the tool's enabled state; Viewport.svelte reads it to
+  // suppress rubber-band / lasso / paint selection and to show snap markers.
+  measureToolActive = $state(false);
+
+  // ── Debug HUD (FPS / Unit / Sel / cursor-XYZ corner overlay) ─────────────
+  // Off by default — it's a developer diagnostic, not production chrome.
+  // ViewportHudMount mounts/unmounts the imperative HUD in response to this.
+  debugHudVisible = $state(false);
   startSection = $state(null);     // () => void
   runInterference = $state(null);  // (bodyIds: string[]) => void
   applyRollback = $state(null);    // () => void — E6.5 timeline scrub
@@ -174,6 +183,8 @@ class StudioRuntime {
     this.bridge = null;
     this.views = null;
     this._lightBaseline = null;
+    this.startMeasure = null;
+    this.measureToolActive = false;
     setActiveComponentProvider(null);
   }
 

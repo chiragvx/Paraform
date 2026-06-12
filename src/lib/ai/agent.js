@@ -64,6 +64,57 @@ function resolveModelConfig() {
     return { providerName, model, maxTokens };
 }
 
+// Tools that observe but don't mutate the document — used to distinguish a
+// turn that actually built something from one that only inspected state.
+const READ_ONLY_TOOLS = new Set([
+    'get_document_summary', 'list_components', 'measure', 'search_library', 'run_invariants',
+]);
+
+/**
+ * Build a concise fallback completion line from a turn's tool results, for the
+ * case where the model produced no closing prose. Prefers naming the things
+ * that were created/changed; falls back to a read acknowledgement.
+ *
+ * @param {Array<{name:string, result:any}>} toolResults
+ * @returns {string} a one-line summary (empty string if nothing to say)
+ */
+export function summarizeTurn(toolResults) {
+    const calls = Array.isArray(toolResults) ? toolResults : [];
+    if (calls.length === 0) return 'Done.';
+
+    const ok = (r) => !(r && r.ok === false);
+    const mutations = calls.filter((c) => !READ_ONLY_TOOLS.has(c.name));
+    const failures = calls.filter((c) => !ok(c.result));
+
+    if (failures.length) {
+        const f = failures[0];
+        const msg = (f.result && (f.result.error || f.result.summary)) || 'failed';
+        const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : '';
+        return `${f.name} failed: ${msg}${more}.`;
+    }
+
+    if (mutations.length) {
+        // Describe what was built/changed, e.g. "Done — addBox, addHole (2 ops)."
+        const parts = mutations.map((c) => {
+            const r = c.result || {};
+            const label = r.summary || r.name || r.featureId || r.componentId || c.name;
+            return String(label);
+        });
+        // Dedupe while preserving order, cap the list so the line stays short.
+        const seen = new Set();
+        const uniq = [];
+        for (const p of parts) { if (!seen.has(p)) { seen.add(p); uniq.push(p); } }
+        const shown = uniq.slice(0, 3).join(', ');
+        const extra = uniq.length > 3 ? `, +${uniq.length - 3} more` : '';
+        const count = mutations.length;
+        return `Done — ${shown}${extra} (${count} op${count === 1 ? '' : 's'}).`;
+    }
+
+    // Only read-only tools ran and the model said nothing.
+    const names = [...new Set(calls.map((c) => c.name))].slice(0, 3).join(', ');
+    return `Reviewed the model (${names}). No changes were needed.`;
+}
+
 /**
  * Run one agent turn.
  *
@@ -88,6 +139,13 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
         messages.push({ role: 'user', text: String(userMessage) });
     }
 
+    // Track turn-level activity so we can synthesize a completion message when
+    // the model ends a turn silently (tool chips but no final prose — observed
+    // live: a turn that ran only get_document_summary and said nothing). Without
+    // this the chat shows a dead turn with no assistant bubble.
+    let sawAssistantText = false;       // any non-blank text emitted this turn
+    const turnToolResults = [];         // [{ name, result }] for the summary
+
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
             if (signal && signal.aborted) {
@@ -108,7 +166,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
             // the final parsed result through the provider's stream handler.
             let result = { text: '', toolCalls: [], stop: true };
             const handler = provider.makeStreamHandler({
-                onText: (text) => emit({ type: 'text', text }),
+                onText: (text) => { if (text && String(text).trim()) sawAssistantText = true; emit({ type: 'text', text }); },
                 onToolCalls: () => {},
                 onStop: (r) => { result = r; },
                 onUsage: (usage) => emit({ type: 'usage', usage }),
@@ -120,6 +178,13 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
             provider.appendAssistantTurn(messages, { text: result.text, toolCalls: result.toolCalls });
 
             if (result.stop || !result.toolCalls || result.toolCalls.length === 0) {
+                // Some models end a turn with tool chips but no closing prose
+                // (e.g. a turn that only read state). Never leave the turn mute:
+                // synthesize a one-line completion from what actually happened.
+                if (!sawAssistantText && (result.text == null || !String(result.text).trim())) {
+                    const fallback = summarizeTurn(turnToolResults);
+                    if (fallback) emit({ type: 'text', text: fallback });
+                }
                 emit({ type: 'done' });
                 return { history: messages };
             }
@@ -131,6 +196,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
                 const r = await dispatchTool(tc.name, tc.input || {});
                 emit({ type: 'tool_result', name: tc.name, result: r });
                 toolResults.push({ id: tc.id, name: tc.name, result: r });
+                turnToolResults.push({ name: tc.name, result: r });
             }
 
             // Feed the results back as the next user turn and loop.

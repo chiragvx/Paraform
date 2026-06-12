@@ -14,21 +14,6 @@
     { value: 'translucent',label: 'Translucent' },
   ];
 
-  const PLATE_OPTIONS = [
-    { value: 'bambu',      label: 'Bambu' },
-    { value: 'prusa',      label: 'Prusa' },
-    { value: 'ender',      label: 'Ender' },
-    { value: 'voron',      label: 'Voron' },
-    { value: 'industrial', label: 'Industrial' },
-  ];
-
-  const LIGHTING_OPTIONS = [
-    { value: 'default',    label: 'Default' },
-    { value: 'studio',     label: 'Studio' },
-    { value: 'neon',       label: 'Neon' },
-    { value: 'cinematic',  label: 'Cinematic' },
-  ];
-
   function pickColor(c) {
     studio.materialColor = c;
     studio.applyMaterialToViewport();
@@ -70,25 +55,7 @@
     />
   </div>
 
-  <!-- Section 3: Build plate -->
-  <div>
-    <div class="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Build Plate</div>
-    <Select
-      bind:value={studio.buildPlate}
-      options={PLATE_OPTIONS}
-    />
-  </div>
-
-  <!-- Section 4: Lighting preset -->
-  <div>
-    <div class="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Lighting Preset</div>
-    <Select
-      bind:value={studio.lightingPreset}
-      options={LIGHTING_OPTIONS}
-    />
-  </div>
-
-  <!-- Section 5: Intensity -->
+  <!-- Section 3: Intensity -->
   <div>
     <div class="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Intensity</div>
     <input

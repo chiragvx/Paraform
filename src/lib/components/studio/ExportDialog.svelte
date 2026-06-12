@@ -12,11 +12,10 @@
   // lib/document/exporter.js FILE_EXTENSIONS). The cards for 3MF / OBJ / glTF
   // are surfaced so the UI hints at the roadmap, but selecting one falls
   // back to STL with an inline warning instead of failing silently.
-  const SUPPORTED = new Set(['stl', 'stl-ascii', 'step', 'brep']);
+  const SUPPORTED = new Set(['stl', 'step', 'brep']);
 
   const ALL_FORMATS = [
     { value: 'stl',       label: 'STL (binary)', description: 'Triangle mesh — 3D printing' },
-    { value: 'stl-ascii', label: 'STL (ASCII)',  description: 'Human-readable mesh' },
     { value: '3mf',       label: '3MF',          description: 'Modern printable bundle' },
     { value: 'obj',       label: 'OBJ',          description: 'Mesh interchange' },
     { value: 'gltf',      label: 'glTF',         description: 'Web 3D / preview' },
@@ -25,9 +24,9 @@
   ];
 
   // v1 launch: only the hero formats. glTF/GLB export is not implemented in
-  // the kernel exporter, so the visible set is STL (binary + ASCII) + STEP.
+  // the kernel exporter, so the visible set is STL (binary) + STEP.
   // 3MF / OBJ / BREP cards are hidden (not deleted) behind the flag.
-  const V1_FORMATS = new Set(['stl', 'stl-ascii', 'step']);
+  const V1_FORMATS = new Set(['stl', 'step']);
   const formats = V1 ? ALL_FORMATS.filter((f) => V1_FORMATS.has(f.value)) : ALL_FORMATS;
   const visibleValues = new Set(formats.map((f) => f.value));
 
@@ -68,7 +67,6 @@
 
   let selected = $state(normalizeFormat(initialFormat));
   let filename = $state(defaultFilename(initialSettings.filenamePattern));
-  let includeHidden = $state(false);
   let busy = $state(false);
   let error = $state(null);
   let warn = $state(null);
@@ -111,7 +109,6 @@
       // with the warning already showing above the footer.
       let fmt = selected;
       if (!SUPPORTED.has(fmt)) fmt = 'stl';
-      if (fmt === 'stl-ascii') fmt = 'stl'; // exporter has no ASCII switch yet
 
       const ext = fmt;
       const name = (filename || defaultFilename()).replace(/\.[a-z0-9]+$/i, '');
@@ -165,16 +162,6 @@
           disabled={busy}
           class="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
-
-        <label class="flex items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            bind:checked={includeHidden}
-            disabled={busy}
-            class="size-3.5 rounded border-input"
-          />
-          Include hidden features
-        </label>
       </div>
 
       {#if warn}
