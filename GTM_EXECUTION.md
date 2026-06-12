@@ -116,32 +116,122 @@ merges to main in one motion.)*
       still contain the fat blobs in history). Local `main` now tracks
       origin/main at the delivery commit.
 
-## Phase 3 — billing (GTM Day 2)
+## Phase 3 — studio cleanup: broken features + UI shortcomings
 
-- [ ] Pick merchant-of-record (Lemon Squeezy vs Polar)
-- [ ] Checkout + webhook → `plan` flag in Supabase → caps lift
+*(Inserted 2026-06-13 at user request — fix what's broken/unpolished in the
+v1 surface before charging money for it. Billing pushed to Phase 4.)*
+
+- [x] Audit done — full findings with file:line detail in
+      [docs/AUDIT_2026-06-13.md](docs/AUDIT_2026-06-13.md) (static wiring
+      trace, code-verified + live Playwright UX review; dynamic crawl
+      stopped early by user — covered by the other two).
+
+**Theme:** the app works but hides every win — the studio boots with the
+camera inside a seeded 40 mm box, so AI placements and compiles produce
+zero visible change. Fix visibility first.
+
+### 3A — Broken features (P0, fix all)
+- [ ] Measure tool: create `MeasureToolMount` wiring the existing
+      `MeasureTool` class into `studio.startMeasure`/`measureToolActive`
+      (Viewport already reads them) (M)
+- [ ] Settings → AI Assistant panel: missing `ai` key in `PANELS` crashes
+      the dialog; add the panel (it's the only provider/model UI) (S–M)
+- [ ] Marking menu: route `form:` commands to `dialogs.openForm`, make the
+      failure toast real, N wedge works once measure lands (S)
+
+### 3B — First-run / demo killers (P0, fix all)
+- [ ] Frame the scene on first bridge render + after AI placements and
+      feature adds (`frameBox` exists in view_animator) (S)
+- [ ] AI chat panel open by default on first run + short welcome line (S)
+- [ ] Stop seeding the demo Box; retarget the empty-state hint to the AI
+      chat (and platform-correct shortcut) (S)
+- [ ] AI fallback closing bubble when a turn ends text-less; root-cause the
+      silent "add a cube → get_document_summary → nothing" turn (S–M)
+- [ ] AppLoader only on the studio route (kills the 3.3 s fake splash on
+      landing) (S)
+- [ ] Landing hero copy → AI-assembly pitch ("Describe a robot, get a
+      printable assembly with a fitted case") (S)
+- [ ] Hide the FPS/Unit/Sel debug HUD behind a settings toggle (S)
+
+### 3C — Misleading / degraded controls (P1)
+- [ ] V1-gate the sidebar plane-row sketcher entry + Extrude/Revolve
+      toolbar buttons (consistent with hidden sketch commands) (S)
+- [ ] Export dialog: drop the "STL (ASCII)" card (exports binary) + the
+      dead "Include hidden" checkbox (S)
+- [ ] Sidebar trash/context-menu delete → `deleteFeatureCascade` (kills
+      zombie component husks; matches Del-key behavior) (S)
+- [ ] Tree "Edit…": open the feature's form, or drop the item for types
+      without an edit surface (M)
+- [ ] ScenePanel: remove (or implement) no-op Build Plate + Lighting
+      Preset selectors (S remove / M implement)
+- [ ] Dedupe "New Document": remove `edit.reset` or route through the
+      same unsaved-changes confirm as `doc.new` (S)
+- [ ] `debug.activeComponent` → v1Hidden (S)
+- [ ] Manage page is fake (hardcoded uploads, stub drop zone) → gate the
+      nav link behind `!V1` for launch (S)
+- [ ] Explore template cards: render the existing thumbnails; label cards
+      as templates-coming or wire the template id through to studio (M)
+- [ ] Settings with no consumer: wire or hide `gridSize`, `autoFit`,
+      `damping`, `autoRecompileMs`, `workerThreads`, `stlBinary`,
+      `edgeThickness`; "reload required" hint on AA (S each)
+- [ ] Theme "System" → `prefers-color-scheme` matchMedia + listener (S)
+- [ ] AI model ids: verify `claude-*` + `gemini-3.5-flash` ids against
+      live APIs; fix agent.js / ai_proxy.py / settings schema (S)
+- [ ] Kinematics slider: debounce ~50 ms or commit-on-release (S)
+- [ ] Compile-busy chip in StatusBar while a kernel call is in flight (S)
+- [ ] Kernel-offline: map `Failed to fetch` to a friendly "Engine
+      offline" banner + status dot (S–M)
+- [ ] Mac ⌘K glyphs → platform-aware (TopBar + viewport hint) (S)
+- [ ] Toolbar search: bind Alt+C or drop the badge; remove dead Enter
+      handler (S)
+- [ ] Sidebar "Origin" row: make it select/flash the triad or render as
+      plain label (S)
+- [ ] AuthView unconfigured branch: friendly copy instead of env-var
+      instructions (S)
+- [ ] Feature auto-numbering ("Box 2") + collapse the 4× "Document"
+      labels in the left panel (S–M)
+- [ ] Library palette: drag-into-scene hint + human metadata line (S)
+- [ ] `launchView` landing/library options: navigate/open accordingly (S)
+
+### 3D — P2 (do only the trivial ones now, defer the rest)
+- [ ] ViewCube bookmark tween arg fix (`targetPos`→`toPosition` — restores
+      animation, kills per-use warning) (S)
+- [ ] Delete orphans: `RepairLoopPanel.svelte`, inner
+      `inspector/KinematicsPanel.svelte`, `app/picking/context_menu.js`,
+      stale JSDoc in `reparent.js:4` (S)
+- [ ] Everything else in AUDIT_2026-06-13.md §P2 → post-launch backlog
+
+### Verify
+- [ ] `npm run build` + full battery + `check_v1_trim.mjs` both modes
+- [ ] Re-run the first-run script by hand: landing → studio → AI "build a
+      servo arm" → visible result without touching the camera
+
+## Phase 4 — billing (GTM Day 2)
+
+- [ ] Pick merchant-of-record (Lemon Squeezy vs Polar; lean Polar)
+- [ ] Checkout + webhook (Supabase Edge Function) → `plan` flag → caps lift
 - [ ] Pricing wired: Free / Maker $19/mo / Lifetime $129 (100 seats)
 
-## Phase 4 — deploy + kernel sandbox (GTM Day 3)
+## Phase 5 — deploy + kernel sandbox (GTM Day 3)
 
 - [ ] Kernel hardening: server-side-only emit path to `/execute`, no secrets,
       no network egress, 30 s timeout, disposable container
 - [ ] Frontend → Vercel; kernel → Fly.io/Railway (one always-on worker)
 - [ ] Smoke test the deployed stack end-to-end
 
-## Phase 5 — landing page + hero video (GTM Day 4)
+## Phase 6 — landing page + hero video (GTM Day 4)
 
 - [ ] Record 75-second hero video (assemble → swap → casing → STL)
 - [ ] Cut 3 GIFs
 - [ ] Landing page: video + pricing + signup, nothing more
 
-## Phase 6 — dogfood (GTM Day 5)
+## Phase 7 — dogfood (GTM Day 5)
 
 - [ ] 5 full builds through the chat UI as a stranger would
 - [ ] STL prints clean in a slicer (screenshot proof)
 - [ ] Fix only what breaks
 
-## Phase 7 — launch (GTM Days 6–7)
+## Phase 8 — launch (GTM Days 6–7)
 
 - [ ] Soft launch: X thread, r/3Dprinting, r/robotics, r/functionalprint,
       maker Discords, 20 YouTuber/educator DMs with free Pro
@@ -176,3 +266,12 @@ merges to main in one motion.)*
   push. Artifacts untracked+gitignored; granular history kept on local
   backup branches. Open: user applies Supabase schema + live sign-in test
   (folded into Phase 4 deploy). Next: Phase 3 — billing.
+- 2026-06-13 — Phase 3 redefined as **studio cleanup** (billing → 4, rest
+  shifted). Audited the v1 surface: static wiring trace (code-verified) +
+  live UX review; dynamic crawl stopped early to save resources. Findings
+  archived in docs/AUDIT_2026-06-13.md; actionable checklist above.
+  Headline: 3 dead features (measure, AI settings panel, marking-menu
+  wedges), and a first-run experience that hides every win (camera inside
+  seeded box, chat collapsed, mute AI turns, fake splash on landing).
+  Core engine verified solid end-to-end. Corrections: Sweep/Loft are real
+  (not stubs); GLB export remains fake.
