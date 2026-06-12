@@ -1,0 +1,10 @@
+flask>=3.0
+flask-cors>=4.0
+build123d>=0.7
+# AI proxy (b123d_server/ai_proxy.py) — forwards /ai/chat to the Anthropic
+# Messages API, streaming SSE through with stream=True.
+requests>=2.31
+# Used by build_sidecar.py to freeze this server into a Tauri externalBin.
+# Only needed when producing the desktop sidecar; the runtime doesn't import it.
+pyinstaller>=6.0
+python-dotenv>=1.0

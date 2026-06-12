@@ -1,0 +1,114 @@
+<script>
+  import { onMount } from 'svelte';
+  import { getDocumentStore } from '../../../../lib/document/index.js';
+  import { persistence } from '$lib/document/persistence.svelte.js';
+  import { studio } from '$lib/studio/runtime.svelte.js';
+  import { dfmStatus } from './inspector/DfmPanel.svelte';
+  import { invariantStatus } from './inspector/InvariantsPanel.svelte';
+  import { assumptionStatus } from './inspector/AssumptionsManifestPanel.svelte';
+
+  let featureCount = $state(0);
+
+  function readFromStore(store) {
+    featureCount = Object.keys(store.doc.features || {}).length;
+  }
+
+  onMount(() => {
+    const store = getDocumentStore();
+    readFromStore(store);
+    const unsub = store.subscribe((_doc, _evt, s) => readFromStore(s));
+    return unsub;
+  });
+
+  // Show whichever build123d the live kernel reports. Falls back gracefully
+  // when bridge isn't booted (e.g. on non-Studio routes).
+  let kernelLabel = $derived.by(() => {
+    const v = studio.bridge?.lastKernelVersion;
+    if (!v) return null;
+    const b = v.build123d || 'unknown';
+    return `b123d ${b}`;
+  });
+
+  let saveLabel = $derived.by(() => {
+    switch (persistence.status) {
+      case 'saved':   return 'Saved';
+      case 'pending': return 'Saving…';
+      case 'error':   return 'Save failed';
+      default:        return 'Unsaved';
+    }
+  });
+
+  let saveDotClass = $derived.by(() => {
+    switch (persistence.status) {
+      case 'saved':   return 'bg-emerald-500';
+      case 'pending': return 'bg-amber-400 animate-pulse';
+      case 'error':   return 'bg-destructive';
+      default:        return 'bg-muted-foreground/40';
+    }
+  });
+</script>
+
+<footer class="flex h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 text-xs text-muted-foreground">
+  <span class="flex items-center gap-1.5">
+    <span class={`size-1.5 rounded-full ${saveDotClass}`}></span>
+    {saveLabel}
+  </span>
+  <span class="opacity-30">|</span>
+  <span>{featureCount} feature{featureCount === 1 ? '' : 's'}</span>
+
+  {#if persistence.mismatchWarning}
+    <span class="opacity-30">|</span>
+    <span
+      class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
+      title={`Document was saved against build123d ${persistence.mismatchWarning.restored}; current kernel is ${persistence.mismatchWarning.current}. Rebuild may differ.`}
+    >
+      ⚠ kernel mismatch
+    </span>
+  {/if}
+
+  {#if dfmStatus.errorCount > 0 || dfmStatus.warningCount > 0}
+    <span class="opacity-30">|</span>
+    <button
+      type="button"
+      class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
+      title={`${dfmStatus.errorCount} errors, ${dfmStatus.warningCount} warnings (${dfmStatus.profileId ?? ''})`}
+      onclick={() => { /* future: scroll inspector to DFM section */ console.info('[dfm] chip clicked'); }}
+    >
+      ⚠ {dfmStatus.errorCount + dfmStatus.warningCount} DFM
+    </button>
+  {/if}
+
+  {#if invariantStatus.errorCount > 0 || invariantStatus.warningCount > 0}
+    <span class="opacity-30">|</span>
+    <button
+      type="button"
+      class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
+      title={`${invariantStatus.errorCount} errors, ${invariantStatus.warningCount} warnings`}
+      onclick={() => { /* future: scroll inspector to Invariants section */ console.info('[invariants] chip clicked'); }}
+    >
+      ⚠ {invariantStatus.errorCount + invariantStatus.warningCount} INV
+    </button>
+  {/if}
+
+  {#if assumptionStatus.unacknowledged > 0}
+    <span class="opacity-30">|</span>
+    <button
+      type="button"
+      class={`rounded border px-1.5 py-0.5 text-[10px] ${assumptionStatus.maxSeverity === 'warning'
+        ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+        : 'border-border bg-muted/30 text-muted-foreground'}`}
+      title={`${assumptionStatus.unacknowledged} unacknowledged assumption${assumptionStatus.unacknowledged === 1 ? '' : 's'}`}
+      onclick={() => { console.info('[assumptions] chip clicked'); }}
+    >
+      {assumptionStatus.maxSeverity === 'warning' ? '⚠' : '·'} {assumptionStatus.unacknowledged} ASM
+    </button>
+  {/if}
+
+  {#if kernelLabel}
+    <span class="ml-auto font-mono opacity-70">{kernelLabel}</span>
+    <span class="opacity-30">·</span>
+    <span class="font-mono">mm · Z-up</span>
+  {:else}
+    <span class="ml-auto font-mono">mm · Z-up</span>
+  {/if}
+</footer>

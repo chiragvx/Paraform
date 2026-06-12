@@ -1,0 +1,286 @@
+[
+  {
+    "id": "lib-part-rail-mgn12-100",
+    "name": "MGN12 Linear Rail 100mm",
+    "category": "rail",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# TODO: refine geometry — MGN12 rail extrusion, 100mm length\nfrom build123d import Box\nbody = Box(12, 100, 8)"
+    },
+    "connectors": [
+      {
+        "id": "rail",
+        "parent": "lib-part-rail-mgn12-100",
+        "kind": "rail",
+        "gender": "male",
+        "size": {
+          "nominal": "MGN12",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          1,
+          0
+        ],
+        "origin": [
+          0,
+          0,
+          4
+        ],
+        "mates_with": [
+          "rail"
+        ],
+        "inducedJoint": "prismatic",
+        "metadata": {
+          "description": "MGN12 rail surface — block slides along axis"
+        },
+        "interfaceId": "rail-mgn12",
+        "role": "linear-rail"
+      },
+      {
+        "id": "bore-1",
+        "parent": "lib-part-rail-mgn12-100",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          -40,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "bore-2",
+        "parent": "lib-part-rail-mgn12-100",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "bore-3",
+        "parent": "lib-part-rail-mgn12-100",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          40,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "rail",
+      "linear",
+      "mgn12",
+      "short",
+      "100mm",
+      "prismatic"
+    ],
+    "keywords": [
+      "rail",
+      "linear",
+      "mgn12",
+      "100",
+      "short"
+    ],
+    "boundingBox": {
+      "min": [
+        -6,
+        -50,
+        0
+      ],
+      "max": [
+        6,
+        50,
+        8
+      ]
+    }
+  },
+  {
+    "id": "lib-part-rail-mgn12-250",
+    "name": "MGN12 Linear Rail 250mm",
+    "category": "rail",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# TODO: refine geometry — MGN12 rail extrusion, 250mm length\nfrom build123d import Box\nbody = Box(12, 250, 8)"
+    },
+    "connectors": [
+      {
+        "id": "rail",
+        "parent": "lib-part-rail-mgn12-250",
+        "kind": "rail",
+        "gender": "male",
+        "size": {
+          "nominal": "MGN12",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          1,
+          0
+        ],
+        "origin": [
+          0,
+          0,
+          4
+        ],
+        "mates_with": [
+          "rail"
+        ],
+        "inducedJoint": "prismatic",
+        "metadata": {},
+        "interfaceId": "rail-mgn12",
+        "role": "linear-rail"
+      },
+      {
+        "id": "bore-1",
+        "parent": "lib-part-rail-mgn12-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          -100,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "bore-2",
+        "parent": "lib-part-rail-mgn12-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "bore-3",
+        "parent": "lib-part-rail-mgn12-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 3.4,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          100,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "rail",
+      "linear",
+      "mgn12",
+      "long",
+      "250mm",
+      "prismatic"
+    ],
+    "keywords": [
+      "rail",
+      "linear",
+      "mgn12",
+      "250",
+      "long"
+    ],
+    "boundingBox": {
+      "min": [
+        -6,
+        -125,
+        0
+      ],
+      "max": [
+        6,
+        125,
+        8
+      ]
+    }
+  }
+]

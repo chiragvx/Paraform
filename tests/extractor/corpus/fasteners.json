@@ -1,0 +1,114 @@
+[
+  {
+    "id": "four-m3-clearance",
+    "text": "four M3 clearance holes",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M3", "qty": 4, "role": "clearance" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m3x16-shcs-4",
+    "text": "4× M3×16 SHCS",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M3", "qty": 4, "length": 16 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "iso4762-m4-12",
+    "text": "ISO 4762 M4×12, 2 places",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M4", "qty": 2, "length": 12 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m5-tap-holes",
+    "text": "two M5 tapped holes",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M5", "qty": 2, "role": "tap" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "608-bearing",
+    "text": "608 bearing pressed into bore",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "608", "qty": 1 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "two-6201",
+    "text": "two 6201 bearings",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "6201", "qty": 2 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m6x20-shcs-6",
+    "text": "6 M6×20 SHCS",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M6", "qty": 6, "length": 20 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m3x10-iso4762-id",
+    "text": "iso4762-m3-10 ×4",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M3", "qty": 4, "length": 10 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m8x25-shcs",
+    "text": "M8×25 SHCS",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M8", "qty": 1, "length": 25 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "all-m3-clearance-corners",
+    "text": "M3 clearance holes at all four corners",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M3", "qty": 4, "role": "clearance" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "m4-bare",
+    "text": "M4 screws",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M4", "qty": 1 }
+      ],
+      "ambiguities": [
+        { "kind": "fastener-length" }
+      ]
+    }
+  }
+]

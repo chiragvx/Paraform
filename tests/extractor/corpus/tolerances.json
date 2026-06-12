@@ -1,0 +1,124 @@
+[
+  {
+    "id": "symmetric-mm",
+    "text": "All dimensions ±0.05 mm",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.05, "minus": 0.05, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "symmetric-no-unit",
+    "text": "Tolerance ±0.1",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.1, "minus": 0.1, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "symmetric-inches",
+    "text": "Hole ±0.001\"",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.0254, "minus": 0.0254, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "asymmetric-bore",
+    "text": "Bore diameter Ø22 +0.1/-0",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 22, "unit": "mm" },
+        { "_c": "tolerance", "target": "last-dimension", "plus": 0.1, "minus": 0, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "asymmetric-shaft",
+    "text": "Shaft +0.05/-0.02",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.05, "minus": 0.02, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "asymmetric-with-unit",
+    "text": "Slot width +0.2/-0.1 mm",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.2, "minus": 0.1, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "it7-unbound",
+    "text": "Shaft fit IT7",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "itGrade": 7, "plus": null, "minus": null, "unit": "mm", "ambiguous": "nominal-size-unresolved" }
+      ]
+    }
+  },
+  {
+    "id": "it7-bound-22",
+    "text": "Bore Ø22 IT7",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 22, "unit": "mm" },
+        { "_c": "tolerance", "target": "last-dimension", "itGrade": 7, "plus": 0.0105, "minus": 0.0105, "unit": "mm", "nominalSize": 22 }
+      ]
+    }
+  },
+  {
+    "id": "it9-all-features",
+    "text": "All features IT9",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "itGrade": 9, "plus": null, "minus": null, "unit": "mm", "ambiguous": "nominal-size-unresolved" }
+      ]
+    }
+  },
+  {
+    "id": "default-unless-specified",
+    "text": "Unless otherwise specified ±0.05",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.05, "minus": 0.05, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "default-all-features",
+    "text": "All features ±0.1 mm",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "plus": 0.1, "minus": 0.1, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "per-axis",
+    "text": "60 mm long ±0.05, 40 mm wide ±0.1",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 60, "unit": "mm" },
+        { "_c": "tolerance", "target": "last-dimension", "plus": 0.05, "minus": 0.05, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 40, "unit": "mm" },
+        { "_c": "tolerance", "target": "last-dimension", "plus": 0.1, "minus": 0.1, "unit": "mm" }
+      ]
+    }
+  },
+  {
+    "id": "h7-lone-unbound",
+    "text": "Bore H7",
+    "expected": {
+      "constraints": [
+        { "_c": "tolerance", "target": "all", "itGrade": 7, "plus": null, "minus": null, "unit": "mm", "ambiguous": "nominal-size-unresolved" }
+      ]
+    }
+  }
+]

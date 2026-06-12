@@ -1,0 +1,10 @@
+{
+  "wireFormat": 4,
+  "namingContract": 1,
+  "expected": {
+    "build123d": "0.10.0",
+    "occt": "7.8.1.1",
+    "python": "3.11"
+  },
+  "buildHash": null
+}

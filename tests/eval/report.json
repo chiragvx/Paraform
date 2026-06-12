@@ -1,0 +1,2333 @@
+{
+  "runAt": "2026-06-12T21:07:12.691Z",
+  "aggregate": {
+    "total": 35,
+    "passed": 35,
+    "overallPassRate": 1,
+    "byCategory": {
+      "kinematic": {
+        "total": 7,
+        "passed": 7,
+        "passRate": 1
+      },
+      "end-to-end": {
+        "total": 5,
+        "passed": 5,
+        "passRate": 1
+      },
+      "fasteners": {
+        "total": 5,
+        "passed": 5,
+        "passRate": 1
+      },
+      "fits": {
+        "total": 4,
+        "passed": 4,
+        "passRate": 1
+      },
+      "materials": {
+        "total": 4,
+        "passed": 4,
+        "passRate": 1
+      },
+      "primitives": {
+        "total": 6,
+        "passed": 6,
+        "passRate": 1
+      },
+      "spatial": {
+        "total": 4,
+        "passed": 4,
+        "passRate": 1
+      }
+    },
+    "perInvariant": {
+      "i-manifold-all-bodies": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-self-intersection": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-zero-thickness": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-material-assigned": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-material-in-database": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-process-assigned": {
+        "total": 35,
+        "passed": 0,
+        "passRate": 0
+      },
+      "i-standardpart-exists-in-catalog": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-clearance-hole-matches-iso273": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-bearing-bore-has-partref": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-fastener-thread-engagement": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-bearing-bore-in-fit-band": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-fastener-bearing-surface": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-fillet-radius-positive": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-chamfer-length-positive": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-shell-thickness-positive": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-extrude-amount-positive": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-component-has-parent": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-cyclic-components": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-joint-references-valid": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-inter-component-interference-at-rest": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-circular-parameters": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-parameters-have-units": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-bearing-pair-fits": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-clearance-hole-for-fastener": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-no-interference-along-trajectory": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-assembly-dof-sane": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      },
+      "i-standardpart-not-deprecated": {
+        "total": 35,
+        "passed": 35,
+        "passRate": 1
+      }
+    }
+  },
+  "gate": {
+    "ok": true,
+    "overallDelta": 0,
+    "regressions": [],
+    "baselineMissing": false
+  },
+  "results": [
+    {
+      "id": "pan-tilt-2dof",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "arm",
+            "dof": 2
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "2-DOF pan-tilt servo assembly. Extractor-level DOF assertion here; the geometric/kinematic assertions (2 revolute joints, driving pan to max swings the tip's world X/Y, no interference at rest or along the swept trajectory) live in src/lib/kinematics/__tests__/articulation.mjs since the eval harness has no kernel."
+    },
+    {
+      "id": "arm-3dof-reach",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "arm",
+            "dof": 3
+          },
+          {
+            "_c": "dimension",
+            "axis": null,
+            "value": 200,
+            "unit": "mm"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "3-DOF arm with a stated reach. DOF + reach dimension extracted; per-joint FK/clamp + swept-interference assertions are in the standalone articulation test (kernel-free solver math)."
+    },
+    {
+      "id": "arm-6dof-payload",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "six-axis-arm",
+            "dof": 6
+          },
+          {
+            "_c": "load",
+            "payload": 2,
+            "mode": "static",
+            "unit": "kg"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Six-axis arm + static payload. Regression net for the headline robotic-arm prompt class. computeDof on the assembled doc must report 6 movable DOF (see articulation.mjs); each revolute contributes 1, fixed brackets 0."
+    },
+    {
+      "id": "m3-clearance-plate-4hole",
+      "category": "end-to-end",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 60,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "width",
+            "value": 40,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 3,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "aluminum"
+          },
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso273",
+            "nominalSize": "M3",
+            "qty": 4,
+            "role": "clearance"
+          },
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "each-corner",
+            "count": 4
+          },
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "from-each-edge",
+            "offset": 5
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [
+          {
+            "kind": "material-grade"
+          }
+        ],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "The canonical end-to-end exemplar from the spec doc."
+    },
+    {
+      "id": "bearing-housing-608",
+      "category": "end-to-end",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 40,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "height",
+            "value": 12,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "6061"
+          },
+          {
+            "_c": "fit_class",
+            "class": "press"
+          },
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "bearing",
+            "nominalSize": "608",
+            "qty": 1
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "aluminum",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Housing + press-fit bearing — multi-layer constraints."
+    },
+    {
+      "id": "shaft-h7g6-rod",
+      "category": "end-to-end",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 10,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 50,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "304"
+          },
+          {
+            "_c": "fit_class",
+            "class": "H7/g6"
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "stainless",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Shaft with ISO 286 fit class."
+    },
+    {
+      "id": "bracket-pla-m4",
+      "category": "end-to-end",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 50,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 3,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "pla"
+          },
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso4762",
+            "nominalSize": "M4",
+            "qty": 2,
+            "length": 12
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "PLA bracket with M4 SHCS fasteners."
+    },
+    {
+      "id": "scara-frame-6061",
+      "category": "end-to-end",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "scara",
+            "dof": 4
+          },
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 200,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "width",
+            "value": 200,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 10,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "6061"
+          },
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso273",
+            "nominalSize": "M5",
+            "qty": 4,
+            "role": "tap"
+          },
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "each-corner",
+            "count": 4
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "aluminum",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "End-to-end mechanism + plate + tapped holes."
+    },
+    {
+      "id": "four-m3-clearance",
+      "category": "fasteners",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso273",
+            "nominalSize": "M3",
+            "qty": 4,
+            "role": "clearance"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "ISO 273 clearance — basic case."
+    },
+    {
+      "id": "m3x16-shcs-4",
+      "category": "fasteners",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso4762",
+            "nominalSize": "M3",
+            "qty": 4,
+            "length": 16
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Socket head cap screw fully spec'd."
+    },
+    {
+      "id": "iso4762-m4-12",
+      "category": "fasteners",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso4762",
+            "nominalSize": "M4",
+            "qty": 2,
+            "length": 12
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Explicit ISO catalog reference."
+    },
+    {
+      "id": "m5-tap",
+      "category": "fasteners",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "iso273",
+            "nominalSize": "M5",
+            "qty": 2,
+            "role": "tap"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Tapped holes role."
+    },
+    {
+      "id": "608-bearing-press",
+      "category": "fasteners",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "bearing",
+            "nominalSize": "608",
+            "qty": 1
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Bearing catalog selection."
+    },
+    {
+      "id": "h7-g6",
+      "category": "fits",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "fit_class",
+            "class": "H7/g6"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "ISO 286 sliding fit."
+    },
+    {
+      "id": "h7-k6",
+      "category": "fits",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "fit_class",
+            "class": "H7/k6"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Transition fit."
+    },
+    {
+      "id": "press-608",
+      "category": "fits",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "fit_class",
+            "class": "press"
+          },
+          {
+            "_c": "part_selection",
+            "catalogPrefix": "bearing",
+            "nominalSize": "608",
+            "qty": 1
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Press fit + bearing catalog combo."
+    },
+    {
+      "id": "slip-d8",
+      "category": "fits",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "fit_class",
+            "class": "slip"
+          },
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 8,
+            "unit": "mm"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Slip fit + diameter."
+    },
+    {
+      "id": "scara-4dof",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "scara",
+            "dof": 4
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "SCARA mechanism + DOF."
+    },
+    {
+      "id": "delta-3dof",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "delta",
+            "dof": 3
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Delta mechanism."
+    },
+    {
+      "id": "cartesian-xyz",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "cartesian",
+            "dof": 3
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Cartesian XYZ."
+    },
+    {
+      "id": "6dof-payload",
+      "category": "kinematic",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "kinematic",
+            "mechanism": "six-axis-arm",
+            "dof": 6
+          },
+          {
+            "_c": "load",
+            "payload": 5,
+            "mode": "static",
+            "unit": "kg"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Six-axis arm + payload load."
+    },
+    {
+      "id": "6061-housing",
+      "category": "materials",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "material",
+            "material": "6061"
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "aluminum",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "6061 grade explicit."
+    },
+    {
+      "id": "7075-T6",
+      "category": "materials",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "material",
+            "material": "7075"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "7075 with temper suffix — temper stripped."
+    },
+    {
+      "id": "304-sleeve",
+      "category": "materials",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "material",
+            "material": "304"
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "stainless",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "DIN material number aliased to 304."
+    },
+    {
+      "id": "alu-ambiguous",
+      "category": "materials",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "material",
+            "material": "aluminum"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [
+          {
+            "kind": "material-grade"
+          }
+        ],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Bare 'aluminum' — grade ambiguity."
+    },
+    {
+      "id": "plate-60x40x3",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 60,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "width",
+            "value": 40,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 3,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "aluminum"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [
+          {
+            "kind": "material-grade"
+          }
+        ],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Canonical plate spec — exercises dimension axes + material lexicon."
+    },
+    {
+      "id": "cube-40",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 40,
+            "unit": "mm"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Bare cube — single dimension."
+    },
+    {
+      "id": "box-100x50x25-6061",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 100,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "width",
+            "value": 50,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 25,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "6061"
+          }
+        ],
+        "missing": [],
+        "extra": [
+          {
+            "_c": "material",
+            "material": "aluminum",
+            "grade": null,
+            "process": null,
+            "_src": "material"
+          }
+        ],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "6061 alloy — material-grade explicit."
+    },
+    {
+      "id": "cyl-d22-h10",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 22,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "height",
+            "value": 10,
+            "unit": "mm"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Cylinder with diameter + height."
+    },
+    {
+      "id": "rod-d8-l50",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 8,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "length",
+            "value": 50,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "304"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Rod + stainless steel grade."
+    },
+    {
+      "id": "disc-d50-t2-brass",
+      "category": "primitives",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 50,
+            "unit": "mm"
+          },
+          {
+            "_c": "dimension",
+            "axis": "thickness",
+            "value": 2,
+            "unit": "mm"
+          },
+          {
+            "_c": "material",
+            "material": "brass"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Brass disc — thin part."
+    },
+    {
+      "id": "edge-offset-5",
+      "category": "spatial",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "from-each-edge",
+            "offset": 5
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Edge-offset datum."
+    },
+    {
+      "id": "four-at-corners",
+      "category": "spatial",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "each-corner",
+            "count": 4
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Corner-placement datum."
+    },
+    {
+      "id": "centered-bore-d6",
+      "category": "spatial",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "dimension",
+            "axis": "diameter",
+            "value": 6,
+            "unit": "mm"
+          },
+          {
+            "_c": "spatial",
+            "target": "holes",
+            "datum": "centered"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Centered hole + diameter."
+    },
+    {
+      "id": "top-face-feature",
+      "category": "spatial",
+      "ok": true,
+      "constraints": {
+        "matched": [
+          {
+            "_c": "spatial",
+            "target": "feature",
+            "datum": "top-face"
+          }
+        ],
+        "missing": [],
+        "extra": [],
+        "ok": true
+      },
+      "assumptions": {
+        "matched": [],
+        "missing": [],
+        "ok": true
+      },
+      "perInvariant": {
+        "i-manifold-all-bodies": true,
+        "i-no-self-intersection": true,
+        "i-no-zero-thickness": true,
+        "i-material-assigned": true,
+        "i-material-in-database": true,
+        "i-process-assigned": false,
+        "i-standardpart-exists-in-catalog": true,
+        "i-clearance-hole-matches-iso273": true,
+        "i-bearing-bore-has-partref": true,
+        "i-fastener-thread-engagement": true,
+        "i-bearing-bore-in-fit-band": true,
+        "i-fastener-bearing-surface": true,
+        "i-fillet-radius-positive": true,
+        "i-chamfer-length-positive": true,
+        "i-shell-thickness-positive": true,
+        "i-extrude-amount-positive": true,
+        "i-component-has-parent": true,
+        "i-no-cyclic-components": true,
+        "i-joint-references-valid": true,
+        "i-no-inter-component-interference-at-rest": true,
+        "i-no-circular-parameters": true,
+        "i-parameters-have-units": true,
+        "i-bearing-pair-fits": true,
+        "i-clearance-hole-for-fastener": true,
+        "i-no-interference-along-trajectory": true,
+        "i-assembly-dof-sane": true,
+        "i-standardpart-not-deprecated": true
+      },
+      "expectedInvariantsOk": true,
+      "notes": "Named-face datum."
+    }
+  ]
+}

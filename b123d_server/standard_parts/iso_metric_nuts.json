@@ -1,0 +1,172 @@
+[
+  {
+    "id": "iso4032-m2",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "name": "M2 Hex Nut",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "acrossFlats": 4.0,
+      "acrossCorners": 4.62,
+      "height": 1.6
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m2p5",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "name": "M2.5 Hex Nut",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "acrossFlats": 5.0,
+      "acrossCorners": 5.77,
+      "height": 2.0
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m3",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "name": "M3 Hex Nut",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "acrossFlats": 5.5,
+      "acrossCorners": 6.35,
+      "height": 2.4
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m4",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "name": "M4 Hex Nut",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "acrossFlats": 7.0,
+      "acrossCorners": 8.08,
+      "height": 3.2
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m5",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "name": "M5 Hex Nut",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "acrossFlats": 8.0,
+      "acrossCorners": 9.24,
+      "height": 4.7
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m6",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "name": "M6 Hex Nut",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "acrossFlats": 10.0,
+      "acrossCorners": 11.55,
+      "height": 5.2
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m8",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "name": "M8 Hex Nut",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "acrossFlats": 13.0,
+      "acrossCorners": 15.01,
+      "height": 6.8
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m10",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "name": "M10 Hex Nut",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "acrossFlats": 17.0,
+      "acrossCorners": 19.63,
+      "height": 8.4
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m12",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "name": "M12 Hex Nut",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "acrossFlats": 19.0,
+      "acrossCorners": 21.94,
+      "height": 10.8
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  },
+  {
+    "id": "iso4032-m16",
+    "standard": "ISO 4032",
+    "category": "Fastener",
+    "nominalSize": "M16",
+    "name": "M16 Hex Nut",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "acrossFlats": 24.0,
+      "acrossCorners": 27.71,
+      "height": 14.8
+    },
+    "metadata": {
+      "material": "steel"
+    }
+  }
+]

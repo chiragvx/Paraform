@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── JS unit tests (zero-dep node:assert suites). Fast, hermetic. ──────────
+  js-tests:
+    name: JS unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS deps
+        run: npm ci --no-audit --no-fund
+
+      - name: Aggregator (npm test)
+        run: npm test
+
+      # Suites added after the aggregator was last refreshed — run explicitly
+      # so they don't silently rot.
+      - name: Migration tests
+        run: node lib/document/__tests__/migration.mjs
+      - name: Components data-layer tests
+        run: node lib/document/__tests__/components.mjs
+      - name: Component CRUD tests
+        run: node lib/document/__tests__/component_ops.mjs
+      - name: Picker component-aware tests
+        run: node lib/picking/__tests__/component_aware.mjs
+      - name: Expression evaluator tests
+        run: node src/lib/parameters/__tests__/expression.mjs
+      - name: Measure API client tests
+        run: node src/lib/measure/__tests__/api.mjs
+      - name: Library standard-parts client tests
+        run: node src/lib/library/__tests__/standard.mjs
+      - name: DFM checks tests
+        run: node src/lib/dfm/__tests__/checks.mjs
+      - name: DFM runner tests
+        run: node src/lib/dfm/__tests__/runner.mjs
+
+      - name: Eval harness — runner unit tests
+        run: node --import ./src/lib/commands/__tests__/_register.mjs tests/eval/__tests__/runner.mjs
+
+      - name: Eval harness — full corpus + per-invariant regression gate
+        run: npm run eval
+
+      - name: Vite build (compile-check)
+        run: npx vite build --logLevel warn
+
+  # ── Python kernel tests (naming corpus, measure, standard parts). ─────────
+  python-tests:
+    name: Python kernel tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install kernel deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r b123d_server/requirements.txt pytest
+
+      - name: Run pytest on b123d_server/__tests__
+        working-directory: b123d_server
+        # __tests__ has nested suites (naming/, measure/, standard_parts/).
+        # The conftest.py files inject sys.path so module imports resolve.
+        run: pytest __tests__ -v --tb=short
+
+  # ── Smoke harness (vite dev + Playwright + local kernel). ─────────────────
+  smoke:
+    name: Browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install JS deps
+        run: npm ci --no-audit --no-fund
+
+      - name: Install kernel deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r b123d_server/requirements.txt
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Start kernel (background)
+        run: |
+          python b123d_server/server.py &
+          echo "KERNEL_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for kernel /health
+        run: |
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://localhost:7823/health > /dev/null; then
+              echo "kernel up (attempt $i)"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "kernel did not come up within 30s"
+          exit 1
+
+      - name: Run smoke harness
+        env:
+          VITE_ENGINE_URL: http://localhost:7823
+        run: npm run test:smoke
+
+      # Stability eval runs in the same job as smoke: it needs the same
+      # live kernel, the same Playwright install, and the same Node/Python
+      # setup. Sharing the job avoids re-installing Chromium (~150 MB) and
+      # double-booting the kernel. The dev server lifecycle is per-script —
+      # runner.mjs starts a vite on port 1421 (smoke uses 1420) so they
+      # don't collide if a future change ever runs them in parallel.
+      - name: Run stability eval
+        env:
+          VITE_ENGINE_URL: http://localhost:7823
+        run: npm run test:stability
+
+      - name: Stop kernel
+        if: always()
+        run: |
+          if [ -n "$KERNEL_PID" ]; then
+            kill "$KERNEL_PID" || true
+          fi

@@ -1,0 +1,29 @@
+{
+    "_doc": "Named fit-classes — friendly engineering vocabulary that maps to a slot the resolver can lift into ISO 286 bands. The canonical here is a phrase the FitClass constraint stores; the resolver maps 'press' → 'H7/p6' (or whatever the invariant library decides).",
+    "entries": [
+        {
+            "canonical": "press",
+            "aliases": ["press fit", "press-fit", "interference fit", "force fit", "shrink fit"]
+        },
+        {
+            "canonical": "slip",
+            "aliases": ["slip fit", "slip-fit", "loose fit", "loose-running fit"]
+        },
+        {
+            "canonical": "slide",
+            "aliases": ["slide fit", "slide-fit", "close running fit", "close-running fit"]
+        },
+        {
+            "canonical": "running",
+            "aliases": ["running fit", "free-running fit", "free running fit"]
+        },
+        {
+            "canonical": "transition",
+            "aliases": ["transition fit", "tap fit", "tap-fit"]
+        },
+        {
+            "canonical": "location",
+            "aliases": ["location fit", "locational fit"]
+        }
+    ]
+}

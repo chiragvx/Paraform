@@ -1,0 +1,32 @@
+[
+  {
+    "id": "keepout-a4988", "standard": "keep-out", "category": "KeepOut", "nominalSize": "a4988",
+    "name": "A4988 stepper driver keep-out",
+    "dims": { "length": 20, "width": 15, "height": 10 },
+    "bbox": { "min": [-10, -7.5, 0], "max": [10, 7.5, 10] }
+  },
+  {
+    "id": "keepout-arduino-nano", "standard": "keep-out", "category": "KeepOut", "nominalSize": "nano",
+    "name": "Arduino Nano keep-out",
+    "dims": { "length": 43.2, "width": 18, "height": 7 },
+    "bbox": { "min": [-21.6, -9, 0], "max": [21.6, 9, 7] }
+  },
+  {
+    "id": "keepout-esp32-devkit", "standard": "keep-out", "category": "KeepOut", "nominalSize": "esp32",
+    "name": "ESP32 DevKit keep-out",
+    "dims": { "length": 55, "width": 28, "height": 13 },
+    "bbox": { "min": [-27.5, -14, 0], "max": [27.5, 14, 13] }
+  },
+  {
+    "id": "keepout-lipo-2s", "standard": "keep-out", "category": "KeepOut", "nominalSize": "lipo-2s",
+    "name": "LiPo 2S battery keep-out",
+    "dims": { "length": 72, "width": 35, "height": 17 },
+    "bbox": { "min": [-36, -17.5, 0], "max": [36, 17.5, 17] }
+  },
+  {
+    "id": "keepout-switch-rocker", "standard": "keep-out", "category": "KeepOut", "nominalSize": "kcd1",
+    "name": "Rocker switch keep-out",
+    "dims": { "length": 21, "width": 15, "height": 23 },
+    "bbox": { "min": [-10.5, -7.5, 0], "max": [10.5, 7.5, 23] }
+  }
+]

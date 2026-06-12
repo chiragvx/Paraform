@@ -1,0 +1,56 @@
+[
+  {
+    "id": "standoff-m3-5",  "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x5",
+    "name": "M3 hex brass standoff, 5 mm",
+    "dims": { "acrossFlats": 5.0, "length": 5,  "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 5] }
+  },
+  {
+    "id": "standoff-m3-8",  "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x8",
+    "name": "M3 hex brass standoff, 8 mm",
+    "dims": { "acrossFlats": 5.0, "length": 8,  "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 8] }
+  },
+  {
+    "id": "standoff-m3-10", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x10",
+    "name": "M3 hex brass standoff, 10 mm",
+    "dims": { "acrossFlats": 5.0, "length": 10, "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 10] }
+  },
+  {
+    "id": "standoff-m3-15", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x15",
+    "name": "M3 hex brass standoff, 15 mm",
+    "dims": { "acrossFlats": 5.0, "length": 15, "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 15] }
+  },
+  {
+    "id": "standoff-m3-20", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x20",
+    "name": "M3 hex brass standoff, 20 mm",
+    "dims": { "acrossFlats": 5.0, "length": 20, "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 20] }
+  },
+  {
+    "id": "standoff-m3-25", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M3x25",
+    "name": "M3 hex brass standoff, 25 mm",
+    "dims": { "acrossFlats": 5.0, "length": 25, "threadNominal": 2.5 },
+    "bbox": { "min": [-2.887, -2.887, 0], "max": [2.887, 2.887, 25] }
+  },
+  {
+    "id": "standoff-m25-5", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M2.5x5",
+    "name": "M2.5 hex brass standoff, 5 mm",
+    "dims": { "acrossFlats": 4.0, "length": 5, "threadNominal": 2.05 },
+    "bbox": { "min": [-2.309, -2.309, 0], "max": [2.309, 2.309, 5] }
+  },
+  {
+    "id": "standoff-m25-8", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M2.5x8",
+    "name": "M2.5 hex brass standoff, 8 mm",
+    "dims": { "acrossFlats": 4.0, "length": 8, "threadNominal": 2.05 },
+    "bbox": { "min": [-2.309, -2.309, 0], "max": [2.309, 2.309, 8] }
+  },
+  {
+    "id": "standoff-m25-12", "standard": "DIN 6334-like", "category": "Standoff", "nominalSize": "M2.5x12",
+    "name": "M2.5 hex brass standoff, 12 mm",
+    "dims": { "acrossFlats": 4.0, "length": 12, "threadNominal": 2.05 },
+    "bbox": { "min": [-2.309, -2.309, 0], "max": [2.309, 2.309, 12] }
+  }
+]

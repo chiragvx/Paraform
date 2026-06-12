@@ -1,0 +1,593 @@
+[
+  {
+    "id": "lib-part-iso4032-m3",
+    "name": "M3 Hex Nut",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4032-m3",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-iso4032-m3",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2.4
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M3",
+        "role": "thread-top"
+      },
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-iso4032-m3",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M3",
+        "role": "thread-bottom"
+      }
+    ],
+    "tags": [
+      "nut",
+      "hex",
+      "m3",
+      "iso4032"
+    ],
+    "keywords": [
+      "m3",
+      "nut",
+      "hex",
+      "hexagonal"
+    ],
+    "boundingBox": {
+      "min": [
+        -2.75,
+        -2.75,
+        0
+      ],
+      "max": [
+        2.75,
+        2.75,
+        2.4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4032-m4",
+    "name": "M4 Hex Nut",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4032-m4",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-iso4032-m4",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          3.2
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "thread-top"
+      },
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-iso4032-m4",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "thread-bottom"
+      }
+    ],
+    "tags": [
+      "nut",
+      "hex",
+      "m4",
+      "iso4032"
+    ],
+    "keywords": [
+      "m4",
+      "nut",
+      "hex"
+    ],
+    "boundingBox": {
+      "min": [
+        -3.5,
+        -3.5,
+        0
+      ],
+      "max": [
+        3.5,
+        3.5,
+        3.2
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4032-m5",
+    "name": "M5 Hex Nut",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4032-m5",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-iso4032-m5",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          4
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "thread-top"
+      },
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-iso4032-m5",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "thread-bottom"
+      }
+    ],
+    "tags": [
+      "nut",
+      "hex",
+      "m5",
+      "iso4032"
+    ],
+    "keywords": [
+      "m5",
+      "nut",
+      "hex"
+    ],
+    "boundingBox": {
+      "min": [
+        -4.25,
+        -4.25,
+        0
+      ],
+      "max": [
+        4.25,
+        4.25,
+        4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4032-m6",
+    "name": "M6 Hex Nut",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4032-m6",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-iso4032-m6",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          5.2
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "thread-top"
+      },
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-iso4032-m6",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "thread-bottom"
+      }
+    ],
+    "tags": [
+      "nut",
+      "hex",
+      "m6",
+      "iso4032"
+    ],
+    "keywords": [
+      "m6",
+      "nut",
+      "hex"
+    ],
+    "boundingBox": {
+      "min": [
+        -5,
+        -5,
+        0
+      ],
+      "max": [
+        5,
+        5,
+        5.2
+      ]
+    }
+  },
+  {
+    "id": "lib-part-tnut-m5-2020",
+    "name": "M5 T-Nut (HFS5 / 2020)",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "tnut-hntr5-m5",
+      "params": {}
+    },
+    "kernelEntryId": "tnut-hntr5-m5",
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-tnut-m5-2020",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2.7
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "M5 thread, accessible from above the slot"
+        },
+        "interfaceId": "thread-M5",
+        "role": "thread-top"
+      },
+      {
+        "id": "rail-slide",
+        "parent": "lib-part-tnut-m5-2020",
+        "kind": "rail",
+        "gender": "neutral",
+        "size": {
+          "nominal": "20-series",
+          "unit": "mm"
+        },
+        "axis": [
+          1,
+          0,
+          0
+        ],
+        "origin": [
+          0,
+          0,
+          1
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "topology": "line",
+        "profile": "tslot-2020",
+        "fit": "detent",
+        "mates_with": [
+          "rail",
+          "slot"
+        ],
+        "inducedJoint": "prismatic",
+        "metadata": {
+          "description": "Slides in HFS5 (2020) t-slot channel; slide axis = +X, thread/out = +Z"
+        },
+        "interfaceId": "rail-2020",
+        "role": "rail-slide"
+      }
+    ],
+    "tags": [
+      "nut",
+      "t-nut",
+      "tnut",
+      "drop-in",
+      "m5",
+      "2020",
+      "hfs5",
+      "extrusion",
+      "slide"
+    ],
+    "keywords": [
+      "t-nut",
+      "tnut",
+      "t nut",
+      "drop-in",
+      "drop in",
+      "2020",
+      "hfs5",
+      "m5",
+      "extrusion"
+    ],
+    "boundingBox": {
+      "min": [
+        -6.5,
+        -4.75,
+        0
+      ],
+      "max": [
+        6.5,
+        4.75,
+        2.7
+      ]
+    }
+  },
+  {
+    "id": "lib-part-tnut-m8-4040",
+    "name": "M8 T-Nut (HFS8 / 4040)",
+    "category": "nut",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "tnut-hntr8-m8",
+      "params": {}
+    },
+    "kernelEntryId": "tnut-hntr8-m8",
+    "connectors": [
+      {
+        "id": "thr-top",
+        "parent": "lib-part-tnut-m8-4040",
+        "kind": "thread",
+        "gender": "female",
+        "size": {
+          "nominal": "M8",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          4
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "M8 thread, accessible from above the slot"
+        },
+        "interfaceId": "thread-M8",
+        "role": "thread-top"
+      },
+      {
+        "id": "rail-slide",
+        "parent": "lib-part-tnut-m8-4040",
+        "kind": "rail",
+        "gender": "neutral",
+        "size": {
+          "nominal": "40-series",
+          "unit": "mm"
+        },
+        "axis": [
+          1,
+          0,
+          0
+        ],
+        "origin": [
+          0,
+          0,
+          1.5
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "topology": "line",
+        "profile": "tslot-4040",
+        "fit": "detent",
+        "mates_with": [
+          "rail",
+          "slot"
+        ],
+        "inducedJoint": "prismatic",
+        "metadata": {
+          "description": "Slides in HFS8 (4040) t-slot channel; slide axis = +X, thread/out = +Z"
+        },
+        "interfaceId": "rail-4040",
+        "role": "rail-slide"
+      }
+    ],
+    "tags": [
+      "nut",
+      "t-nut",
+      "tnut",
+      "drop-in",
+      "m8",
+      "4040",
+      "hfs8",
+      "extrusion",
+      "slide"
+    ],
+    "keywords": [
+      "t-nut",
+      "tnut",
+      "t nut",
+      "drop-in",
+      "drop in",
+      "4040",
+      "hfs8",
+      "m8",
+      "extrusion"
+    ],
+    "boundingBox": {
+      "min": [
+        -9,
+        -7.5,
+        0
+      ],
+      "max": [
+        9,
+        7.5,
+        4
+      ]
+    }
+  }
+]

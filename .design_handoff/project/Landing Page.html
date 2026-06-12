@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paraform — AI-Native Parametric CAD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bhagwa:#E8630A;--bhagwa-l:#FF7B30;--bhagwa-xl:#FFAA77;
+  --bhagwa-dim:rgba(232,99,10,0.08);--bhagwa-glow:rgba(232,99,10,0.18);
+  --bg:#060606;--s1:#0D0D0D;--s2:#141414;--s3:#1C1C1C;--s4:#252525;
+  --b0:#1A1A1A;--b1:#252525;--b2:#333333;--b3:#444444;
+  --t1:#EDE9E4;--t2:#7A7470;--t3:#3C3830;
+  --green:#3DBA72;--red:#EF5C5C;--blue:#4A9EE0;
+  --D:'Space Grotesk',sans-serif;--B:'Manrope',sans-serif;--M:'JetBrains Mono',monospace;
+  --r:8px;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--t1);font-family:var(--B);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;height:62px;
+  display:flex;align-items:center;padding:0 52px;
+  transition:background .4s,border-color .4s;
+  border-bottom:1px solid transparent;
+}
+nav.scrolled{background:rgba(6,6,6,.9);backdrop-filter:blur(16px);border-color:var(--b0);}
+.n-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.n-mark{
+  width:30px;height:30px;background:var(--bhagwa);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--D);font-weight:700;font-size:14px;color:#fff;
+}
+.n-name{font-family:var(--D);font-weight:600;font-size:17px;color:var(--t1);letter-spacing:-.3px;}
+.n-links{display:flex;gap:28px;margin-left:44px;list-style:none;}
+.n-links a{color:var(--t2);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s;}
+.n-links a:hover{color:var(--t1);}
+.n-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+.nb{padding:7px 18px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;font-family:var(--D);}
+.nb.ghost{color:var(--t2);border:1px solid var(--b1);background:transparent;}
+.nb.ghost:hover{color:var(--t1);border-color:var(--b3);}
+.nb.orange{background:var(--bhagwa);color:#fff;border:none;}
+.nb.orange:hover{background:var(--bhagwa-l);box-shadow:0 4px 24px var(--bhagwa-glow);}
+
+/* ── HERO ── */
+.hero{
+  min-height:100vh;display:grid;grid-template-columns:1fr 1fr;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(232,99,10,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,99,10,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+.hero-l{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:110px 60px 80px 80px;position:relative;z-index:2;
+}
+.htag{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--bhagwa-dim);border:1px solid rgba(232,99,10,.22);
+  color:#FF9552;font-family:var(--M);font-size:11px;padding:5px 14px;
+  border-radius:100px;margin-bottom:44px;width:fit-content;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s ease, transform .7s ease;
+}
+.htag::before{content:'';width:5px;height:5px;background:var(--bhagwa);border-radius:50%;}
+h1.hh1{
+  font-family:var(--D);font-size:clamp(54px,6.5vw,92px);font-weight:700;
+  line-height:.95;letter-spacing:-3px;margin-bottom:30px;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s .08s ease, transform .7s .08s ease;
+}
+.hh1 .acc{color:var(--bhagwa);}
+.hsub{
+  font-size:18px;line-height:1.65;color:var(--t2);max-width:460px;
+  margin-bottom:48px;font-weight:500;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s .16s ease, transform .7s .16s ease;
+}
+.hcta{
+  display:flex;gap:14px;align-items:center;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s .24s ease, transform .7s .24s ease;
+}
+.bp{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;background:var(--bhagwa);color:#fff;
+  border-radius:var(--r);font-size:15px;font-weight:600;
+  text-decoration:none;transition:background .2s,transform .2s,box-shadow .2s;font-family:var(--D);
+}
+.bp:hover{background:var(--bhagwa-l);transform:translateY(-1px);box-shadow:0 8px 32px var(--bhagwa-glow);}
+.bs{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 22px;color:var(--t2);border:1px solid var(--b2);
+  border-radius:var(--r);font-size:15px;font-weight:600;
+  text-decoration:none;transition:color .2s,border-color .2s,background .2s;font-family:var(--D);
+}
+.bs:hover{color:var(--t1);border-color:var(--b3);background:var(--s2);}
+.hstats{
+  display:flex;gap:36px;margin-top:60px;padding-top:32px;
+  border-top:1px solid var(--b0);
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s .34s ease, transform .7s .34s ease;
+}
+.hstat label{display:block;font-family:var(--M);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--t3);margin-bottom:5px;}
+.hstat span{font-family:var(--D);font-size:22px;font-weight:700;letter-spacing:-.5px;}
+
+.hero-r{position:relative;overflow:hidden;}
+#hcanvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+.hglow{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:70%;height:70%;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(232,99,10,.06) 0%,transparent 70%);
+  animation:pls 5s ease-in-out infinite;
+}
+
+/* ── MARQUEE ── */
+.mq{border-top:1px solid var(--b0);border-bottom:1px solid var(--b0);background:var(--s1);padding:12px 0;overflow:hidden;}
+.mq-track{display:flex;width:max-content;animation:scrollX 50s linear infinite;}
+.mq-item{
+  display:flex;align-items:center;gap:10px;padding:0 36px;
+  font-family:var(--M);font-size:11px;color:var(--t3);white-space:nowrap;
+  border-right:1px solid var(--b0);
+}
+.mq-item .dot{width:3px;height:3px;background:var(--bhagwa);border-radius:50%;flex-shrink:0;}
+
+/* ── SHARED SECTION ATOMS ── */
+.stag{font-family:var(--M);font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--bhagwa);margin-bottom:18px;}
+.sh1{font-family:var(--D);font-size:clamp(36px,4vw,58px);font-weight:700;letter-spacing:-2px;line-height:1.0;margin-bottom:18px;}
+.ssub{font-size:17px;color:var(--t2);line-height:1.65;max-width:500px;margin-bottom:64px;text-wrap:pretty;}
+
+/* ── FEATURES ── */
+.feat{padding:140px 80px;}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.fc{
+  background:var(--s1);border:1px solid var(--b0);border-radius:14px;
+  padding:36px 32px;transition:border-color .3s,transform .4s;cursor:default;
+}
+.fc:hover{border-color:rgba(232,99,10,.4);transform:translateY(-3px);}
+.fi{
+  width:42px;height:42px;background:var(--bhagwa-dim);
+  border:1px solid rgba(232,99,10,.18);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:24px;
+}
+.fc h3{font-family:var(--D);font-size:18px;font-weight:600;margin-bottom:10px;letter-spacing:-.3px;}
+.fc p{font-size:14px;color:var(--t2);line-height:1.65;}
+
+/* ── AI SECTION ── */
+.ai-sec{
+  padding:120px 80px;background:var(--s1);
+  border-top:1px solid var(--b0);border-bottom:1px solid var(--b0);
+}
+.ai-layout{display:grid;grid-template-columns:1fr 1.35fr;gap:80px;align-items:center;}
+.ai-benefit{
+  display:flex;align-items:center;gap:14px;padding:16px;
+  background:var(--s2);border:1px solid var(--b1);border-radius:10px;
+}
+.ai-benefit-icon{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.ai-benefit h4{font-family:var(--D);font-size:13px;font-weight:600;margin-bottom:3px;}
+.ai-benefit p{font-size:12px;color:var(--t2);}
+/* Chat demo card */
+.chat-demo{
+  background:var(--s2);border:1px solid var(--b1);border-radius:14px;
+  overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.5);
+}
+.cd-header{
+  padding:13px 16px;border-bottom:1px solid var(--b0);
+  display:flex;align-items:center;gap:9px;
+}
+.cd-mark{
+  width:24px;height:24px;background:var(--bhagwa);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--D);font-weight:700;font-size:11px;color:#fff;flex-shrink:0;
+}
+.cd-title{font-family:var(--D);font-weight:600;font-size:13px;}
+.cd-badge{
+  margin-left:auto;display:flex;align-items:center;gap:5px;
+  background:rgba(61,186,114,.12);border:1px solid rgba(61,186,114,.28);
+  color:var(--green);font-family:var(--M);font-size:10px;padding:3px 9px;border-radius:100px;
+}
+.cd-badge::before{content:'';width:5px;height:5px;background:var(--green);border-radius:50%;}
+.cd-msgs{padding:18px;display:flex;flex-direction:column;gap:14px;}
+.msg-u{
+  align-self:flex-end;max-width:80%;background:var(--s3);border:1px solid var(--b1);
+  padding:10px 13px;border-radius:12px 12px 3px 12px;font-size:13px;line-height:1.55;
+  animation:fU .4s ease both;
+}
+.msg-ai{align-self:flex-start;width:100%;display:flex;gap:9px;}
+.ai-av{
+  width:24px;height:24px;background:var(--bhagwa);border-radius:6px;
+  flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--D);font-weight:700;font-size:11px;color:#fff;
+}
+.msg-ai-body{flex:1;}
+.msg-ai-text{font-size:13px;line-height:1.6;margin-bottom:10px;animation:fU .4s .2s ease both;}
+.diff-w{background:var(--bg);border:1px solid var(--b1);border-radius:8px;overflow:hidden;margin-bottom:10px;animation:fU .5s .35s ease both;}
+.diff-wh{
+  padding:7px 12px;border-bottom:1px solid var(--b0);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.diff-fn{font-family:var(--M);font-size:10.5px;color:var(--t3);}
+.diff-vb{font-family:var(--M);font-size:10px;color:var(--bhagwa-xl);background:var(--bhagwa-dim);border:1px solid rgba(232,99,10,.18);padding:2px 8px;border-radius:4px;}
+.diff-body{padding:6px 0;}
+.dl{display:flex;align-items:flex-start;gap:0;font-family:var(--M);font-size:11px;line-height:1.9;padding:0 10px;}
+.dl .ds{width:14px;flex-shrink:0;opacity:.5;}
+.dl .dc{flex:1;}
+.dl.r{background:rgba(239,92,92,.07);color:#F08080;}
+.dl.g{background:rgba(61,186,114,.07);color:#70CC8E;}
+.dl.n{color:var(--t3);}
+.diff-acts{padding:7px 12px;border-top:1px solid var(--b0);display:flex;gap:8px;animation:fU .4s .5s ease both;}
+.da{
+  padding:5px 14px;border-radius:5px;font-family:var(--D);font-size:12px;
+  font-weight:600;cursor:pointer;transition:all .2s;
+}
+.da.acc{background:rgba(61,186,114,.12);color:var(--green);border:1px solid rgba(61,186,114,.22);}
+.da.acc:hover{background:rgba(61,186,114,.22);}
+.da.rev{background:rgba(239,92,92,.08);color:#EF7A7A;border:1px solid rgba(239,92,92,.18);}
+.da.rev:hover{background:rgba(239,92,92,.18);}
+.cd-input{
+  padding:11px 14px;border-top:1px solid var(--b0);
+  display:flex;align-items:center;gap:10px;
+}
+.cd-input-box{
+  flex:1;background:var(--s3);border:1px solid var(--b1);
+  border-radius:7px;padding:8px 13px;font-family:var(--B);font-size:13px;color:var(--t3);
+}
+.cd-send{
+  width:32px;height:32px;background:var(--bhagwa);border:none;border-radius:7px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.cd-send:hover{background:var(--bhagwa-l);}
+
+/* ── PARAM SECTION ── */
+.param-sec{padding:120px 80px;}
+.param-layout{display:grid;grid-template-columns:1.35fr 1fr;gap:80px;align-items:center;}
+.param-demo{background:var(--s1);border:1px solid var(--b1);border-radius:14px;overflow:hidden;}
+.param-demo-h{
+  padding:11px 16px;border-bottom:1px solid var(--b0);
+  font-family:var(--M);font-size:10px;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--bhagwa);display:flex;align-items:center;gap:8px;
+}
+.param-list{padding:14px;display:flex;flex-direction:column;gap:6px;}
+.param-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--s2);border:1px solid var(--b0);border-radius:8px;
+  transition:border-color .2s;
+}
+.param-row:hover{border-color:var(--bhagwa);}
+.pname{font-family:var(--M);font-size:11.5px;color:var(--t2);flex-shrink:0;width:110px;}
+.pslider{flex:1;}
+.pslider input[type=range]{
+  width:100%;-webkit-appearance:none;height:2px;background:var(--b2);
+  border-radius:2px;outline:none;cursor:pointer;
+}
+.pslider input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;background:var(--bhagwa);
+  border-radius:50%;cursor:pointer;box-shadow:0 0 8px var(--bhagwa-glow);
+}
+.pval{
+  font-family:var(--M);font-size:12px;color:var(--t1);font-weight:500;
+  background:var(--s3);border:1px solid var(--b1);padding:3px 9px;
+  border-radius:5px;cursor:pointer;width:46px;text-align:right;flex-shrink:0;
+}
+.punit{font-family:var(--M);font-size:10px;color:var(--t3);width:22px;flex-shrink:0;}
+.param-footer{
+  padding:12px 14px;border-top:1px solid var(--b0);display:flex;gap:8px;
+}
+.pfbtn{
+  flex:1;padding:8px;border:none;border-radius:7px;font-family:var(--D);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.pfbtn.primary{background:var(--bhagwa);color:#fff;}
+.pfbtn.primary:hover{background:var(--bhagwa-l);}
+.pfbtn.ghost{background:transparent;color:var(--t2);border:1px solid var(--b1);flex:0;padding:8px 16px;}
+.pfbtn.ghost:hover{color:var(--t1);border-color:var(--b2);}
+
+/* ── VERSION SECTION ── */
+.ver-sec{padding:120px 80px;background:var(--s1);border-top:1px solid var(--b0);border-bottom:1px solid var(--b0);}
+.ver-layout{display:grid;grid-template-columns:1fr 1.35fr;gap:80px;align-items:center;}
+.ver-demo{display:flex;flex-direction:column;gap:0;}
+.vi{
+  display:flex;gap:18px;align-items:flex-start;padding:18px;
+  border-radius:10px;transition:background .2s;cursor:pointer;position:relative;
+}
+.vi:not(:last-child)::after{
+  content:'';position:absolute;left:35px;top:52px;width:1px;
+  height:calc(100% - 16px);background:var(--b1);
+}
+.vi:hover{background:var(--s2);}
+.vi.active{background:var(--s2);}
+.vnum{
+  width:26px;height:26px;flex-shrink:0;border-radius:50%;
+  background:var(--s3);border:1px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--M);font-size:11px;color:var(--t2);position:relative;z-index:1;
+}
+.vi.active .vnum{background:var(--bhagwa);border-color:transparent;color:#fff;box-shadow:0 0 12px var(--bhagwa-glow);}
+.vinfo{flex:1;}
+.vlabel{font-family:var(--D);font-size:14px;font-weight:600;margin-bottom:4px;}
+.vdesc{font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:6px;}
+.vmeta{display:flex;align-items:center;gap:10px;}
+.vbadge{font-family:var(--M);font-size:10px;padding:2px 8px;border-radius:4px;color:var(--bhagwa-xl);background:var(--bhagwa-dim);border:1px solid rgba(232,99,10,.15);}
+.vtime{font-family:var(--M);font-size:10px;color:var(--t3);}
+
+/* ── STUDIO PREVIEW ── */
+.preview-sec{padding:120px 80px;}
+.preview-header{text-align:center;margin-bottom:56px;}
+.studio-mockup{
+  background:var(--s1);border:1px solid var(--b1);border-radius:16px;
+  overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.6);
+  aspect-ratio:16/9;position:relative;display:grid;
+  grid-template-rows:44px 1fr 24px;
+  grid-template-columns:44px 200px 1fr 320px;
+}
+/* Topbar */
+.mock-topbar{
+  grid-column:1/-1;background:var(--s2);border-bottom:1px solid var(--b0);
+  display:flex;align-items:center;padding:0 14px;gap:10px;
+}
+.mock-tb-mark{width:24px;height:24px;background:var(--bhagwa);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--D);font-weight:700;font-size:11px;color:#fff;}
+.mock-tb-name{font-family:var(--D);font-size:12px;font-weight:500;padding:4px 10px;background:var(--s3);border:1px solid var(--b1);border-radius:5px;display:flex;align-items:center;gap:5px;color:var(--t2);}
+.mock-tb-sep{width:1px;height:18px;background:var(--b1);}
+.mock-tb-btns{display:flex;gap:2px;}
+.mock-tb-btn{width:26px;height:26px;border-radius:5px;background:transparent;border:none;display:flex;align-items:center;justify-content:center;}
+.mock-tb-btn svg{width:12px;height:12px;stroke:var(--t3);fill:none;stroke-width:1.5;}
+.mock-export{margin-left:auto;background:var(--bhagwa);color:#fff;border:none;border-radius:6px;padding:5px 13px;font-family:var(--D);font-size:11px;font-weight:600;cursor:default;display:flex;align-items:center;gap:5px;}
+/* Rail */
+.mock-rail{background:var(--s1);border-right:1px solid var(--b0);padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.mock-rail-btn{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.mock-rail-btn.active{background:rgba(232,99,10,.18);}
+.mock-rail-btn svg{width:14px;height:14px;fill:none;stroke-width:1.5;}
+/* Left panel */
+.mock-left{background:var(--s1);border-right:1px solid var(--b0);overflow:hidden;}
+.mock-left-tabs{display:flex;border-bottom:1px solid var(--b0);}
+.mock-left-tab{flex:1;padding:8px;font-family:var(--M);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;text-align:center;color:var(--t3);border-bottom:2px solid transparent;}
+.mock-left-tab.active{color:var(--bhagwa);border-bottom-color:var(--bhagwa);}
+.mock-layers{padding:10px;}
+.mock-layer{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:4px;}
+.mock-layer.active{background:rgba(232,99,10,.1);}
+.mock-ldot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.mock-lname{font-size:11px;color:var(--t2);}
+.mock-layer.active .mock-lname{color:var(--t1);}
+/* Viewport */
+.mock-vp{background:#050505;position:relative;overflow:hidden;}
+.mock-vp canvas{position:absolute;inset:0;width:100%;height:100%;}
+.mock-vp-ctrls{position:absolute;bottom:10px;right:10px;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--s2);border:1px solid var(--b0);border-radius:5px;overflow:hidden;}
+.mock-vc{padding:4px 8px;font-family:var(--M);font-size:9px;color:var(--t3);background:transparent;text-align:center;}
+.mock-vc.active{color:var(--t2);background:var(--s3);}
+/* AI Panel */
+.mock-ai{background:var(--s1);border-left:1px solid var(--b0);display:flex;flex-direction:column;overflow:hidden;}
+.mock-ai-h{padding:10px 12px;border-bottom:1px solid var(--b0);}
+.mock-ai-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.mock-ai-mark{width:20px;height:20px;background:var(--bhagwa);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--D);font-weight:700;font-size:9px;color:#fff;}
+.mock-ai-title{font-family:var(--D);font-size:12px;font-weight:600;}
+.mock-ai-badge{margin-left:auto;background:rgba(61,186,114,.12);border:1px solid rgba(61,186,114,.28);color:var(--green);font-family:var(--M);font-size:9px;padding:2px 7px;border-radius:100px;display:flex;align-items:center;gap:4px;}
+.mock-ai-badge::before{content:'';width:4px;height:4px;background:var(--green);border-radius:50%;}
+.mock-model-sel{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:7px 10px;font-family:var(--D);font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.mock-model-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);}
+.mock-msgs{padding:12px;flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;}
+.mock-msg-u{align-self:flex-end;max-width:80%;background:var(--s3);border:1px solid var(--b1);padding:8px 10px;border-radius:10px 10px 2px 10px;font-size:11px;line-height:1.5;}
+.mock-msg-ai{align-self:flex-start;display:flex;gap:7px;}
+.mock-ai-av{width:20px;height:20px;background:var(--bhagwa);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--D);font-weight:700;font-size:9px;color:#fff;}
+.mock-ai-text{font-size:11px;line-height:1.55;color:var(--t1);}
+.mock-diff{background:var(--bg);border:1px solid var(--b1);border-radius:6px;overflow:hidden;margin-top:6px;}
+.mock-diff-h{padding:5px 8px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between;}
+.mock-diff-fn{font-family:var(--M);font-size:9px;color:var(--t3);}
+.mock-diff-v{font-family:var(--M);font-size:9px;color:var(--bhagwa-xl);background:var(--bhagwa-dim);padding:1px 6px;border-radius:3px;}
+.mock-diff-lines{padding:4px 0;}
+.mdl{display:flex;gap:6px;font-family:var(--M);font-size:9.5px;line-height:1.8;padding:0 8px;}
+.mdl.g{background:rgba(61,186,114,.07);color:#70CC8E;}
+.mdl.r{background:rgba(239,92,92,.07);color:#F08080;}
+.mdl.n{color:var(--t3);}
+.mock-diff-acts{padding:6px 8px;border-top:1px solid var(--b0);display:flex;gap:6px;}
+.mock-da{padding:3px 10px;border-radius:4px;font-family:var(--D);font-size:10px;font-weight:600;border:none;cursor:default;}
+.mock-da.acc{background:rgba(61,186,114,.15);color:var(--green);}
+.mock-da.rev{background:rgba(239,92,92,.1);color:#EF7A7A;}
+.mock-input{padding:9px 12px;border-top:1px solid var(--b0);display:flex;gap:8px;align-items:center;}
+.mock-input-box{flex:1;background:var(--s3);border:1px solid var(--b1);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--t3);}
+.mock-send{width:26px;height:26px;background:var(--bhagwa);border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;}
+.mock-send svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2;}
+/* Status bar */
+.mock-status{grid-column:1/-1;background:var(--s2);border-top:1px solid var(--b0);display:flex;align-items:center;padding:0 14px;gap:14px;}
+.mock-stat{font-family:var(--M);font-size:9px;color:var(--t3);}
+
+/* ── CTA ── */
+.cta{padding:160px 80px;text-align:center;position:relative;overflow:hidden;}
+.cta-bg{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;
+  background:radial-gradient(ellipse 60% 50% at 50% 60%,rgba(232,99,10,.07) 0%,transparent 100%);
+}
+.cta h2{
+  font-family:var(--D);font-size:clamp(52px,7.5vw,104px);font-weight:700;
+  letter-spacing:-3.5px;line-height:.92;margin-bottom:28px;position:relative;z-index:1;
+}
+.cta h2 em{color:var(--bhagwa);font-style:normal;}
+.cta p{font-size:18px;color:var(--t2);margin-bottom:48px;position:relative;z-index:1;}
+.cta-btns{display:flex;gap:16px;justify-content:center;position:relative;z-index:1;}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--b0);padding:36px 80px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.f-left{display:flex;align-items:center;gap:10px;}
+.f-links{display:flex;gap:24px;list-style:none;}
+.f-links a{color:var(--t3);text-decoration:none;font-size:13px;transition:color .2s;}
+.f-links a:hover{color:var(--t2);}
+.f-copy{font-family:var(--M);font-size:11px;color:var(--t3);}
+
+/* ── ANIMATIONS ── */
+@keyframes fU{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+@keyframes fD{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:none;}}
+@keyframes scrollX{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes pls{0%,100%{opacity:.5;}50%{opacity:1;}}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+
+.rv{opacity:0;transform:translateY(28px);transition:opacity .75s ease,transform .75s ease;}
+.rv.in{opacity:1;transform:none;}
+.rv-l{opacity:0;transform:translateX(-28px);transition:opacity .75s ease,transform .75s ease;}
+.rv-l.in{opacity:1;transform:none;}
+.rv-r{opacity:0;transform:translateX(28px);transition:opacity .75s ease,transform .75s ease;}
+.rv-r.in{opacity:1;transform:none;}
+.d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}.d4{transition-delay:.4s;}.d5{transition-delay:.5s;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="n-logo">
+    <div class="n-mark">P</div>
+    <span class="n-name">Paraform</span>
+  </a>
+  <ul class="n-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#ai">AI Engine</a></li>
+    <li><a href="#studio-preview">Studio</a></li>
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">Pricing</a></li>
+  </ul>
+  <div class="n-right">
+    <a href="#" class="nb ghost">Sign in</a>
+    <a href="Studio.html" class="nb orange">Open Studio →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-l">
+    <div class="htag">Parametric CAD · Generative AI · Real-time 3D</div>
+    <h1 class="hh1">Design<br>anything.<br><span class="acc">Generate</span><br>everything.</h1>
+    <p class="hsub">Paraform is the AI-native parametric CAD studio for engineers who think in code and geometry. Describe your model — watch it emerge.</p>
+    <div class="hcta">
+      <a href="Studio.html" class="bp">Open Studio →</a>
+      <a href="#ai" class="bs">▶ Watch Demo</a>
+    </div>
+    <div class="hstats">
+      <div class="hstat"><label>Models created</label><span>248K+</span></div>
+      <div class="hstat"><label>AI generations</label><span>1.4M+</span></div>
+      <div class="hstat"><label>Export formats</label><span>14</span></div>
+    </div>
+  </div>
+  <div class="hero-r">
+    <div class="hglow"></div>
+    <canvas id="hcanvas"></canvas>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="mq">
+  <div class="mq-track" id="mq"></div>
+</div>
+
+<!-- FEATURES -->
+<section class="feat" id="features">
+  <div class="rv"><div class="stag">Core Capabilities</div></div>
+  <h2 class="sh1 rv d1">Everything you need to<br>build complex geometry.</h2>
+  <p class="ssub rv d2">From parametric constraints to AI-driven generation, Paraform is a complete 3D design environment for engineers who demand precision.</p>
+  <div class="feat-grid">
+    <div class="fc rv d1">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <h3>Parametric Modeling</h3>
+      <p>Every dimension is a named variable. Change one parameter and the entire model updates in real-time with full constraint propagation.</p>
+    </div>
+    <div class="fc rv d2">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <h3>AI Code Generation</h3>
+      <p>Describe your model in plain language. The AI writes the parametric script, adds features, and refines geometry with every prompt.</p>
+    </div>
+    <div class="fc rv d3">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h3>Real-time Rendering</h3>
+      <p>See your model update live as you type. High-quality shading, accurate normals, and physical materials — all natively in the browser.</p>
+    </div>
+    <div class="fc rv d1">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      </div>
+      <h3>Version Control</h3>
+      <p>Every AI generation is a checkpoint. Browse your history, compare states, and restore previous versions with one click.</p>
+    </div>
+    <div class="fc rv d2">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <h3>Export Anywhere</h3>
+      <p>STL, STEP, OBJ, GLTF, and 10 more formats. Direct integration with fabrication tools, slicers, and downstream CAD systems.</p>
+    </div>
+    <div class="fc rv d3">
+      <div class="fi">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h3>Collaborative Design</h3>
+      <p>Share models with your team. Fork versions, comment on geometry, and merge changes — parametric design like modern software development.</p>
+    </div>
+  </div>
+</section>
+
+<!-- AI SECTION -->
+<section class="ai-sec" id="ai">
+  <div class="ai-layout">
+    <div>
+      <div class="stag rv">AI Generation Engine</div>
+      <h2 class="sh1 rv d1">Describe it.<br>Watch it build.</h2>
+      <p class="ssub rv d2" style="margin-bottom:36px;">Paraform's AI understands mechanical intent. Tell it what you need and it generates precise parametric code — then shows you exactly what changed so you can accept or revert every modification.</p>
+      <div class="rv d2" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="ai-benefit">
+          <div class="ai-benefit-icon" style="background:rgba(61,186,114,.12);border:1px solid rgba(61,186,114,.25);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div><h4>Accept individual changes</h4><p>Review each AI edit before it applies to your model</p></div>
+        </div>
+        <div class="ai-benefit">
+          <div class="ai-benefit-icon" style="background:rgba(232,99,10,.1);border:1px solid rgba(232,99,10,.2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--bhagwa)" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          </div>
+          <div><h4>Instant revert to any version</h4><p>Full history with one-click restore, no rebuilding required</p></div>
+        </div>
+        <div class="ai-benefit">
+          <div class="ai-benefit-icon" style="background:rgba(74,158,224,.1);border:1px solid rgba(74,158,224,.2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div><h4>Choose your AI model</h4><p>Switch between Gemma 4, Gemini Flash, and Gemini Pro</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-demo rv-r d1">
+      <div class="cd-header">
+        <div class="cd-mark">P</div>
+        <span class="cd-title">Paraform AI</span>
+        <div style="flex:1"></div>
+        <span style="font-family:var(--M);font-size:10px;color:var(--t3);margin-right:10px;">GEMINI PRO</span>
+        <div class="cd-badge">Ready</div>
+      </div>
+      <div class="cd-msgs">
+        <div class="msg-u">Add M3 mounting holes at the four base plate corners with 2mm chamfer</div>
+        <div class="msg-ai">
+          <div class="ai-av">P</div>
+          <div class="msg-ai-body">
+            <div class="msg-ai-text">Added 4× M3 clearance holes (3.2mm dia) with 45° chamfers. Here's what changed:</div>
+            <div class="diff-w">
+              <div class="diff-wh">
+                <span class="diff-fn">bracket_base.scad</span>
+                <span class="diff-vb">v2 → v3</span>
+              </div>
+              <div class="diff-body">
+                <div class="dl n"><span class="ds"> </span><span class="dc">base_w = 120; base_d = 80;</span></div>
+                <div class="dl r"><span class="ds">-</span><span class="dc">// No mounting holes</span></div>
+                <div class="dl g"><span class="ds">+</span><span class="dc">hole_d = 3.2;  // M3 clearance</span></div>
+                <div class="dl g"><span class="ds">+</span><span class="dc">chamfer = 2; mount_off = 8;</span></div>
+                <div class="dl g"><span class="ds">+</span><span class="dc">corner_holes(hole_d, chamfer);</span></div>
+              </div>
+              <div class="diff-acts">
+                <button class="da acc" id="demo-acc">✓ Accept changes</button>
+                <button class="da rev" id="demo-rev">↩ Revert</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0 4px 33px;">
+          <div style="display:flex;gap:5px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--bhagwa);animation:pls 1.4s ease infinite;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--bhagwa);animation:pls 1.4s .2s ease infinite;opacity:.6;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--bhagwa);animation:pls 1.4s .4s ease infinite;opacity:.4;"></div>
+          </div>
+          <span style="font-size:11px;color:var(--t3);font-family:var(--M);">Rendering model…</span>
+        </div>
+      </div>
+      <div class="cd-input">
+        <div class="cd-input-box">Write a message…</div>
+        <button class="cd-send">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARAM SECTION -->
+<section class="param-sec">
+  <div class="param-layout">
+    <div class="param-demo rv-l d1">
+      <div class="param-demo-h">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Parameters
+      </div>
+      <div class="param-list">
+        <div class="param-row"><span class="pname">base_width</span><div class="pslider"><input type="range" min="60" max="200" value="120"></div><span class="pval">120</span><span class="punit">mm</span></div>
+        <div class="param-row"><span class="pname">base_depth</span><div class="pslider"><input type="range" min="40" max="160" value="80"></div><span class="pval">80</span><span class="punit">mm</span></div>
+        <div class="param-row"><span class="pname">wall_thickness</span><div class="pslider"><input type="range" min="2" max="20" value="4"></div><span class="pval">4</span><span class="punit">mm</span></div>
+        <div class="param-row"><span class="pname">fillet_r</span><div class="pslider"><input type="range" min="0" max="20" value="3"></div><span class="pval">3</span><span class="punit">mm</span></div>
+        <div class="param-row"><span class="pname">hole_diam</span><div class="pslider"><input type="range" min="1" max="12" value="3.2" step="0.1"></div><span class="pval">3.2</span><span class="punit">mm</span></div>
+        <div class="param-row"><span class="pname">chamfer</span><div class="pslider"><input type="range" min="0" max="8" value="2" step="0.5"></div><span class="pval">2</span><span class="punit">mm</span></div>
+      </div>
+      <div class="param-footer">
+        <button class="pfbtn primary">Apply</button>
+        <button class="pfbtn ghost">Reset</button>
+      </div>
+    </div>
+    <div>
+      <div class="stag rv">Parametric Engine</div>
+      <h2 class="sh1 rv d1">Every value<br>is a variable.</h2>
+      <p class="ssub rv d2" style="margin-bottom:0;">Paraform models are fully parametric — every dimension, angle, and offset is a named expression. Change wall thickness from 4 to 6mm and your entire model updates instantly. No rebuilding, no manual edits, no broken geometry.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VERSION SECTION -->
+<section class="ver-sec">
+  <div class="ver-layout">
+    <div>
+      <div class="stag rv">Version Control</div>
+      <h2 class="sh1 rv d1">Every generation<br>is a checkpoint.</h2>
+      <p class="ssub rv d2" style="margin-bottom:0;">Paraform tracks every AI-generated change as an immutable version. Navigate your design history, compare geometric states, and restore previous versions instantly — like Git, but for solid geometry.</p>
+    </div>
+    <div class="ver-demo rv-r d1">
+      <div class="vi active"><div class="vnum">4</div><div class="vinfo"><div class="vlabel">Added chamfers + mounting holes</div><div class="vdesc">4× M3 clearance holes, 2mm 45° chamfers at base corners</div><div class="vmeta"><span class="vbadge">Current</span><span class="vtime">2 min ago</span></div></div></div>
+      <div class="vi"><div class="vnum">3</div><div class="vinfo"><div class="vlabel">Increased wall thickness</div><div class="vdesc">wall_t: 4mm → 6mm for structural integrity</div><div class="vmeta"><span class="vtime">18 min ago</span></div></div></div>
+      <div class="vi"><div class="vnum">2</div><div class="vinfo"><div class="vlabel">Added internal ribbing</div><div class="vdesc">Cross-hatch support ribs, 2mm wide, 45° angle</div><div class="vmeta"><span class="vtime">34 min ago</span></div></div></div>
+      <div class="vi"><div class="vnum">1</div><div class="vinfo"><div class="vlabel">Initial generation</div><div class="vdesc">Base bracket 120×80mm, 4mm walls, fillet r=3</div><div class="vmeta"><span class="vtime">51 min ago</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STUDIO PREVIEW -->
+<section class="preview-sec" id="studio-preview">
+  <div class="preview-header rv">
+    <div class="stag" style="text-align:center;margin-bottom:16px;">Full Studio</div>
+    <h2 class="sh1" style="text-align:center;letter-spacing:-2px;">A professional CAD workspace,<br>reimagined from scratch.</h2>
+  </div>
+  <div class="studio-mockup rv d1">
+    <!-- Topbar -->
+    <div class="mock-topbar">
+      <div class="mock-tb-mark">P</div>
+      <div class="mock-tb-name">
+        New Custom Model
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="mock-tb-sep"></div>
+      <div class="mock-tb-btns">
+        <div class="mock-tb-btn"><svg viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/></svg></div>
+        <div class="mock-tb-btn"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></div>
+        <div class="mock-tb-btn"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.5"/></svg></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto;align-items:center;">
+        <div style="display:flex;background:var(--s3);border:1px solid var(--b1);border-radius:5px;overflow:hidden;">
+          <div style="padding:3px 8px;font-family:var(--M);font-size:9px;color:var(--t3);">XY</div>
+          <div style="padding:3px 8px;font-family:var(--M);font-size:9px;color:var(--t3);border-left:1px solid var(--b1);">XZ</div>
+          <div style="padding:3px 8px;font-family:var(--M);font-size:9px;color:var(--t3);border-left:1px solid var(--b1);">YZ</div>
+        </div>
+        <div class="mock-export">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Export
+        </div>
+      </div>
+    </div>
+    <!-- Rail -->
+    <div class="mock-rail">
+      <div class="mock-rail-btn active" style="background:rgba(232,99,10,.18);">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--bhagwa)" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="mock-rail-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--t3)" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+      <div class="mock-rail-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--t3)" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+      <div style="flex:1;"></div>
+      <div class="mock-rail-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--t3)" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
+    </div>
+    <!-- Left panel -->
+    <div class="mock-left">
+      <div class="mock-left-tabs">
+        <div class="mock-left-tab active">LAYERS</div>
+        <div class="mock-left-tab">SCRIPT</div>
+        <div class="mock-left-tab">LIB</div>
+      </div>
+      <div class="mock-layers">
+        <div class="mock-layer active"><div class="mock-ldot" style="background:#E8630A;"></div><span class="mock-lname">Bracket Body</span></div>
+        <div class="mock-layer"><div class="mock-ldot" style="background:#3DBA72;"></div><span class="mock-lname">Mounting Holes</span></div>
+        <div class="mock-layer"><div class="mock-ldot" style="background:#4A9EE0;"></div><span class="mock-lname">Chamfers</span></div>
+        <div class="mock-layer"><div class="mock-ldot" style="background:#9B7EE8;"></div><span class="mock-lname">Internal Ribs</span></div>
+      </div>
+    </div>
+    <!-- Viewport -->
+    <div class="mock-vp">
+      <canvas id="mock-canvas"></canvas>
+      <div class="mock-vp-ctrls">
+        <div class="mock-vc">TOP</div><div class="mock-vc">FRONT</div>
+        <div class="mock-vc">RIGHT</div><div class="mock-vc active">ISO</div>
+      </div>
+    </div>
+    <!-- AI Panel -->
+    <div class="mock-ai">
+      <div class="mock-ai-h">
+        <div class="mock-ai-top">
+          <div class="mock-ai-mark">P</div>
+          <span class="mock-ai-title">Paraform AI</span>
+          <div class="mock-ai-badge">Ready</div>
+        </div>
+        <div class="mock-model-sel">
+          <div class="mock-model-dot"></div>
+          Gemini Pro
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" style="margin-left:auto;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="mock-msgs">
+        <div class="mock-msg-u">Add mounting holes at base corners</div>
+        <div class="mock-msg-ai">
+          <div class="mock-ai-av">P</div>
+          <div>
+            <div class="mock-ai-text">Added 4× M3 clearance holes with chamfers.</div>
+            <div class="mock-diff">
+              <div class="mock-diff-h"><span class="mock-diff-fn">bracket.scad</span><span class="mock-diff-v">v2→v3</span></div>
+              <div class="mock-diff-lines">
+                <div class="mdl r"><span>-</span><span>// No holes</span></div>
+                <div class="mdl g"><span>+</span><span>hole_d = 3.2;</span></div>
+                <div class="mdl g"><span>+</span><span>chamfer = 2;</span></div>
+              </div>
+              <div class="mock-diff-acts">
+                <div class="mock-da acc">✓ Accept</div>
+                <div class="mock-da rev">↩ Revert</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-input">
+        <div class="mock-input-box">Write a message…</div>
+        <div class="mock-send"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+      </div>
+    </div>
+    <!-- Status -->
+    <div class="mock-status">
+      <span class="mock-stat">No selection · X — Y — Z —</span>
+      <span style="margin-left:auto;"></span>
+      <span class="mock-stat">12.7K cm³</span>
+      <span class="mock-stat" style="color:var(--b2);">|</span>
+      <span class="mock-stat">994K polys</span>
+      <span class="mock-stat" style="color:var(--b2);">|</span>
+      <span class="mock-stat">372 objects</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-bg"></div>
+  <h2 class="rv">Start designing<br><em>today.</em></h2>
+  <p class="rv d1">Free to start. No credit card. No install.</p>
+  <div class="cta-btns rv d2">
+    <a href="Studio.html" class="bp" style="font-size:17px;padding:16px 36px;">Open Studio →</a>
+    <a href="#" class="bs" style="font-size:17px;padding:16px 28px;">Read the docs</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-left">
+    <div class="n-mark">P</div>
+    <span style="font-family:var(--D);font-weight:600;font-size:16px;letter-spacing:-.2px;">Paraform</span>
+  </div>
+  <ul class="f-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">GitHub</a></li>
+    <li><a href="#">Discord</a></li>
+    <li><a href="#">Status</a></li>
+  </ul>
+  <div class="f-copy">© 2026 Paraform, Inc.</div>
+</footer>
+
+<script>
+// NAV scroll
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 30));
+
+// HERO reveal — trigger via JS so elements start hidden but reveal reliably
+function revealHero() {
+  document.querySelectorAll('.htag,.hh1,.hsub,.hcta,.hstats').forEach(el => {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+  });
+}
+if (document.readyState === 'complete') revealHero();
+else window.addEventListener('load', revealHero);
+
+// MARQUEE
+const mqItems = ['Parametric Modeling','AI Code Gen','Real-time 3D','Version Control','STEP Export','STL Export','Gemini Pro','Gemma 4','Boolean Ops','Surface Modeling','OpenSCAD Compat','Browser Native','GLTF Export','Multi-model AI'];
+const mq = document.getElementById('mq');
+mq.innerHTML = [...mqItems,...mqItems].map(t=>`<div class="mq-item"><span class="dot"></span>${t}</div>`).join('');
+
+// SCROLL REVEALS
+const obs = new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.12});
+document.querySelectorAll('.rv,.rv-l,.rv-r').forEach(el=>obs.observe(el));
+
+// VERSION items
+document.querySelectorAll('.vi').forEach(item=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.vi').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// DEMO buttons
+document.getElementById('demo-acc')?.addEventListener('click', function(){
+  this.textContent='✓ Accepted';
+  this.style.background='rgba(61,186,114,.28)';
+  this.disabled=true;
+});
+document.getElementById('demo-rev')?.addEventListener('click', function(){
+  this.textContent='↩ Reverted';
+  this.style.background='rgba(239,92,92,.2)';
+  this.disabled=true;
+});
+
+// PARAM sliders
+document.querySelectorAll('.param-row').forEach(row=>{
+  const sl=row.querySelector('input[type=range]');
+  const vl=row.querySelector('.pval');
+  if(sl&&vl) sl.addEventListener('input',()=>{
+    const v=parseFloat(sl.value);
+    vl.textContent=Number.isInteger(v)||sl.step==='1'?v:v.toFixed(1);
+  });
+});
+
+// ── HERO CANVAS WIREFRAME ──────────────────────────────────
+(function(){
+  const canvas=document.getElementById('hcanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let W,H,rotY=0,rotX=0.3;
+
+  function resize(){
+    const dpr=devicePixelRatio||1;
+    W=canvas.offsetWidth; H=canvas.offsetHeight;
+    canvas.width=W*dpr; canvas.height=H*dpr;
+    ctx.scale(dpr,dpr);
+  }
+  window.addEventListener('resize',resize); resize();
+
+  // Parametric shell mesh (visor-like form)
+  const verts=[], lines=[];
+  const uN=26, vN=16;
+  for(let ui=0;ui<=uN;ui++){
+    for(let vi=0;vi<=vN;vi++){
+      const u=ui/uN, v=vi/vN;
+      const theta=(u-.5)*Math.PI*1.55;
+      const phi=(v-.5)*Math.PI*.8;
+      const angDet=1+.07*Math.cos(theta*6);
+      const r=220*(.55+.45*Math.pow(Math.cos(phi*.85),2))*angDet;
+      const x=r*Math.sin(theta);
+      const y=(r*.52)*Math.sin(phi)-20;
+      const z=r*Math.cos(theta)*.62;
+      verts.push({x,y,z});
+    }
+  }
+  for(let ui=0;ui<uN;ui++) for(let vi=0;vi<=vN;vi++) lines.push([ui*(vN+1)+vi,(ui+1)*(vN+1)+vi]);
+  for(let ui=0;ui<=uN;ui++) for(let vi=0;vi<vN;vi++) lines.push([ui*(vN+1)+vi,ui*(vN+1)+vi+1]);
+
+  function rot(p){
+    const {x,y,z}=p;
+    const x1=x*Math.cos(rotY)+z*Math.sin(rotY);
+    const z1=-x*Math.sin(rotY)+z*Math.cos(rotY);
+    const y2=y*Math.cos(rotX)-z1*Math.sin(rotX);
+    const z2=y*Math.sin(rotX)+z1*Math.cos(rotX);
+    return{x:x1,y:y2,z:z2};
+  }
+  function prj(p){
+    const fov=620,dz=p.z+820;
+    return{x:p.x*fov/dz+W/2,y:p.y*fov/dz+H/2,d:p.z};
+  }
+
+  function gizmo(){
+    const gx=W-52,gy=H-52,gl=26;
+    [[[1,0,0],'#C84040','X'],[[0,1,0],'#40A840','Y'],[[0,0,1],'#4060C8','Z']].forEach(([d,c,l])=>{
+      const rp=rot({x:d[0]*gl,y:d[1]*gl,z:d[2]*gl});
+      const pp=prj(rp);
+      ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx+pp.x-W/2,gy+pp.y-H/2);
+      ctx.strokeStyle=c;ctx.lineWidth=1.2;ctx.stroke();
+      ctx.fillStyle=c;ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+      ctx.fillText(l,gx+(pp.x-W/2)*1.4,gy+(pp.y-H/2)*1.4+3);
+    });
+  }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    const proj=verts.map(v=>{const r=rot(v);const p=prj(r);return{...p,depth:r.z};});
+    const sl=lines.map(([a,b])=>({a,b,depth:(proj[a].depth+proj[b].depth)/2})).sort((a,b)=>a.depth-b.depth);
+    for(const {a,b,depth} of sl){
+      const pa=proj[a],pb=proj[b];
+      const t=Math.max(0,Math.min(1,(depth+240)/460));
+      const alpha=.04+.66*t;
+      if(t>.62){
+        ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+        ctx.strokeStyle=`rgba(232,99,10,${(t-.62)*.4})`;ctx.lineWidth=4;ctx.stroke();
+      }
+      ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+      if(t>.5){
+        const r=Math.round(232*t+70*(1-t)),g=Math.round(99*t+45*(1-t)),b2=Math.round(10*t+28*(1-t));
+        ctx.strokeStyle=`rgba(${r},${g},${b2},${alpha})`;
+      } else {
+        ctx.strokeStyle=`rgba(75,50,25,${alpha*.55})`;
+      }
+      ctx.lineWidth=.45+t*1.1;ctx.stroke();
+    }
+    gizmo();
+    rotY+=.0045;
+    requestAnimationFrame(render);
+  }
+  render();
+})();
+
+// ── MOCK STUDIO CANVAS ─────────────────────────────────────
+(function(){
+  const canvas=document.getElementById('mock-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let W,H,rotY=0.4,rotX=0.22;
+
+  function resize(){
+    const dpr=devicePixelRatio||1;
+    W=canvas.offsetWidth;H=canvas.offsetHeight;
+    canvas.width=W*dpr;canvas.height=H*dpr;
+    ctx.scale(dpr,dpr);
+  }
+  const ro=new ResizeObserver(resize);ro.observe(canvas);resize();
+
+  // Simple bracket mesh
+  const verts=[],lines=[];
+  const bw=1.4,bd=.9,bh=.38;
+  const corners=[[-bw,-bh,-bd],[bw,-bh,-bd],[bw,bh,-bd],[-bw,bh,-bd],[-bw,-bh,bd],[bw,-bh,bd],[bw,bh,bd],[-bw,bh,bd]];
+  corners.forEach(c=>verts.push({x:c[0]*55,y:c[1]*55,z:c[2]*55}));
+  [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(e=>lines.push(e));
+  // top grid
+  const bi=verts.length,s=6;
+  for(let i=0;i<=s;i++) for(let j=0;j<=s;j++) verts.push({x:-bw*55+(2*bw*55*i/s),y:bh*55,z:-bd*55+(2*bd*55*j/s)});
+  for(let i=0;i<s;i++) for(let j=0;j<=s;j++) lines.push([bi+i*(s+1)+j,bi+(i+1)*(s+1)+j]);
+  for(let i=0;i<=s;i++) for(let j=0;j<s;j++) lines.push([bi+i*(s+1)+j,bi+i*(s+1)+j+1]);
+  // holes
+  [[-bw*55+14,bh*55,-bd*55+14],[bw*55-14,bh*55,-bd*55+14],[bw*55-14,bh*55,bd*55-14],[-bw*55+14,bh*55,bd*55-14]].forEach(([hx,hy,hz])=>{
+    const hb=verts.length,hn=10,hr=7;
+    for(let i=0;i<=hn;i++) verts.push({x:hx+hr*Math.cos(i/hn*Math.PI*2),y:hy,z:hz+hr*Math.sin(i/hn*Math.PI*2)});
+    for(let i=0;i<hn;i++) lines.push([hb+i,hb+i+1]);
+  });
+
+  function rot(p){
+    const{x,y,z}=p;
+    const x1=x*Math.cos(rotY)+z*Math.sin(rotY),z1=-x*Math.sin(rotY)+z*Math.cos(rotY);
+    const y2=y*Math.cos(rotX)-z1*Math.sin(rotX),z2=y*Math.sin(rotX)+z1*Math.cos(rotX);
+    return{x:x1,y:y2,z:z2};
+  }
+  function prj(p){const fov=420,dz=p.z+600;return{x:p.x*fov/dz+W/2,y:p.y*fov/dz+H/2,d:p.z};}
+
+  function render(){
+    if(W===0||H===0){requestAnimationFrame(render);return;}
+    ctx.clearRect(0,0,W,H);
+    // grid
+    const gs=18,gn=8;
+    for(let i=-gn;i<=gn;i++){
+      const p1=rot({x:i*gs,y:bh*55+.5,z:-gn*gs}),p2=rot({x:i*gs,y:bh*55+.5,z:gn*gs});
+      const pp1=prj(p1),pp2=prj(p2);
+      ctx.beginPath();ctx.moveTo(pp1.x,pp1.y);ctx.lineTo(pp2.x,pp2.y);
+      ctx.strokeStyle='rgba(20,70,120,.4)';ctx.lineWidth=.4;ctx.stroke();
+    }
+    for(let j=-gn;j<=gn;j++){
+      const p1=rot({x:-gn*gs,y:bh*55+.5,z:j*gs}),p2=rot({x:gn*gs,y:bh*55+.5,z:j*gs});
+      const pp1=prj(p1),pp2=prj(p2);
+      ctx.beginPath();ctx.moveTo(pp1.x,pp1.y);ctx.lineTo(pp2.x,pp2.y);
+      ctx.strokeStyle='rgba(20,70,120,.4)';ctx.lineWidth=.4;ctx.stroke();
+    }
+    const proj=verts.map(v=>{const r=rot(v);const p=prj(r);return{...p,depth:r.z};});
+    const sl=lines.map(([a,b])=>({a,b,depth:(proj[a].d+proj[b].d)/2})).sort((x,y)=>x.depth-y.depth);
+    for(const{a,b,depth}of sl){
+      const pa=proj[a],pb=proj[b];
+      const t=Math.max(0,Math.min(1,(depth+200)/370));
+      const alpha=.1+.65*t;
+      ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+      ctx.strokeStyle=t>.5?`rgba(232,99,10,${alpha*.75})`:`rgba(75,50,22,${alpha*.6})`;
+      ctx.lineWidth=.4+t*.8;ctx.stroke();
+    }
+    rotY+=.004;requestAnimationFrame(render);
+  }
+  render();
+})();
+</script>
+</body>
+</html>

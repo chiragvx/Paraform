@@ -1,0 +1,890 @@
+[
+  {
+    "id": "lib-part-servo-sg90",
+    "name": "SG90 Micro Servo (9g)",
+    "category": "misc",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "servo-sg90",
+      "params": {}
+    },
+    "manufacturer": "TowerPro",
+    "connectors": [
+      {
+        "id": "mount",
+        "parent": "lib-part-servo-sg90",
+        "kind": "planar",
+        "gender": "neutral",
+        "role": "servo-mount",
+        "interfaceId": "servo-mount-9g",
+        "size": {
+          "nominal": "9g",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "planar"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "Mounting-flange plane; 2 holes at ±14mm in X. Pairs with servo-mount-9g bracket."
+        }
+      },
+      {
+        "id": "mount-hole-a",
+        "parent": "lib-part-servo-sg90",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -14,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-b",
+        "parent": "lib-part-servo-sg90",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          14,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "shaft",
+        "parent": "lib-part-servo-sg90",
+        "kind": "shaft",
+        "gender": "male",
+        "role": "output-shaft",
+        "interfaceId": "spline-SG90",
+        "size": {
+          "nominal": 4.8,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -5.5,
+          0,
+          31.5
+        ],
+        "mates_with": [
+          "bore"
+        ],
+        "inducedJoint": "revolute",
+        "metadata": {
+          "description": "Output spline, 21T ~4.8mm. Accepts SG90 horns (spline-SG90)."
+        }
+      }
+    ],
+    "tags": [
+      "servo",
+      "sg90",
+      "micro",
+      "9g",
+      "rc",
+      "actuator",
+      "servo-mount-9g"
+    ],
+    "keywords": [
+      "servo",
+      "sg90",
+      "micro servo",
+      "9g",
+      "9 gram",
+      "tower pro",
+      "hobby servo"
+    ],
+    "boundingBox": {
+      "min": [
+        -16,
+        -6.1,
+        0
+      ],
+      "max": [
+        16,
+        6.1,
+        32.5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-servo-mg90s",
+    "name": "MG90S Micro Servo (metal gear, 9g)",
+    "category": "misc",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "servo-mg90s",
+      "params": {}
+    },
+    "manufacturer": "TowerPro",
+    "connectors": [
+      {
+        "id": "mount",
+        "parent": "lib-part-servo-mg90s",
+        "kind": "planar",
+        "gender": "neutral",
+        "role": "servo-mount",
+        "interfaceId": "servo-mount-9g",
+        "size": {
+          "nominal": "9g",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "planar"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "9g mount flange — interchangeable with SG90 (servo-mount-9g)."
+        }
+      },
+      {
+        "id": "mount-hole-a",
+        "parent": "lib-part-servo-mg90s",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -14,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-b",
+        "parent": "lib-part-servo-mg90s",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          14,
+          0,
+          16.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "shaft",
+        "parent": "lib-part-servo-mg90s",
+        "kind": "shaft",
+        "gender": "male",
+        "role": "output-shaft",
+        "interfaceId": "spline-SG90",
+        "size": {
+          "nominal": 4.8,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -5.5,
+          0,
+          31.5
+        ],
+        "mates_with": [
+          "bore"
+        ],
+        "inducedJoint": "revolute",
+        "metadata": {
+          "description": "21T ~4.8mm output spline; SG90-compatible horns (spline-SG90)."
+        }
+      }
+    ],
+    "tags": [
+      "servo",
+      "mg90s",
+      "micro",
+      "9g",
+      "metal gear",
+      "rc",
+      "actuator",
+      "servo-mount-9g"
+    ],
+    "keywords": [
+      "servo",
+      "mg90s",
+      "micro servo",
+      "9g",
+      "metal gear",
+      "tower pro"
+    ],
+    "boundingBox": {
+      "min": [
+        -16,
+        -6.1,
+        0
+      ],
+      "max": [
+        16,
+        6.1,
+        32.5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-servo-mg996r",
+    "name": "MG996R Standard Servo (metal gear)",
+    "category": "misc",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "servo-mg996r",
+      "params": {}
+    },
+    "manufacturer": "TowerPro",
+    "connectors": [
+      {
+        "id": "mount",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "planar",
+        "gender": "neutral",
+        "role": "servo-mount",
+        "interfaceId": "servo-mount-standard",
+        "size": {
+          "nominal": "standard",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          26.7
+        ],
+        "mates_with": [
+          "planar"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "Standard 40x20 servo mount flange (servo-mount-standard); 4 holes 2.5mm."
+        }
+      },
+      {
+        "id": "mount-hole-a",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -24.5,
+          -5,
+          26.7
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-b",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -24.5,
+          5,
+          26.7
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-c",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          24.5,
+          -5,
+          26.7
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-d",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          24.5,
+          5,
+          26.7
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "shaft",
+        "parent": "lib-part-servo-mg996r",
+        "kind": "shaft",
+        "gender": "male",
+        "role": "output-shaft",
+        "interfaceId": "spline-25T",
+        "size": {
+          "nominal": 5.74,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -9.75,
+          0,
+          42.7
+        ],
+        "mates_with": [
+          "bore"
+        ],
+        "inducedJoint": "revolute",
+        "metadata": {
+          "description": "25T output spline ~5.74mm; accepts spline-25T horns (Futaba-pattern)."
+        }
+      }
+    ],
+    "tags": [
+      "servo",
+      "mg996r",
+      "standard",
+      "metal gear",
+      "rc",
+      "actuator",
+      "servo-mount-standard"
+    ],
+    "keywords": [
+      "servo",
+      "mg996r",
+      "standard servo",
+      "metal gear",
+      "55g",
+      "high torque"
+    ],
+    "boundingBox": {
+      "min": [
+        -27.5,
+        -10,
+        0
+      ],
+      "max": [
+        27.5,
+        10,
+        42.7
+      ]
+    }
+  },
+  {
+    "id": "lib-part-servo-ds3218",
+    "name": "DS3218 Standard Servo (20kg)",
+    "category": "misc",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "servo-ds3218",
+      "params": {}
+    },
+    "manufacturer": "DSServo",
+    "connectors": [
+      {
+        "id": "mount",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "planar",
+        "gender": "neutral",
+        "role": "servo-mount",
+        "interfaceId": "servo-mount-standard",
+        "size": {
+          "nominal": "standard",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          27.5
+        ],
+        "mates_with": [
+          "planar"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "Standard-size servo mount flange (servo-mount-standard)."
+        }
+      },
+      {
+        "id": "mount-hole-a",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -24.5,
+          -5,
+          27.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-b",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -24.5,
+          5,
+          27.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-c",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          24.5,
+          -5,
+          27.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-d",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          24.5,
+          5,
+          27.5
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "shaft",
+        "parent": "lib-part-servo-ds3218",
+        "kind": "shaft",
+        "gender": "male",
+        "role": "output-shaft",
+        "interfaceId": "spline-25T",
+        "size": {
+          "nominal": 5.74,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          -9.75,
+          0,
+          43.5
+        ],
+        "mates_with": [
+          "bore"
+        ],
+        "inducedJoint": "revolute",
+        "metadata": {
+          "description": "25T output spline ~5.74mm; spline-25T horns."
+        }
+      }
+    ],
+    "tags": [
+      "servo",
+      "ds3218",
+      "standard",
+      "high torque",
+      "20kg",
+      "rc",
+      "actuator",
+      "servo-mount-standard"
+    ],
+    "keywords": [
+      "servo",
+      "ds3218",
+      "20kg",
+      "high torque",
+      "standard servo",
+      "waterproof"
+    ],
+    "boundingBox": {
+      "min": [
+        -27.5,
+        -10,
+        0
+      ],
+      "max": [
+        27.5,
+        10,
+        43.5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-servo-dynamixel-ax12",
+    "name": "Dynamixel AX-12A Smart Servo",
+    "category": "misc",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "servo-dynamixel-ax12",
+      "params": {}
+    },
+    "manufacturer": "ROBOTIS",
+    "connectors": [
+      {
+        "id": "mount",
+        "parent": "lib-part-servo-dynamixel-ax12",
+        "kind": "planar",
+        "gender": "neutral",
+        "role": "servo-mount",
+        "interfaceId": "dynamixel-fr05",
+        "size": {
+          "nominal": "FR05",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "planar"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "Bottom frame face; ROBOTIS FR05 mounting grid (dynamixel-fr05)."
+        }
+      },
+      {
+        "id": "mount-hole-a",
+        "parent": "lib-part-servo-dynamixel-ax12",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          -12,
+          -12,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "mount-hole-b",
+        "parent": "lib-part-servo-dynamixel-ax12",
+        "kind": "bore",
+        "gender": "female",
+        "role": "mount-hole",
+        "size": {
+          "nominal": 2,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          12,
+          12,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "horn",
+        "parent": "lib-part-servo-dynamixel-ax12",
+        "kind": "shaft",
+        "gender": "male",
+        "role": "output-shaft",
+        "interfaceId": "dynamixel-horn-ax",
+        "size": {
+          "nominal": 7.5,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          1,
+          0
+        ],
+        "origin": [
+          0,
+          18.5,
+          25.5
+        ],
+        "mates_with": [
+          "bore"
+        ],
+        "inducedJoint": "revolute",
+        "metadata": {
+          "description": "Side-mounted output horn; AX-series spline (dynamixel-horn-ax)."
+        }
+      }
+    ],
+    "tags": [
+      "servo",
+      "dynamixel",
+      "ax-12",
+      "ax12a",
+      "smart",
+      "robotis",
+      "actuator",
+      "serial"
+    ],
+    "keywords": [
+      "servo",
+      "dynamixel",
+      "ax-12",
+      "ax12a",
+      "smart servo",
+      "robotis",
+      "serial servo"
+    ],
+    "boundingBox": {
+      "min": [
+        -16,
+        -16,
+        0
+      ],
+      "max": [
+        16,
+        20.5,
+        38.5
+      ]
+    }
+  }
+]

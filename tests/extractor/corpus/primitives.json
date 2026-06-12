@@ -1,0 +1,140 @@
+[
+  {
+    "id": "plate-60x40x3",
+    "text": "60×40×3 mm aluminum plate",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 60, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 40, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 3, "unit": "mm" },
+        { "_c": "material", "material": "aluminum" }
+      ],
+      "ambiguities": [
+        { "kind": "material-grade" }
+      ]
+    }
+  },
+  {
+    "id": "cube-40",
+    "text": "40 mm cube",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 40, "unit": "mm" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "box-100x50x25",
+    "text": "100 × 50 × 25 mm box, 6061 aluminum",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 100, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 50, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 25, "unit": "mm" },
+        { "_c": "material", "material": "6061" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "cyl-d22-h10",
+    "text": "Ø22 mm cylinder, 10 mm tall",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 22, "unit": "mm" },
+        { "_c": "dimension", "axis": "height", "value": 10, "unit": "mm" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "plate-200x100x5-steel",
+    "text": "200×100×5 mm steel plate",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 200, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 100, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 5, "unit": "mm" },
+        { "_c": "material", "material": "steel" }
+      ],
+      "ambiguities": [
+        { "kind": "material-grade" }
+      ]
+    }
+  },
+  {
+    "id": "rod-d8-l50",
+    "text": "Ø8 × 50 mm rod, stainless 304",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 8, "unit": "mm" },
+        { "_c": "dimension", "axis": "length", "value": 50, "unit": "mm" },
+        { "_c": "material", "material": "304" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "bracket-pla",
+    "text": "L-bracket, 50 mm legs, 3 mm thick, PLA",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 50, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 3, "unit": "mm" },
+        { "_c": "material", "material": "pla" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "spacer-d10-w5",
+    "text": "Ø10 mm spacer, 5 mm wide, 7075 aluminum",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 10, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 5, "unit": "mm" },
+        { "_c": "material", "material": "7075" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "panel-300x200x6",
+    "text": "300×200×6 mm panel, ABS",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 300, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 200, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 6, "unit": "mm" },
+        { "_c": "material", "material": "abs" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "disc-d50-t2",
+    "text": "Ø50 × 2 mm disc, brass",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 50, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 2, "unit": "mm" },
+        { "_c": "material", "material": "brass" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "block-30x30x30",
+    "text": "30×30×30 mm titanium block",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "length", "value": 30, "unit": "mm" },
+        { "_c": "dimension", "axis": "width", "value": 30, "unit": "mm" },
+        { "_c": "dimension", "axis": "thickness", "value": 30, "unit": "mm" },
+        { "_c": "material", "material": "titanium" }
+      ],
+      "ambiguities": []
+    }
+  }
+]

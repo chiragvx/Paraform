@@ -1,0 +1,168 @@
+{
+  "createdAt": "2026-06-07T16:34:44.956Z",
+  "overallPassRate": 1,
+  "perInvariant": {
+    "i-manifold-all-bodies": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-no-self-intersection": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-no-zero-thickness": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-material-assigned": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-material-in-database": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-process-assigned": {
+      "total": 32,
+      "passed": 0,
+      "passRate": 0
+    },
+    "i-standardpart-exists-in-catalog": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-clearance-hole-matches-iso273": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-bearing-bore-has-partref": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-fastener-thread-engagement": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-bearing-bore-in-fit-band": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-fastener-bearing-surface": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-fillet-radius-positive": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-chamfer-length-positive": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-shell-thickness-positive": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-extrude-amount-positive": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-component-has-parent": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-no-cyclic-components": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-joint-references-valid": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-no-inter-component-interference-at-rest": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-no-circular-parameters": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-parameters-have-units": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-bearing-pair-fits": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-clearance-hole-for-fastener": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    },
+    "i-standardpart-not-deprecated": {
+      "total": 32,
+      "passed": 32,
+      "passRate": 1
+    }
+  },
+  "byCategory": {
+    "end-to-end": {
+      "total": 5,
+      "passed": 5,
+      "passRate": 1
+    },
+    "fasteners": {
+      "total": 5,
+      "passed": 5,
+      "passRate": 1
+    },
+    "fits": {
+      "total": 4,
+      "passed": 4,
+      "passRate": 1
+    },
+    "kinematic": {
+      "total": 4,
+      "passed": 4,
+      "passRate": 1
+    },
+    "materials": {
+      "total": 4,
+      "passed": 4,
+      "passRate": 1
+    },
+    "primitives": {
+      "total": 6,
+      "passed": 6,
+      "passRate": 1
+    },
+    "spatial": {
+      "total": 4,
+      "passed": 4,
+      "passRate": 1
+    }
+  }
+}

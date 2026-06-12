@@ -1,0 +1,38 @@
+[
+  {
+    "id": "bearing-623",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "623",
+    "name": "623 deep-groove ball bearing",
+    "dims": { "innerDiameter": 3, "outerDiameter": 10, "width": 4 },
+    "metadata": { "type": "deep-groove-ball", "sealed": false }
+  },
+  {
+    "id": "bearing-6800",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6800",
+    "name": "6800 thin-section ball bearing",
+    "dims": { "innerDiameter": 10, "outerDiameter": 19, "width": 5 },
+    "metadata": { "type": "deep-groove-ball", "sealed": false }
+  },
+  {
+    "id": "bearing-6900",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6900",
+    "name": "6900 thin-section ball bearing",
+    "dims": { "innerDiameter": 10, "outerDiameter": 22, "width": 6 },
+    "metadata": { "type": "deep-groove-ball", "sealed": false }
+  },
+  {
+    "id": "bearing-f623",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "F623",
+    "name": "F623 flanged ball bearing",
+    "dims": { "innerDiameter": 3, "outerDiameter": 10, "width": 4 },
+    "metadata": { "type": "deep-groove-ball", "flanged": true, "flangeDiameter": 12, "sealed": false }
+  }
+]

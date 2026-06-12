@@ -1,0 +1,47 @@
+{
+    "_doc": "Kinematic / mechanism vocabulary. 'family' lets us flag 3-DOF cartesian vs. 4-DOF SCARA at routing time.",
+    "entries": [
+        {
+            "canonical": "scara",
+            "family": "scara",
+            "aliases": ["scara", "scara arm"],
+            "defaultDof": 4
+        },
+        {
+            "canonical": "cartesian",
+            "family": "cartesian",
+            "aliases": ["cartesian", "xyz", "linear cartesian"],
+            "defaultDof": 3
+        },
+        {
+            "canonical": "delta",
+            "family": "delta",
+            "aliases": ["delta", "delta robot", "delta arm", "parallel-link"],
+            "defaultDof": 3
+        },
+        {
+            "canonical": "gantry",
+            "family": "gantry",
+            "aliases": ["gantry", "h-gantry", "h-bot", "h-bot gantry", "corexy"],
+            "defaultDof": 3
+        },
+        {
+            "canonical": "six-axis-arm",
+            "family": "arm",
+            "aliases": ["6-dof arm", "six-axis arm", "6-axis arm", "industrial arm", "articulated arm"],
+            "defaultDof": 6
+        },
+        {
+            "canonical": "polar",
+            "family": "polar",
+            "aliases": ["polar", "polar manipulator"],
+            "defaultDof": 3
+        },
+        {
+            "canonical": "stewart",
+            "family": "parallel",
+            "aliases": ["stewart platform", "hexapod"],
+            "defaultDof": 6
+        }
+    ]
+}

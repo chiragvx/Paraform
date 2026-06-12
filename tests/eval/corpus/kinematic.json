@@ -1,0 +1,39 @@
+[
+  {
+    "id": "scara-4dof",
+    "category": "kinematic",
+    "spec": "4-DOF SCARA arm",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "scara", "dof": 4 }
+    ],
+    "notes": "SCARA mechanism + DOF."
+  },
+  {
+    "id": "delta-3dof",
+    "category": "kinematic",
+    "spec": "3-DOF delta robot",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "delta", "dof": 3 }
+    ],
+    "notes": "Delta mechanism."
+  },
+  {
+    "id": "cartesian-xyz",
+    "category": "kinematic",
+    "spec": "cartesian XYZ stage",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "cartesian", "dof": 3 }
+    ],
+    "notes": "Cartesian XYZ."
+  },
+  {
+    "id": "6dof-payload",
+    "category": "kinematic",
+    "spec": "6-DOF arm payload 5 kg",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "six-axis-arm", "dof": 6 },
+      { "_c": "load", "payload": 5, "mode": "static", "unit": "kg" }
+    ],
+    "notes": "Six-axis arm + payload load."
+  }
+]

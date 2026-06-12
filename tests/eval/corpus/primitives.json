@@ -1,0 +1,68 @@
+[
+  {
+    "id": "plate-60x40x3",
+    "category": "primitives",
+    "spec": "60×40×3 mm aluminum plate",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "length", "value": 60, "unit": "mm" },
+      { "_c": "dimension", "axis": "width", "value": 40, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 3, "unit": "mm" },
+      { "_c": "material", "material": "aluminum" }
+    ],
+    "expectedAssumptions": [{ "kind": "material-grade" }],
+    "notes": "Canonical plate spec — exercises dimension axes + material lexicon."
+  },
+  {
+    "id": "cube-40",
+    "category": "primitives",
+    "spec": "40 mm cube",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "length", "value": 40, "unit": "mm" }
+    ],
+    "notes": "Bare cube — single dimension."
+  },
+  {
+    "id": "box-100x50x25-6061",
+    "category": "primitives",
+    "spec": "100 × 50 × 25 mm box, 6061 aluminum",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "length", "value": 100, "unit": "mm" },
+      { "_c": "dimension", "axis": "width", "value": 50, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 25, "unit": "mm" },
+      { "_c": "material", "material": "6061" }
+    ],
+    "notes": "6061 alloy — material-grade explicit."
+  },
+  {
+    "id": "cyl-d22-h10",
+    "category": "primitives",
+    "spec": "Ø22 mm cylinder, 10 mm tall",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 22, "unit": "mm" },
+      { "_c": "dimension", "axis": "height", "value": 10, "unit": "mm" }
+    ],
+    "notes": "Cylinder with diameter + height."
+  },
+  {
+    "id": "rod-d8-l50",
+    "category": "primitives",
+    "spec": "Ø8 × 50 mm rod, stainless 304",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 8, "unit": "mm" },
+      { "_c": "dimension", "axis": "length", "value": 50, "unit": "mm" },
+      { "_c": "material", "material": "304" }
+    ],
+    "notes": "Rod + stainless steel grade."
+  },
+  {
+    "id": "disc-d50-t2-brass",
+    "category": "primitives",
+    "spec": "Ø50 × 2 mm disc, brass",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 50, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 2, "unit": "mm" },
+      { "_c": "material", "material": "brass" }
+    ],
+    "notes": "Brass disc — thin part."
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "bearing-608",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "608",
+    "name": "608 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 8,
+      "outerDiameter": 22,
+      "width": 7
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6000",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6000",
+    "name": "6000 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 10,
+      "outerDiameter": 26,
+      "width": 8
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6001",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6001",
+    "name": "6001 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 12,
+      "outerDiameter": 28,
+      "width": 8
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6002",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6002",
+    "name": "6002 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 15,
+      "outerDiameter": 32,
+      "width": 9
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6003",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6003",
+    "name": "6003 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 17,
+      "outerDiameter": 35,
+      "width": 10
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6200",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6200",
+    "name": "6200 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 10,
+      "outerDiameter": 30,
+      "width": 9
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-6201",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "6201",
+    "name": "6201 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 12,
+      "outerDiameter": 32,
+      "width": 10
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-625",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "625",
+    "name": "625 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 5,
+      "outerDiameter": 16,
+      "width": 5
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-626",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "626",
+    "name": "626 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 6,
+      "outerDiameter": 19,
+      "width": 6
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  },
+  {
+    "id": "bearing-624",
+    "standard": "ISO 15:2017",
+    "category": "Bearing",
+    "nominalSize": "624",
+    "name": "624 deep-groove ball bearing",
+    "dims": {
+      "innerDiameter": 4,
+      "outerDiameter": 13,
+      "width": 5
+    },
+    "metadata": {
+      "type": "deep-groove-ball",
+      "sealed": false
+    }
+  }
+]

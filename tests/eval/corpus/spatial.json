@@ -1,0 +1,39 @@
+[
+  {
+    "id": "edge-offset-5",
+    "category": "spatial",
+    "spec": "holes 5 mm from each edge",
+    "expectedConstraints": [
+      { "_c": "spatial", "target": "holes", "datum": "from-each-edge", "offset": 5 }
+    ],
+    "notes": "Edge-offset datum."
+  },
+  {
+    "id": "four-at-corners",
+    "category": "spatial",
+    "spec": "four holes at the corners",
+    "expectedConstraints": [
+      { "_c": "spatial", "target": "holes", "datum": "each-corner", "count": 4 }
+    ],
+    "notes": "Corner-placement datum."
+  },
+  {
+    "id": "centered-bore-d6",
+    "category": "spatial",
+    "spec": "Ø6 mm bore on center",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 6, "unit": "mm" },
+      { "_c": "spatial", "target": "holes", "datum": "centered" }
+    ],
+    "notes": "Centered hole + diameter."
+  },
+  {
+    "id": "top-face-feature",
+    "category": "spatial",
+    "spec": "logo on the top face",
+    "expectedConstraints": [
+      { "_c": "spatial", "target": "feature", "datum": "top-face" }
+    ],
+    "notes": "Named-face datum."
+  }
+]

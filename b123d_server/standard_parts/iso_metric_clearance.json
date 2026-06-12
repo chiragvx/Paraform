@@ -1,0 +1,362 @@
+[
+  {
+    "id": "iso273-m3-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M3",
+    "name": "M3 clearance (close)",
+    "dims": {
+      "threadNominal": "3",
+      "holeDiameter": 3.2,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m3-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M3",
+    "name": "M3 clearance (medium)",
+    "dims": {
+      "threadNominal": "3",
+      "holeDiameter": 3.4,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m3-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M3",
+    "name": "M3 clearance (loose)",
+    "dims": {
+      "threadNominal": "3",
+      "holeDiameter": 3.6,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m4-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M4",
+    "name": "M4 clearance (close)",
+    "dims": {
+      "threadNominal": "4",
+      "holeDiameter": 4.3,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m4-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M4",
+    "name": "M4 clearance (medium)",
+    "dims": {
+      "threadNominal": "4",
+      "holeDiameter": 4.5,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m4-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M4",
+    "name": "M4 clearance (loose)",
+    "dims": {
+      "threadNominal": "4",
+      "holeDiameter": 4.8,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m5-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M5",
+    "name": "M5 clearance (close)",
+    "dims": {
+      "threadNominal": "5",
+      "holeDiameter": 5.3,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m5-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M5",
+    "name": "M5 clearance (medium)",
+    "dims": {
+      "threadNominal": "5",
+      "holeDiameter": 5.5,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m5-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M5",
+    "name": "M5 clearance (loose)",
+    "dims": {
+      "threadNominal": "5",
+      "holeDiameter": 5.8,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m6-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M6",
+    "name": "M6 clearance (close)",
+    "dims": {
+      "threadNominal": "6",
+      "holeDiameter": 6.4,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m6-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M6",
+    "name": "M6 clearance (medium)",
+    "dims": {
+      "threadNominal": "6",
+      "holeDiameter": 6.6,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m6-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M6",
+    "name": "M6 clearance (loose)",
+    "dims": {
+      "threadNominal": "6",
+      "holeDiameter": 7.0,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m8-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M8",
+    "name": "M8 clearance (close)",
+    "dims": {
+      "threadNominal": "8",
+      "holeDiameter": 8.4,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m8-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M8",
+    "name": "M8 clearance (medium)",
+    "dims": {
+      "threadNominal": "8",
+      "holeDiameter": 9.0,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m8-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M8",
+    "name": "M8 clearance (loose)",
+    "dims": {
+      "threadNominal": "8",
+      "holeDiameter": 10.0,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m10-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M10",
+    "name": "M10 clearance (close)",
+    "dims": {
+      "threadNominal": "10",
+      "holeDiameter": 10.5,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m10-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M10",
+    "name": "M10 clearance (medium)",
+    "dims": {
+      "threadNominal": "10",
+      "holeDiameter": 11.0,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m10-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M10",
+    "name": "M10 clearance (loose)",
+    "dims": {
+      "threadNominal": "10",
+      "holeDiameter": 12.0,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m12-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M12",
+    "name": "M12 clearance (close)",
+    "dims": {
+      "threadNominal": "12",
+      "holeDiameter": 13.0,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m12-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M12",
+    "name": "M12 clearance (medium)",
+    "dims": {
+      "threadNominal": "12",
+      "holeDiameter": 14.0,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m12-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M12",
+    "name": "M12 clearance (loose)",
+    "dims": {
+      "threadNominal": "12",
+      "holeDiameter": 15.0,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  },
+  {
+    "id": "iso273-m16-close",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M16",
+    "name": "M16 clearance (close)",
+    "dims": {
+      "threadNominal": "16",
+      "holeDiameter": 17.0,
+      "fit": "close"
+    },
+    "metadata": {
+      "fit": "close"
+    }
+  },
+  {
+    "id": "iso273-m16-medium",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M16",
+    "name": "M16 clearance (medium)",
+    "dims": {
+      "threadNominal": "16",
+      "holeDiameter": 18.0,
+      "fit": "medium"
+    },
+    "metadata": {
+      "fit": "medium"
+    }
+  },
+  {
+    "id": "iso273-m16-loose",
+    "standard": "ISO 273",
+    "category": "ClearanceHole",
+    "nominalSize": "M16",
+    "name": "M16 clearance (loose)",
+    "dims": {
+      "threadNominal": "16",
+      "holeDiameter": 19.0,
+      "fit": "loose"
+    },
+    "metadata": {
+      "fit": "loose"
+    }
+  }
+]

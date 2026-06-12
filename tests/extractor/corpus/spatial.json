@@ -1,0 +1,111 @@
+[
+  {
+    "id": "5mm-from-edge",
+    "text": "holes 5 mm from each edge",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "holes", "datum": "from-each-edge", "offset": 5 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "four-at-corners",
+    "text": "four holes at the corners",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "holes", "datum": "each-corner", "count": 4 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "centered-bore",
+    "text": "Ø6 mm bore on center",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 6, "unit": "mm" },
+        { "_c": "spatial", "target": "holes", "datum": "centered" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "top-face-feature",
+    "text": "logo on the top face",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "feature", "datum": "top-face" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "inset-3mm",
+    "text": "pocket inset 3 mm from the edge",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "feature", "datum": "inset-from-edge", "offset": 3 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "4xM3-at-corners-5mm",
+    "text": "four M3 clearance holes at the corners, 5 mm from each edge",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M3", "qty": 4, "role": "clearance" },
+        { "_c": "spatial", "target": "holes", "datum": "each-corner", "count": 4 },
+        { "_c": "spatial", "target": "holes", "datum": "from-each-edge", "offset": 5 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "bottom-face",
+    "text": "groove on the bottom face",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "feature", "datum": "bottom-face" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "concentric",
+    "text": "concentric counterbore",
+    "expected": {
+      "constraints": [
+        { "_c": "spatial", "target": "feature", "datum": "concentric" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "centered-plate",
+    "text": "M5 hole centered on the plate",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M5", "qty": 1 },
+        { "_c": "spatial", "target": "holes", "datum": "centered" }
+      ],
+      "ambiguities": [
+        { "kind": "fastener-length" }
+      ]
+    }
+  },
+  {
+    "id": "front-face",
+    "text": "M3 boss on the front face",
+    "expected": {
+      "constraints": [
+        { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M3", "qty": 1 },
+        { "_c": "spatial", "target": "feature", "datum": "front-face" }
+      ],
+      "ambiguities": [
+        { "kind": "fastener-length" }
+      ]
+    }
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "lib-part-iso7089-m3",
+    "name": "M3 Flat Washer",
+    "category": "washer",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "iso7089-m3", "params": {} },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-iso7089-m3", "kind": "bore", "gender": "female",
+        "size": { "nominal": 3.2, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": { "description": "M3 clearance bore" } }
+    ],
+    "tags": ["washer", "flat", "m3", "iso7089"],
+    "keywords": ["m3", "washer", "flat", "shim"],
+    "boundingBox": { "min": [-3.5, -3.5, 0], "max": [3.5, 3.5, 0.5] }
+  },
+  {
+    "id": "lib-part-iso7089-m4",
+    "name": "M4 Flat Washer",
+    "category": "washer",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "iso7089-m4", "params": {} },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-iso7089-m4", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["washer", "flat", "m4"],
+    "keywords": ["m4", "washer", "flat"],
+    "boundingBox": { "min": [-4.5, -4.5, 0], "max": [4.5, 4.5, 0.8] }
+  },
+  {
+    "id": "lib-part-iso7089-m5",
+    "name": "M5 Flat Washer",
+    "category": "washer",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "iso7089-m5", "params": {} },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-iso7089-m5", "kind": "bore", "gender": "female",
+        "size": { "nominal": 5.3, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["washer", "flat", "m5"],
+    "keywords": ["m5", "washer", "flat"],
+    "boundingBox": { "min": [-5, -5, 0], "max": [5, 5, 1] }
+  },
+  {
+    "id": "lib-part-iso7089-m6",
+    "name": "M6 Flat Washer",
+    "category": "washer",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "iso7089-m6", "params": {} },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-iso7089-m6", "kind": "bore", "gender": "female",
+        "size": { "nominal": 6.4, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["washer", "flat", "m6"],
+    "keywords": ["m6", "washer", "flat"],
+    "boundingBox": { "min": [-6, -6, 0], "max": [6, 6, 1.6] }
+  }
+]

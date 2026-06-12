@@ -1,0 +1,1535 @@
+[
+  {
+    "id": "iso4762-m2-4",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 4,
+    "name": "M2x4 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 4,
+      "threadedLengthMin": 4
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-5",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 5,
+    "name": "M2x5 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 5,
+      "threadedLengthMin": 5
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-6",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 6,
+    "name": "M2x6 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 6,
+      "threadedLengthMin": 6
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-8",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 8,
+    "name": "M2x8 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 8,
+      "threadedLengthMin": 8
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 10,
+    "name": "M2x10 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 12,
+    "name": "M2x12 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 16,
+    "name": "M2x16 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2",
+    "length": 20,
+    "name": "M2x20 SHCS",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "headDiameter": 3.8,
+      "headHeight": 2.0,
+      "socketAcrossFlats": 1.5,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-5",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 5,
+    "name": "M2.5x5 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 5,
+      "threadedLengthMin": 5
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-6",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 6,
+    "name": "M2.5x6 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 6,
+      "threadedLengthMin": 6
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-8",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 8,
+    "name": "M2.5x8 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 8,
+      "threadedLengthMin": 8
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 10,
+    "name": "M2.5x10 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 12,
+    "name": "M2.5x12 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 16,
+    "name": "M2.5x16 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 20,
+    "name": "M2.5x20 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m2p5-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M2.5",
+    "length": 25,
+    "name": "M2.5x25 SHCS",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "headDiameter": 4.5,
+      "headHeight": 2.5,
+      "socketAcrossFlats": 2.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-5",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 5,
+    "name": "M3x5 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 5,
+      "threadedLengthMin": 5
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-6",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 6,
+    "name": "M3x6 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 6,
+      "threadedLengthMin": 6
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-8",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 8,
+    "name": "M3x8 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 8,
+      "threadedLengthMin": 8
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 10,
+    "name": "M3x10 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 12,
+    "name": "M3x12 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 16,
+    "name": "M3x16 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 20,
+    "name": "M3x20 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 25,
+    "name": "M3x25 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m3-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M3",
+    "length": 30,
+    "name": "M3x30 SHCS",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "headDiameter": 5.5,
+      "headHeight": 3.0,
+      "socketAcrossFlats": 2.5,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-6",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 6,
+    "name": "M4x6 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 6,
+      "threadedLengthMin": 6
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-8",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 8,
+    "name": "M4x8 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 8,
+      "threadedLengthMin": 8
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 10,
+    "name": "M4x10 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 12,
+    "name": "M4x12 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 16,
+    "name": "M4x16 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 20,
+    "name": "M4x20 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 25,
+    "name": "M4x25 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 30,
+    "name": "M4x30 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m4-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M4",
+    "length": 40,
+    "name": "M4x40 SHCS",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "headDiameter": 7.0,
+      "headHeight": 4.0,
+      "socketAcrossFlats": 3.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-8",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 8,
+    "name": "M5x8 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 8,
+      "threadedLengthMin": 8
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 10,
+    "name": "M5x10 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 12,
+    "name": "M5x12 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 16,
+    "name": "M5x16 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 20,
+    "name": "M5x20 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 25,
+    "name": "M5x25 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 30,
+    "name": "M5x30 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 40,
+    "name": "M5x40 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m5-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M5",
+    "length": 50,
+    "name": "M5x50 SHCS",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "headDiameter": 8.5,
+      "headHeight": 5.0,
+      "socketAcrossFlats": 4.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-10",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 10,
+    "name": "M6x10 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 10,
+      "threadedLengthMin": 10
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 12,
+    "name": "M6x12 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 16,
+    "name": "M6x16 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 20,
+    "name": "M6x20 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 25,
+    "name": "M6x25 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 30,
+    "name": "M6x30 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 40,
+    "name": "M6x40 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m6-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M6",
+    "length": 50,
+    "name": "M6x50 SHCS",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "headDiameter": 10.0,
+      "headHeight": 6.0,
+      "socketAcrossFlats": 5.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-12",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 12,
+    "name": "M8x12 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 12,
+      "threadedLengthMin": 12
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 16,
+    "name": "M8x16 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 20,
+    "name": "M8x20 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 25,
+    "name": "M8x25 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 30,
+    "name": "M8x30 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 40,
+    "name": "M8x40 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m8-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M8",
+    "length": 50,
+    "name": "M8x50 SHCS",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "headDiameter": 13.0,
+      "headHeight": 8.0,
+      "socketAcrossFlats": 6.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-16",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 16,
+    "name": "M10x16 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 16,
+      "threadedLengthMin": 16
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 20,
+    "name": "M10x20 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 25,
+    "name": "M10x25 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 30,
+    "name": "M10x30 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 40,
+    "name": "M10x40 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m10-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M10",
+    "length": 50,
+    "name": "M10x50 SHCS",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "headDiameter": 16.0,
+      "headHeight": 10.0,
+      "socketAcrossFlats": 8.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m12-20",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "length": 20,
+    "name": "M12x20 SHCS",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "headDiameter": 18.0,
+      "headHeight": 12.0,
+      "socketAcrossFlats": 10.0,
+      "lengthTotal": 20,
+      "threadedLengthMin": 20
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m12-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "length": 25,
+    "name": "M12x25 SHCS",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "headDiameter": 18.0,
+      "headHeight": 12.0,
+      "socketAcrossFlats": 10.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m12-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "length": 30,
+    "name": "M12x30 SHCS",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "headDiameter": 18.0,
+      "headHeight": 12.0,
+      "socketAcrossFlats": 10.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m12-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "length": 40,
+    "name": "M12x40 SHCS",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "headDiameter": 18.0,
+      "headHeight": 12.0,
+      "socketAcrossFlats": 10.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m12-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M12",
+    "length": 50,
+    "name": "M12x50 SHCS",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "headDiameter": 18.0,
+      "headHeight": 12.0,
+      "socketAcrossFlats": 10.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m16-25",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M16",
+    "length": 25,
+    "name": "M16x25 SHCS",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "headDiameter": 24.0,
+      "headHeight": 16.0,
+      "socketAcrossFlats": 14.0,
+      "lengthTotal": 25,
+      "threadedLengthMin": 25
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m16-30",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M16",
+    "length": 30,
+    "name": "M16x30 SHCS",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "headDiameter": 24.0,
+      "headHeight": 16.0,
+      "socketAcrossFlats": 14.0,
+      "lengthTotal": 30,
+      "threadedLengthMin": 30
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m16-40",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M16",
+    "length": 40,
+    "name": "M16x40 SHCS",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "headDiameter": 24.0,
+      "headHeight": 16.0,
+      "socketAcrossFlats": 14.0,
+      "lengthTotal": 40,
+      "threadedLengthMin": 40
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  },
+  {
+    "id": "iso4762-m16-50",
+    "standard": "ISO 4762",
+    "category": "Fastener",
+    "nominalSize": "M16",
+    "length": 50,
+    "name": "M16x50 SHCS",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "headDiameter": 24.0,
+      "headHeight": 16.0,
+      "socketAcrossFlats": 14.0,
+      "lengthTotal": 50,
+      "threadedLengthMin": 50
+    },
+    "metadata": {
+      "material": "steel",
+      "finish": "black-oxide"
+    }
+  }
+]

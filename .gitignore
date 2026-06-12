@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# UI validation bot output
+screenshots/
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/gen
+src-tauri/Cargo.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +30,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code worktrees
+.claude/worktrees/
+__pycache__/
+
+# Local secrets / API keys — never commit
+.env
+.env.local
+.env.*.local
+
+# PyInstaller sidecar build artifacts (regenerate: npm run sidecar:build)
+b123d_server/build/
+src-tauri/binaries/

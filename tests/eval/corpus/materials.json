@@ -1,0 +1,39 @@
+[
+  {
+    "id": "6061-housing",
+    "category": "materials",
+    "spec": "6061 aluminum housing",
+    "expectedConstraints": [
+      { "_c": "material", "material": "6061" }
+    ],
+    "notes": "6061 grade explicit."
+  },
+  {
+    "id": "7075-T6",
+    "category": "materials",
+    "spec": "bracket out of 7075-T6",
+    "expectedConstraints": [
+      { "_c": "material", "material": "7075" }
+    ],
+    "notes": "7075 with temper suffix — temper stripped."
+  },
+  {
+    "id": "304-sleeve",
+    "category": "materials",
+    "spec": "1.4301 stainless steel sleeve",
+    "expectedConstraints": [
+      { "_c": "material", "material": "304" }
+    ],
+    "notes": "DIN material number aliased to 304."
+  },
+  {
+    "id": "alu-ambiguous",
+    "category": "materials",
+    "spec": "aluminum housing",
+    "expectedConstraints": [
+      { "_c": "material", "material": "aluminum" }
+    ],
+    "expectedAssumptions": [{ "kind": "material-grade" }],
+    "notes": "Bare 'aluminum' — grade ambiguity."
+  }
+]

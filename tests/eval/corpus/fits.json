@@ -1,0 +1,40 @@
+[
+  {
+    "id": "h7-g6",
+    "category": "fits",
+    "spec": "H7/g6 fit between shaft and bore",
+    "expectedConstraints": [
+      { "_c": "fit_class", "class": "H7/g6" }
+    ],
+    "notes": "ISO 286 sliding fit."
+  },
+  {
+    "id": "h7-k6",
+    "category": "fits",
+    "spec": "press the pin into a H7/k6 fit",
+    "expectedConstraints": [
+      { "_c": "fit_class", "class": "H7/k6" }
+    ],
+    "notes": "Transition fit."
+  },
+  {
+    "id": "press-608",
+    "category": "fits",
+    "spec": "press fit for 608 bearing",
+    "expectedConstraints": [
+      { "_c": "fit_class", "class": "press" },
+      { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "608", "qty": 1 }
+    ],
+    "notes": "Press fit + bearing catalog combo."
+  },
+  {
+    "id": "slip-d8",
+    "category": "fits",
+    "spec": "slip fit on Ø8 dowel",
+    "expectedConstraints": [
+      { "_c": "fit_class", "class": "slip" },
+      { "_c": "dimension", "axis": "diameter", "value": 8, "unit": "mm" }
+    ],
+    "notes": "Slip fit + diameter."
+  }
+]

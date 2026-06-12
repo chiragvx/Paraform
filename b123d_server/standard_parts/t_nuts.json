@@ -1,0 +1,48 @@
+[
+  {
+    "id": "tnut-hntr5-m5",
+    "standard": "Misumi HNTR5",
+    "category": "T-Nut",
+    "nominalSize": "M5-20-series",
+    "name": "M5 T-Nut (HFS5 / 20-series channel)",
+    "dims": {
+      "series": 20,
+      "thread": "M5",
+      "threadNominal": 5.0,
+      "baseLength": 13.0,
+      "baseWidth": 9.5,
+      "baseHeight": 2.0,
+      "neckWidth": 5.7,
+      "neckHeight": 0.7
+    },
+    "metadata": {
+      "fitsExtrusionSeries": [20],
+      "slotSeries": "M5",
+      "channelWidth": 10.6,
+      "slotOpening": 6.0
+    }
+  },
+  {
+    "id": "tnut-hntr8-m8",
+    "standard": "Misumi HNTR8",
+    "category": "T-Nut",
+    "nominalSize": "M8-40-series",
+    "name": "M8 T-Nut (HFS8 / 40-series channel)",
+    "dims": {
+      "series": 40,
+      "thread": "M8",
+      "threadNominal": 8.0,
+      "baseLength": 18.0,
+      "baseWidth": 15.0,
+      "baseHeight": 3.0,
+      "neckWidth": 8.0,
+      "neckHeight": 1.0
+    },
+    "metadata": {
+      "fitsExtrusionSeries": [40],
+      "slotSeries": "M8",
+      "channelWidth": 15.4,
+      "slotOpening": 8.2
+    }
+  }
+]

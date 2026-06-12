@@ -1,0 +1,162 @@
+[
+  {
+    "id": "iso261-m2",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M2",
+    "name": "M2 coarse",
+    "dims": {
+      "threadNominal": 2.0,
+      "threadPitch": 0.4,
+      "rootDiameter": 1.6,
+      "profileDepth": 0.245
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m2p5",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M2.5",
+    "name": "M2.5 coarse",
+    "dims": {
+      "threadNominal": 2.5,
+      "threadPitch": 0.45,
+      "rootDiameter": 2.04,
+      "profileDepth": 0.276
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m3",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M3",
+    "name": "M3 coarse",
+    "dims": {
+      "threadNominal": 3.0,
+      "threadPitch": 0.5,
+      "rootDiameter": 2.45,
+      "profileDepth": 0.307
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m4",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M4",
+    "name": "M4 coarse",
+    "dims": {
+      "threadNominal": 4.0,
+      "threadPitch": 0.7,
+      "rootDiameter": 3.24,
+      "profileDepth": 0.429
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m5",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M5",
+    "name": "M5 coarse",
+    "dims": {
+      "threadNominal": 5.0,
+      "threadPitch": 0.8,
+      "rootDiameter": 4.13,
+      "profileDepth": 0.491
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m6",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M6",
+    "name": "M6 coarse",
+    "dims": {
+      "threadNominal": 6.0,
+      "threadPitch": 1.0,
+      "rootDiameter": 4.92,
+      "profileDepth": 0.613
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m8",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M8",
+    "name": "M8 coarse",
+    "dims": {
+      "threadNominal": 8.0,
+      "threadPitch": 1.25,
+      "rootDiameter": 6.65,
+      "profileDepth": 0.767
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m10",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M10",
+    "name": "M10 coarse",
+    "dims": {
+      "threadNominal": 10.0,
+      "threadPitch": 1.5,
+      "rootDiameter": 8.38,
+      "profileDepth": 0.92
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m12",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M12",
+    "name": "M12 coarse",
+    "dims": {
+      "threadNominal": 12.0,
+      "threadPitch": 1.75,
+      "rootDiameter": 10.11,
+      "profileDepth": 1.074
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  },
+  {
+    "id": "iso261-m16",
+    "standard": "ISO 261",
+    "category": "Thread",
+    "nominalSize": "M16",
+    "name": "M16 coarse",
+    "dims": {
+      "threadNominal": 16.0,
+      "threadPitch": 2.0,
+      "rootDiameter": 13.84,
+      "profileDepth": 1.227
+    },
+    "metadata": {
+      "series": "coarse"
+    }
+  }
+]

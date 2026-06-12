@@ -1,0 +1,81 @@
+[
+  {
+    "id": "servo-sg90",
+    "standard": "TowerPro SG90",
+    "category": "Servo",
+    "nominalSize": "9g",
+    "name": "SG90 micro servo",
+    "dims": {
+      "bodyL": 22.8, "bodyW": 12.2, "bodyH": 22.5,
+      "flangeEar": 4.6, "flangeT": 2.5, "flangeZ": 15.9,
+      "bossR": 5.5, "bossH": 4.0,
+      "shaftR": 2.4, "shaftH": 6.0, "shaftX": -5.5
+    },
+    "bbox": { "min": [-16, -6.1, 0], "max": [16, 6.1, 32.5] },
+    "metadata": { "mountInterface": "servo-mount-9g", "splineInterface": "spline-SG90" }
+  },
+  {
+    "id": "servo-mg90s",
+    "standard": "TowerPro MG90S",
+    "category": "Servo",
+    "nominalSize": "9g",
+    "name": "MG90S micro servo (metal gear)",
+    "dims": {
+      "bodyL": 22.8, "bodyW": 12.2, "bodyH": 22.5,
+      "flangeEar": 4.6, "flangeT": 2.5, "flangeZ": 15.9,
+      "bossR": 5.5, "bossH": 4.0,
+      "shaftR": 2.4, "shaftH": 6.0, "shaftX": -5.5
+    },
+    "bbox": { "min": [-16, -6.1, 0], "max": [16, 6.1, 32.5] },
+    "metadata": { "mountInterface": "servo-mount-9g", "splineInterface": "spline-SG90" }
+  },
+  {
+    "id": "servo-mg996r",
+    "standard": "TowerPro MG996R",
+    "category": "Servo",
+    "nominalSize": "standard",
+    "name": "MG996R standard servo (metal gear)",
+    "dims": {
+      "bodyL": 40.7, "bodyW": 19.7, "bodyH": 36.0,
+      "flangeEar": 7.15, "flangeT": 2.7, "flangeZ": 25.35,
+      "bossR": 6.0, "bossH": 4.0,
+      "shaftR": 2.87, "shaftH": 2.7, "shaftX": -9.75,
+      "mountHoleD": 2.5,
+      "mountHoles": [[-24.5, -5], [-24.5, 5], [24.5, -5], [24.5, 5]]
+    },
+    "bbox": { "min": [-27.5, -10, 0], "max": [27.5, 10, 42.7] },
+    "metadata": { "mountInterface": "servo-mount-standard", "splineInterface": "spline-25T" }
+  },
+  {
+    "id": "servo-ds3218",
+    "standard": "DSServo DS3218",
+    "category": "Servo",
+    "nominalSize": "standard",
+    "name": "DS3218 standard servo (20kg)",
+    "dims": {
+      "bodyL": 40.0, "bodyW": 20.0, "bodyH": 37.0,
+      "flangeEar": 7.5, "flangeT": 2.5, "flangeZ": 26.25,
+      "bossR": 6.0, "bossH": 4.0,
+      "shaftR": 2.87, "shaftH": 2.5, "shaftX": -9.75,
+      "mountHoleD": 2.5,
+      "mountHoles": [[-24.5, -5], [-24.5, 5], [24.5, -5], [24.5, 5]]
+    },
+    "bbox": { "min": [-27.5, -10, 0], "max": [27.5, 10, 43.5] },
+    "metadata": { "mountInterface": "servo-mount-standard", "splineInterface": "spline-25T" }
+  },
+  {
+    "id": "servo-dynamixel-ax12",
+    "standard": "ROBOTIS AX-12A",
+    "category": "Servo",
+    "nominalSize": "FR05",
+    "name": "Dynamixel AX-12A smart servo",
+    "dims": {
+      "bodyL": 32.0, "bodyW": 32.0, "bodyH": 38.5,
+      "flangeEar": 0.0, "flangeT": 0.0, "flangeZ": 0.0,
+      "bossR": 7.5, "bossH": 0.0,
+      "shaftR": 3.75, "shaftH": 0.0, "shaftX": 0.0
+    },
+    "bbox": { "min": [-16, -16, 0], "max": [16, 16, 38.5] },
+    "metadata": { "mountInterface": "dynamixel-fr05", "splineInterface": "dynamixel-horn-ax" }
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "m3-clearance-plate-4hole",
+    "category": "end-to-end",
+    "spec": "A 60×40×3 mm aluminum plate with four M3 clearance holes at the corners, 5 mm from each edge.",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "length", "value": 60, "unit": "mm" },
+      { "_c": "dimension", "axis": "width", "value": 40, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 3, "unit": "mm" },
+      { "_c": "material", "material": "aluminum" },
+      { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M3", "qty": 4, "role": "clearance" },
+      { "_c": "spatial", "target": "holes", "datum": "each-corner", "count": 4 },
+      { "_c": "spatial", "target": "holes", "datum": "from-each-edge", "offset": 5 }
+    ],
+    "expectedAssumptions": [{ "kind": "material-grade" }],
+    "notes": "The canonical end-to-end exemplar from the spec doc."
+  },
+  {
+    "id": "bearing-housing-608",
+    "category": "end-to-end",
+    "spec": "Ø40 mm 6061 aluminum housing, 12 mm tall, press fit for 608 bearing.",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 40, "unit": "mm" },
+      { "_c": "dimension", "axis": "height", "value": 12, "unit": "mm" },
+      { "_c": "material", "material": "6061" },
+      { "_c": "fit_class", "class": "press" },
+      { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "608", "qty": 1 }
+    ],
+    "notes": "Housing + press-fit bearing — multi-layer constraints."
+  },
+  {
+    "id": "shaft-h7g6-rod",
+    "category": "end-to-end",
+    "spec": "Ø10 × 50 mm 304 stainless rod with H7/g6 fit to housing.",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "diameter", "value": 10, "unit": "mm" },
+      { "_c": "dimension", "axis": "length", "value": 50, "unit": "mm" },
+      { "_c": "material", "material": "304" },
+      { "_c": "fit_class", "class": "H7/g6" }
+    ],
+    "notes": "Shaft with ISO 286 fit class."
+  },
+  {
+    "id": "bracket-pla-m4",
+    "category": "end-to-end",
+    "spec": "L-bracket, 50 mm legs, 3 mm thick, PLA, two M4×12 SHCS through the back face.",
+    "expectedConstraints": [
+      { "_c": "dimension", "axis": "length", "value": 50, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 3, "unit": "mm" },
+      { "_c": "material", "material": "pla" },
+      { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M4", "qty": 2, "length": 12 }
+    ],
+    "notes": "PLA bracket with M4 SHCS fasteners."
+  },
+  {
+    "id": "scara-frame-6061",
+    "category": "end-to-end",
+    "spec": "4-DOF SCARA arm base, 200×200×10 mm 6061 aluminum plate with four M5 tapped holes at the corners.",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "scara", "dof": 4 },
+      { "_c": "dimension", "axis": "length", "value": 200, "unit": "mm" },
+      { "_c": "dimension", "axis": "width", "value": 200, "unit": "mm" },
+      { "_c": "dimension", "axis": "thickness", "value": 10, "unit": "mm" },
+      { "_c": "material", "material": "6061" },
+      { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M5", "qty": 4, "role": "tap" },
+      { "_c": "spatial", "target": "holes", "datum": "each-corner", "count": 4 }
+    ],
+    "notes": "End-to-end mechanism + plate + tapped holes."
+  }
+]

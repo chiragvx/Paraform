@@ -1,0 +1,401 @@
+[
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "3-6 mm",
+    "dims": {
+      "rangeMin": 3,
+      "rangeMax": 6,
+      "holeUpperDevUm": 12,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -4,
+      "shaftLowerDevUm": -12
+    },
+    "id": "iso286-h7g6-3-6",
+    "name": "H7g6 3-6 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "3-6 mm",
+    "dims": {
+      "rangeMin": 3,
+      "rangeMax": 6,
+      "holeUpperDevUm": 12,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -8
+    },
+    "id": "iso286-h7h6-3-6",
+    "name": "H7h6 3-6 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "3-6 mm",
+    "dims": {
+      "rangeMin": 3,
+      "rangeMax": 6,
+      "holeUpperDevUm": 12,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 9,
+      "shaftLowerDevUm": 1
+    },
+    "id": "iso286-h7k6-3-6",
+    "name": "H7k6 3-6 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "6-10 mm",
+    "dims": {
+      "rangeMin": 6,
+      "rangeMax": 10,
+      "holeUpperDevUm": 15,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -5,
+      "shaftLowerDevUm": -14
+    },
+    "id": "iso286-h7g6-6-10",
+    "name": "H7g6 6-10 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "6-10 mm",
+    "dims": {
+      "rangeMin": 6,
+      "rangeMax": 10,
+      "holeUpperDevUm": 15,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -9
+    },
+    "id": "iso286-h7h6-6-10",
+    "name": "H7h6 6-10 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "6-10 mm",
+    "dims": {
+      "rangeMin": 6,
+      "rangeMax": 10,
+      "holeUpperDevUm": 15,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 10,
+      "shaftLowerDevUm": 1
+    },
+    "id": "iso286-h7k6-6-10",
+    "name": "H7k6 6-10 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "10-18 mm",
+    "dims": {
+      "rangeMin": 10,
+      "rangeMax": 18,
+      "holeUpperDevUm": 18,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -6,
+      "shaftLowerDevUm": -17
+    },
+    "id": "iso286-h7g6-10-18",
+    "name": "H7g6 10-18 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "10-18 mm",
+    "dims": {
+      "rangeMin": 10,
+      "rangeMax": 18,
+      "holeUpperDevUm": 18,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -11
+    },
+    "id": "iso286-h7h6-10-18",
+    "name": "H7h6 10-18 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "10-18 mm",
+    "dims": {
+      "rangeMin": 10,
+      "rangeMax": 18,
+      "holeUpperDevUm": 18,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 12,
+      "shaftLowerDevUm": 1
+    },
+    "id": "iso286-h7k6-10-18",
+    "name": "H7k6 10-18 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "18-30 mm",
+    "dims": {
+      "rangeMin": 18,
+      "rangeMax": 30,
+      "holeUpperDevUm": 21,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -7,
+      "shaftLowerDevUm": -20
+    },
+    "id": "iso286-h7g6-18-30",
+    "name": "H7g6 18-30 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "18-30 mm",
+    "dims": {
+      "rangeMin": 18,
+      "rangeMax": 30,
+      "holeUpperDevUm": 21,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -13
+    },
+    "id": "iso286-h7h6-18-30",
+    "name": "H7h6 18-30 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "18-30 mm",
+    "dims": {
+      "rangeMin": 18,
+      "rangeMax": 30,
+      "holeUpperDevUm": 21,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 15,
+      "shaftLowerDevUm": 2
+    },
+    "id": "iso286-h7k6-18-30",
+    "name": "H7k6 18-30 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "30-50 mm",
+    "dims": {
+      "rangeMin": 30,
+      "rangeMax": 50,
+      "holeUpperDevUm": 25,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -9,
+      "shaftLowerDevUm": -25
+    },
+    "id": "iso286-h7g6-30-50",
+    "name": "H7g6 30-50 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "30-50 mm",
+    "dims": {
+      "rangeMin": 30,
+      "rangeMax": 50,
+      "holeUpperDevUm": 25,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -16
+    },
+    "id": "iso286-h7h6-30-50",
+    "name": "H7h6 30-50 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "30-50 mm",
+    "dims": {
+      "rangeMin": 30,
+      "rangeMax": 50,
+      "holeUpperDevUm": 25,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 18,
+      "shaftLowerDevUm": 2
+    },
+    "id": "iso286-h7k6-30-50",
+    "name": "H7k6 30-50 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "50-80 mm",
+    "dims": {
+      "rangeMin": 50,
+      "rangeMax": 80,
+      "holeUpperDevUm": 30,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -10,
+      "shaftLowerDevUm": -29
+    },
+    "id": "iso286-h7g6-50-80",
+    "name": "H7g6 50-80 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "50-80 mm",
+    "dims": {
+      "rangeMin": 50,
+      "rangeMax": 80,
+      "holeUpperDevUm": 30,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -19
+    },
+    "id": "iso286-h7h6-50-80",
+    "name": "H7h6 50-80 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "50-80 mm",
+    "dims": {
+      "rangeMin": 50,
+      "rangeMax": 80,
+      "holeUpperDevUm": 30,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 21,
+      "shaftLowerDevUm": 2
+    },
+    "id": "iso286-h7k6-50-80",
+    "name": "H7k6 50-80 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "80-120 mm",
+    "dims": {
+      "rangeMin": 80,
+      "rangeMax": 120,
+      "holeUpperDevUm": 35,
+      "holeLowerDevUm": 0,
+      "fit": "H7g6",
+      "shaftUpperDevUm": -12,
+      "shaftLowerDevUm": -34
+    },
+    "id": "iso286-h7g6-80-120",
+    "name": "H7g6 80-120 mm",
+    "metadata": {
+      "fit": "H7g6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "80-120 mm",
+    "dims": {
+      "rangeMin": 80,
+      "rangeMax": 120,
+      "holeUpperDevUm": 35,
+      "holeLowerDevUm": 0,
+      "fit": "H7h6",
+      "shaftUpperDevUm": 0,
+      "shaftLowerDevUm": -22
+    },
+    "id": "iso286-h7h6-80-120",
+    "name": "H7h6 80-120 mm",
+    "metadata": {
+      "fit": "H7h6"
+    }
+  },
+  {
+    "standard": "ISO 286-2",
+    "category": "Fit",
+    "nominalSize": "80-120 mm",
+    "dims": {
+      "rangeMin": 80,
+      "rangeMax": 120,
+      "holeUpperDevUm": 35,
+      "holeLowerDevUm": 0,
+      "fit": "H7k6",
+      "shaftUpperDevUm": 25,
+      "shaftLowerDevUm": 3
+    },
+    "id": "iso286-h7k6-80-120",
+    "name": "H7k6 80-120 mm",
+    "metadata": {
+      "fit": "H7k6"
+    }
+  }
+]

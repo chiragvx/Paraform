@@ -1,0 +1,128 @@
+[
+  {
+    "id": "lib-part-driver-a4988",
+    "name": "A4988 Stepper Driver Board",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: A4988/DRV8825 carrier board 20x15x10mm (incl. heatsink)\nfrom build123d import Box\nbody = Box(20, 15, 10)" },
+    "connectors": [
+      { "id": "pcb", "parent": "lib-part-driver-a4988", "kind": "planar", "gender": "neutral",
+        "role": "pcb-mount", "interfaceId": "pcb-pololu-carrier",
+        "size": { "nominal": "20x15", "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "PCB underside; plugs into a 16-pin 0.1in header socket (pcb-pololu-carrier)." } }
+    ],
+    "tags": ["electronics", "driver", "a4988", "drv8825", "stepper", "keep-out", "pcb"],
+    "keywords": ["a4988", "drv8825", "stepper driver", "pololu", "carrier", "electronics"],
+    "boundingBox": { "min": [-10, -7.5, 0], "max": [10, 7.5, 10] }
+  },
+  {
+    "id": "lib-part-mcu-arduino-nano",
+    "name": "Arduino Nano (microcontroller)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: Arduino Nano board 43.2x18x7mm\nfrom build123d import Box\nbody = Box(43.2, 18, 7)" },
+    "connectors": [
+      { "id": "pcb", "parent": "lib-part-mcu-arduino-nano", "kind": "planar", "gender": "neutral",
+        "role": "pcb-mount", "interfaceId": "pcb-nano",
+        "size": { "nominal": "43x18", "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Board underside; rests on a Nano carrier or standoffs (pcb-nano)." } },
+      { "id": "usb", "parent": "lib-part-mcu-arduino-nano", "kind": "planar", "gender": "neutral",
+        "role": "panel-port", "interfaceId": "port-mini-usb",
+        "size": { "nominal": "mini-usb", "unit": "mm" },
+        "axis": [-1, 0, 0], "origin": [-21.6, 0, 3.5],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "USB port face — a casing wall here needs a port cutout (port-mini-usb)." } }
+    ],
+    "tags": ["electronics", "microcontroller", "arduino", "nano", "mcu", "keep-out", "pcb"],
+    "keywords": ["arduino", "nano", "microcontroller", "mcu", "atmega328", "electronics"],
+    "boundingBox": { "min": [-21.6, -9, 0], "max": [21.6, 9, 7] }
+  },
+  {
+    "id": "lib-part-mcu-esp32-devkit",
+    "name": "ESP32 DevKit (microcontroller)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: ESP32 DevKitC board 55x28x13mm (incl. pins)\nfrom build123d import Box\nbody = Box(55, 28, 13)" },
+    "connectors": [
+      { "id": "pcb", "parent": "lib-part-mcu-esp32-devkit", "kind": "planar", "gender": "neutral",
+        "role": "pcb-mount", "interfaceId": "pcb-esp32-devkit",
+        "size": { "nominal": "55x28", "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Board underside (pcb-esp32-devkit)." } },
+      { "id": "usb", "parent": "lib-part-mcu-esp32-devkit", "kind": "planar", "gender": "neutral",
+        "role": "panel-port", "interfaceId": "port-micro-usb",
+        "size": { "nominal": "micro-usb", "unit": "mm" },
+        "axis": [-1, 0, 0], "origin": [-27.5, 0, 4],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Micro-USB port face — casing needs a cutout here (port-micro-usb)." } }
+    ],
+    "tags": ["electronics", "microcontroller", "esp32", "devkit", "mcu", "wifi", "keep-out", "pcb"],
+    "keywords": ["esp32", "devkit", "microcontroller", "mcu", "wifi", "bluetooth", "electronics"],
+    "boundingBox": { "min": [-27.5, -14, 0], "max": [27.5, 14, 13] }
+  },
+  {
+    "id": "lib-part-battery-lipo-2s",
+    "name": "LiPo Battery 2S 1300mAh",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: 2S 1300mAh LiPo pack 72x35x17mm\nfrom build123d import Box\nbody = Box(72, 35, 17)" },
+    "connectors": [
+      { "id": "rest", "parent": "lib-part-battery-lipo-2s", "kind": "planar", "gender": "neutral",
+        "role": "battery-bay", "interfaceId": "battery-lipo-2s",
+        "size": { "nominal": "72x35", "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Bottom face rests in a battery bay (battery-lipo-2s)." } },
+      { "id": "lead", "parent": "lib-part-battery-lipo-2s", "kind": "planar", "gender": "neutral",
+        "role": "panel-port", "interfaceId": "port-xt60",
+        "size": { "nominal": "xt60", "unit": "mm" },
+        "axis": [1, 0, 0], "origin": [36, 0, 8.5],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Lead/connector exit face — casing needs a slot for the XT60 lead (port-xt60)." } }
+    ],
+    "tags": ["electronics", "battery", "lipo", "2s", "power", "keep-out"],
+    "keywords": ["battery", "lipo", "2s", "1300mah", "power", "pack", "electronics"],
+    "boundingBox": { "min": [-36, -17.5, 0], "max": [36, 17.5, 17] }
+  },
+  {
+    "id": "lib-part-switch-rocker-kcd1",
+    "name": "Rocker Switch (KCD1, panel-mount)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: KCD1 mini rocker switch, 21x15 body, snaps into a 19x13mm panel cutout\nfrom build123d import Box\nbody = Box(21, 15, 23)" },
+    "connectors": [
+      { "id": "panel", "parent": "lib-part-switch-rocker-kcd1", "kind": "planar", "gender": "neutral",
+        "role": "panel-switch", "interfaceId": "panel-cutout-rocker-19x13",
+        "size": { "nominal": "19x13", "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 8],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Panel-mount plane; casing must cut a 19x13mm snap-in hole (panel-cutout-rocker-19x13). cutout: 19x13mm." } }
+    ],
+    "tags": ["electronics", "switch", "rocker", "kcd1", "panel", "panel-switch", "keep-out"],
+    "keywords": ["switch", "rocker", "kcd1", "toggle", "power switch", "panel mount", "on off"],
+    "boundingBox": { "min": [-10.5, -7.5, 0], "max": [10.5, 7.5, 23] }
+  },
+  {
+    "id": "lib-part-switch-toggle-spst",
+    "name": "Toggle Switch (SPST, panel-mount)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Keep-out: MTS-101 SPST toggle, M6 panel thread, lever above panel\nfrom build123d import Cylinder\nbody = Cylinder(radius=6, height=30)" },
+    "connectors": [
+      { "id": "panel", "parent": "lib-part-switch-toggle-spst", "kind": "planar", "gender": "neutral",
+        "role": "panel-switch", "interfaceId": "panel-cutout-toggle-m6",
+        "size": { "nominal": 6.5, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 10],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "M6 bushing panel mount; casing must drill a 6.5mm round hole (panel-cutout-toggle-m6). cutout: round 6.5mm." } }
+    ],
+    "tags": ["electronics", "switch", "toggle", "spst", "panel", "panel-switch", "keep-out", "m6"],
+    "keywords": ["switch", "toggle", "spst", "mts-101", "panel mount", "on off", "lever"],
+    "boundingBox": { "min": [-6, -6, 0], "max": [6, 6, 30] }
+  }
+]

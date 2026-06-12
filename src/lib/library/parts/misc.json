@@ -1,0 +1,143 @@
+[
+  {
+    "id": "lib-part-hinge-small",
+    "name": "Small Hinge",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — pivoting hinge 30mm wide, 3mm thick leaves\nfrom build123d import Box\nbody = Box(30, 20, 3)" },
+    "connectors": [
+      { "id": "pin", "parent": "lib-part-hinge-small", "kind": "shaft", "gender": "male",
+        "size": { "nominal": 3, "unit": "mm" }, "axis": [1, 0, 0], "origin": [0, 0, 0],
+        "mates_with": ["bore"], "inducedJoint": "revolute",
+        "metadata": { "description": "Hinge pivot — induces revolute joint" } },
+      { "id": "bore-l-1", "parent": "lib-part-hinge-small", "kind": "bore", "gender": "female",
+        "size": { "nominal": 3.4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [-10, -5, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} },
+      { "id": "bore-r-1", "parent": "lib-part-hinge-small", "kind": "bore", "gender": "female",
+        "size": { "nominal": 3.4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [10, 5, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["hinge", "pivot", "small", "revolute"],
+    "keywords": ["hinge", "pivot", "small", "rotate"],
+    "boundingBox": { "min": [-15, -10, -1.5], "max": [15, 10, 1.5] }
+  },
+  {
+    "id": "lib-part-clip-spring",
+    "name": "Spring Clip",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — spring clip 20x10x1mm\nfrom build123d import Box\nbody = Box(20, 10, 1)" },
+    "connectors": [
+      { "id": "tab", "parent": "lib-part-clip-spring", "kind": "tab", "gender": "male",
+        "size": { "nominal": 10, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["slot"], "inducedJoint": "fixed", "metadata": { "description": "Tab snaps into matching slot" } }
+    ],
+    "tags": ["clip", "spring", "snap", "tab"],
+    "keywords": ["clip", "spring", "snap", "tab", "snap-fit"],
+    "boundingBox": { "min": [-10, -5, -0.5], "max": [10, 5, 0.5] }
+  },
+  {
+    "id": "lib-part-knob-small",
+    "name": "Knob Small",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — knurled knob, 20mm dia, M4 bore\nfrom build123d import Cylinder\nbody = Cylinder(radius=10, height=10)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-knob-small", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4, "unit": "mm" }, "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["knob", "small", "knurled", "m4"],
+    "keywords": ["knob", "handle", "small", "m4"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 10] }
+  },
+  {
+    "id": "lib-part-foot-rubber",
+    "name": "Rubber Foot",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — rubber foot 20mm dia, 6mm tall\nfrom build123d import Cylinder\nbody = Cylinder(radius=10, height=6)" },
+    "connectors": [
+      { "id": "mount", "parent": "lib-part-foot-rubber", "kind": "planar", "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 6],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Top flat surface adheres to host" } },
+      { "id": "bore", "parent": "lib-part-foot-rubber", "kind": "bore", "gender": "female",
+        "size": { "nominal": 3.4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 6],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["foot", "rubber", "stand", "anti-slip"],
+    "keywords": ["foot", "rubber", "pad", "stand", "anti-slip"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 6] }
+  },
+  {
+    "id": "lib-part-clamp-shaft-8",
+    "name": "Shaft Clamp 8mm",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — split clamp for 8mm shaft\nfrom build123d import Box\nbody = Box(20, 20, 10)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-clamp-shaft-8", "kind": "bore", "gender": "female",
+        "size": { "nominal": 8, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 5],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Clamps onto an 8mm shaft" } },
+      { "id": "bore-mount-1", "parent": "lib-part-clamp-shaft-8", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 1, 0], "origin": [-7, 0, 5],
+        "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} },
+      { "id": "bore-mount-2", "parent": "lib-part-clamp-shaft-8", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 1, 0], "origin": [7, 0, 5],
+        "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["clamp", "shaft", "8mm", "m4"],
+    "keywords": ["clamp", "shaft", "8mm", "split"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 10] }
+  },
+  {
+    "id": "lib-part-handle-medium",
+    "name": "Handle Medium",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — handle 60mm long with 2x M4 bores\nfrom build123d import Box\nbody = Box(60, 15, 10)" },
+    "connectors": [
+      { "id": "bore-1", "parent": "lib-part-handle-medium", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, -1], "origin": [-22, 0, 0],
+        "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} },
+      { "id": "bore-2", "parent": "lib-part-handle-medium", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, -1], "origin": [22, 0, 0],
+        "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["handle", "medium", "m4"],
+    "keywords": ["handle", "grip", "medium"],
+    "boundingBox": { "min": [-30, -7.5, 0], "max": [30, 7.5, 10] }
+  },
+  {
+    "id": "lib-part-spacer-m4-2",
+    "name": "Spacer M4 x 2mm",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — flat spacer 2mm tall, M4 bore\nfrom build123d import Cylinder\nbody = Cylinder(radius=4, height=2)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-spacer-m4-2", "kind": "bore", "gender": "female",
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["spacer", "m4", "thin"],
+    "keywords": ["spacer", "shim", "m4", "2mm"],
+    "boundingBox": { "min": [-4, -4, 0], "max": [4, 4, 2] }
+  },
+  {
+    "id": "lib-part-endcap-m6",
+    "name": "End Cap M6",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — M6 end cap 12mm dia\nfrom build123d import Cylinder\nbody = Cylinder(radius=6, height=3)" },
+    "connectors": [
+      { "id": "thr", "parent": "lib-part-endcap-m6", "kind": "thread", "gender": "male",
+        "size": { "nominal": "M6", "unit": "mm" }, "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["endcap", "m6", "plug"],
+    "keywords": ["end", "cap", "plug", "m6"],
+    "boundingBox": { "min": [-6, -6, 0], "max": [6, 6, 3] }
+  }
+]

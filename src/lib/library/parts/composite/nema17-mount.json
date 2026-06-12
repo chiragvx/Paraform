@@ -1,0 +1,43 @@
+{
+  "id": "lib-composite-nema17-mount",
+  "name": "NEMA17 Stepper Mount",
+  "category": "bracket",
+  "source": "composite",
+  "build": null,
+  "members": [
+    {
+      "partRecordId": "lib-part-bracket-l-medium",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m3-12",
+      "transform": { "position": [-15.5, 0, 35], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m3-12",
+      "transform": { "position": [15.5, 0, 35], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m3-12",
+      "transform": { "position": [-15.5, 0, 4.5], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m3-12",
+      "transform": { "position": [15.5, 0, 4.5], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    }
+  ],
+  "connectors": [
+    { "id": "shaft", "parent": "lib-composite-nema17-mount", "kind": "shaft", "gender": "neutral",
+      "size": { "nominal": 5, "unit": "mm" }, "axis": [0, 1, 0], "origin": [0, 0, 20],
+      "mates_with": ["bore"], "inducedJoint": "revolute",
+      "metadata": { "description": "NEMA17 output shaft pass-through" } }
+  ],
+  "tags": ["composite", "nema17", "stepper", "mount", "bracket"],
+  "keywords": ["nema17", "stepper", "mount", "motor"],
+  "boundingBox": { "min": [-20, -20, 0], "max": [20, 0, 40] }
+}

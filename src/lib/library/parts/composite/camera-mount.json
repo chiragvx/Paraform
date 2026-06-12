@@ -1,0 +1,33 @@
+{
+  "id": "lib-composite-camera-mount",
+  "name": "Camera Mount Basic",
+  "category": "bracket",
+  "source": "composite",
+  "build": null,
+  "members": [
+    {
+      "partRecordId": "lib-part-bracket-l-small",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m3-8",
+      "transform": { "position": [0, 0, 10], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4032-m3",
+      "transform": { "position": [0, 0, 13], "rotation": [1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    }
+  ],
+  "connectors": [
+    { "id": "tripod", "parent": "lib-composite-camera-mount", "kind": "thread", "gender": "female",
+      "size": { "nominal": "1/4-20", "unit": "in" }, "axis": [0, 0, -1], "origin": [0, 0, 0],
+      "mates_with": ["thread"], "inducedJoint": "fixed",
+      "metadata": { "description": "Standard 1/4-20 tripod thread (camera/UNC fit). Imperial size — flagged for v2." } }
+  ],
+  "tags": ["composite", "camera", "mount", "tripod"],
+  "keywords": ["camera", "mount", "tripod", "1/4-20"],
+  "boundingBox": { "min": [-10, -10, 0], "max": [10, 0, 20] }
+}

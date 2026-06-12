@@ -1,0 +1,47 @@
+[
+  {
+    "id": "four-m3-clearance",
+    "category": "fasteners",
+    "spec": "four M3 clearance holes",
+    "expectedConstraints": [
+      { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M3", "qty": 4, "role": "clearance" }
+    ],
+    "notes": "ISO 273 clearance — basic case."
+  },
+  {
+    "id": "m3x16-shcs-4",
+    "category": "fasteners",
+    "spec": "4× M3×16 SHCS",
+    "expectedConstraints": [
+      { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M3", "qty": 4, "length": 16 }
+    ],
+    "notes": "Socket head cap screw fully spec'd."
+  },
+  {
+    "id": "iso4762-m4-12",
+    "category": "fasteners",
+    "spec": "ISO 4762 M4×12, 2 places",
+    "expectedConstraints": [
+      { "_c": "part_selection", "catalogPrefix": "iso4762", "nominalSize": "M4", "qty": 2, "length": 12 }
+    ],
+    "notes": "Explicit ISO catalog reference."
+  },
+  {
+    "id": "m5-tap",
+    "category": "fasteners",
+    "spec": "two M5 tapped holes",
+    "expectedConstraints": [
+      { "_c": "part_selection", "catalogPrefix": "iso273", "nominalSize": "M5", "qty": 2, "role": "tap" }
+    ],
+    "notes": "Tapped holes role."
+  },
+  {
+    "id": "608-bearing-press",
+    "category": "fasteners",
+    "spec": "608 bearing pressed into bore",
+    "expectedConstraints": [
+      { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "608", "qty": 1 }
+    ],
+    "notes": "Bearing catalog selection."
+  }
+]

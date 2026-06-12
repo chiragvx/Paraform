@@ -1,0 +1,82 @@
+[
+  {
+    "id": "lib-part-horn-sg90-arm",
+    "name": "SG90 Servo Horn (single arm)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Single-arm servo horn for SG90/MG90S 21T spline (real kernel builder).\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('horn-sg90-arm')" },
+    "connectors": [
+      { "id": "spline", "parent": "lib-part-horn-sg90-arm", "kind": "bore", "gender": "female",
+        "role": "horn-spline", "interfaceId": "spline-SG90",
+        "size": { "nominal": 4.8, "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "21T female spline socket; mates to SG90/MG90S output (spline-SG90)." } },
+      { "id": "tip-hole", "parent": "lib-part-horn-sg90-arm", "kind": "bore", "gender": "female",
+        "role": "linkage-hole", "size": { "nominal": 1.2, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [12, 0, 2],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["horn", "servo horn", "sg90", "arm", "spline-sg90", "linkage"],
+    "keywords": ["horn", "servo horn", "sg90", "mg90s", "single arm", "21t"],
+    "boundingBox": { "min": [-4, -4, 0], "max": [18, 4, 2] }
+  },
+  {
+    "id": "lib-part-horn-sg90-cross",
+    "name": "SG90 Servo Horn (4-arm cross)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# 4-arm cross horn for SG90/MG90S 21T spline (real kernel builder).\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('horn-sg90-cross')" },
+    "connectors": [
+      { "id": "spline", "parent": "lib-part-horn-sg90-cross", "kind": "bore", "gender": "female",
+        "role": "horn-spline", "interfaceId": "spline-SG90",
+        "size": { "nominal": 4.8, "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "21T female spline; SG90/MG90S (spline-SG90)." } }
+    ],
+    "tags": ["horn", "servo horn", "sg90", "cross", "4-arm", "spline-sg90"],
+    "keywords": ["horn", "servo horn", "sg90", "mg90s", "cross", "four arm", "x horn"],
+    "boundingBox": { "min": [-14, -14, 0], "max": [14, 14, 2] }
+  },
+  {
+    "id": "lib-part-horn-25t-arm",
+    "name": "25T Servo Horn (single arm, aluminium)",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Aluminium single-arm horn for 25T standard servos (real kernel builder).\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('horn-25t-arm')" },
+    "connectors": [
+      { "id": "spline", "parent": "lib-part-horn-25t-arm", "kind": "bore", "gender": "female",
+        "role": "horn-spline", "interfaceId": "spline-25T",
+        "size": { "nominal": 5.74, "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "25T female spline; mates to MG996R/DS3218 output (spline-25T)." } },
+      { "id": "tip-hole", "parent": "lib-part-horn-25t-arm", "kind": "bore", "gender": "female",
+        "role": "linkage-hole", "size": { "nominal": 4, "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [20, 0, 3],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["horn", "servo horn", "25t", "aluminium", "arm", "spline-25t", "mg996r"],
+    "keywords": ["horn", "servo horn", "25t", "aluminium", "single arm", "mg996r", "ds3218"],
+    "boundingBox": { "min": [-6, -6, 0], "max": [25, 6, 3] }
+  },
+  {
+    "id": "lib-part-horn-25t-disc",
+    "name": "25T Servo Disc Horn",
+    "category": "misc",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# Round disc horn for 25T standard servos (real kernel builder).\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('horn-25t-disc')" },
+    "connectors": [
+      { "id": "spline", "parent": "lib-part-horn-25t-disc", "kind": "bore", "gender": "female",
+        "role": "horn-spline", "interfaceId": "spline-25T",
+        "size": { "nominal": 5.74, "unit": "mm" },
+        "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "25T female spline disc; MG996R/DS3218 (spline-25T)." } }
+    ],
+    "tags": ["horn", "servo horn", "25t", "disc", "round", "spline-25t"],
+    "keywords": ["horn", "servo horn", "25t", "disc", "round", "wheel"],
+    "boundingBox": { "min": [-12.5, -12.5, 0], "max": [12.5, 12.5, 3] }
+  }
+]

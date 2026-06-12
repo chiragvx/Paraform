@@ -1,0 +1,26 @@
+[
+  {
+    "id": "horn-sg90-arm", "standard": "generic", "category": "Horn", "nominalSize": "spline-SG90",
+    "name": "SG90 single-arm servo horn",
+    "dims": { "hubR": 4.0, "thickness": 2.0, "armLength": 18.0, "armWidth": 6.0, "arms": 1, "boreR": 2.4 },
+    "bbox": { "min": [-4, -4, 0], "max": [18, 4, 2] }
+  },
+  {
+    "id": "horn-sg90-cross", "standard": "generic", "category": "Horn", "nominalSize": "spline-SG90",
+    "name": "SG90 4-arm cross horn",
+    "dims": { "hubR": 4.0, "thickness": 2.0, "armLength": 14.0, "armWidth": 5.0, "arms": 4, "boreR": 2.4 },
+    "bbox": { "min": [-14, -14, 0], "max": [14, 14, 2] }
+  },
+  {
+    "id": "horn-25t-arm", "standard": "generic", "category": "Horn", "nominalSize": "spline-25T",
+    "name": "25T single-arm aluminium horn",
+    "dims": { "hubR": 6.0, "thickness": 3.0, "armLength": 25.0, "armWidth": 8.0, "arms": 1, "boreR": 2.87 },
+    "bbox": { "min": [-6, -6, 0], "max": [25, 6, 3] }
+  },
+  {
+    "id": "horn-25t-disc", "standard": "generic", "category": "Horn", "nominalSize": "spline-25T",
+    "name": "25T disc horn",
+    "dims": { "hubR": 12.5, "thickness": 3.0, "armLength": 0.0, "armWidth": 0.0, "arms": 0, "boreR": 2.87 },
+    "bbox": { "min": [-12.5, -12.5, 0], "max": [12.5, 12.5, 3] }
+  }
+]

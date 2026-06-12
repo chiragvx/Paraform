@@ -1,0 +1,106 @@
+[
+  {
+    "id": "h7-g6",
+    "text": "H7/g6 fit between shaft and bore",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "H7/g6" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "h7-h6",
+    "text": "H7/h6 fit",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "H7/h6" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "h7-k6",
+    "text": "press the pin into a H7/k6 fit",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "H7/k6" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "press-fit-bearing",
+    "text": "press fit for 608 bearing",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "press" },
+        { "_c": "part_selection", "catalogPrefix": "bearing", "nominalSize": "608", "qty": 1 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "slip-fit-Ø8",
+    "text": "slip fit on Ø8 dowel",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "slip" },
+        { "_c": "dimension", "axis": "diameter", "value": 8, "unit": "mm" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "slide-fit",
+    "text": "slide fit between shaft and housing",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "slide" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "running-fit",
+    "text": "running fit on Ø10 shaft",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "running" },
+        { "_c": "dimension", "axis": "diameter", "value": 10, "unit": "mm" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "transition-fit",
+    "text": "transition fit on the pin",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "transition" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "interference-fit",
+    "text": "interference fit for bearing seat",
+    "expected": {
+      "constraints": [
+        { "_c": "fit_class", "class": "press" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "h7-g6-22",
+    "text": "Ø22 bore, H7/g6 fit to shaft",
+    "expected": {
+      "constraints": [
+        { "_c": "dimension", "axis": "diameter", "value": 22, "unit": "mm" },
+        { "_c": "fit_class", "class": "H7/g6" }
+      ],
+      "ambiguities": []
+    }
+  }
+]

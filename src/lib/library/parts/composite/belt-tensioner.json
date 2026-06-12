@@ -1,0 +1,37 @@
+{
+  "id": "lib-composite-belt-tensioner",
+  "name": "GT2 Belt Tensioner",
+  "category": "pulley",
+  "source": "composite",
+  "build": null,
+  "members": [
+    {
+      "partRecordId": "lib-part-bearing-608",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-pulley-gt2-20t",
+      "transform": { "position": [0, 0, 7], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": [
+        { "memberConnector": "bore", "parentConnector": "id", "memberParentIndex": 0 }
+      ]
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m5-25",
+      "transform": { "position": [0, 0, 25], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": [
+        { "memberConnector": "thr", "parentConnector": "id", "memberParentIndex": 0 }
+      ]
+    }
+  ],
+  "connectors": [
+    { "id": "mount", "parent": "lib-composite-belt-tensioner", "kind": "thread", "gender": "male",
+      "size": { "nominal": "M5", "unit": "mm" }, "axis": [0, 0, -1], "origin": [0, 0, 0],
+      "mates_with": ["thread"], "inducedJoint": "fixed",
+      "metadata": { "description": "Bottom mounting bolt — attaches to chassis" } }
+  ],
+  "tags": ["composite", "tensioner", "belt", "gt2", "608"],
+  "keywords": ["belt", "tensioner", "gt2", "idler", "pulley assembly"],
+  "boundingBox": { "min": [-11, -11, 0], "max": [11, 11, 30] }
+}

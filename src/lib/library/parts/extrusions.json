@@ -1,0 +1,2207 @@
+[
+  {
+    "id": "lib-part-ext-2020-250",
+    "name": "2020 T-slot extrusion, 250 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2020-250.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-250')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2020-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion bottom face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2020-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          250
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion top face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x20",
+      "250mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x20",
+      "2020",
+      "20",
+      "250"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -10,
+        0
+      ],
+      "max": [
+        10,
+        10,
+        250
+      ]
+    },
+    "kernelEntryId": "ext-2020-250"
+  },
+  {
+    "id": "lib-part-ext-2020-500",
+    "name": "2020 T-slot extrusion, 500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2020-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2020-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion bottom face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2020-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion top face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x20",
+      "500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x20",
+      "2020",
+      "20",
+      "500"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -10,
+        0
+      ],
+      "max": [
+        10,
+        10,
+        500
+      ]
+    },
+    "kernelEntryId": "ext-2020-500"
+  },
+  {
+    "id": "lib-part-ext-2020-1000",
+    "name": "2020 T-slot extrusion, 1000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2020-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-1000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2020-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion bottom face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2020-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion top face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x20",
+      "1000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x20",
+      "2020",
+      "20",
+      "1000"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -10,
+        0
+      ],
+      "max": [
+        10,
+        10,
+        1000
+      ]
+    },
+    "kernelEntryId": "ext-2020-1000"
+  },
+  {
+    "id": "lib-part-ext-2020-1500",
+    "name": "2020 T-slot extrusion, 1500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2020-1500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-1500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2020-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion bottom face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2020-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion top face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x20",
+      "1500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x20",
+      "2020",
+      "20",
+      "1500"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -10,
+        0
+      ],
+      "max": [
+        10,
+        10,
+        1500
+      ]
+    },
+    "kernelEntryId": "ext-2020-1500"
+  },
+  {
+    "id": "lib-part-ext-2020-2000",
+    "name": "2020 T-slot extrusion, 2000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2020-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-2000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2020-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion bottom face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2020-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x20 extrusion top face"
+        },
+        "interfaceId": "profile-2020",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x20",
+      "2000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x20",
+      "2020",
+      "20",
+      "2000"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -10,
+        0
+      ],
+      "max": [
+        10,
+        10,
+        2000
+      ]
+    },
+    "kernelEntryId": "ext-2020-2000"
+  },
+  {
+    "id": "lib-part-ext-2040-250",
+    "name": "2040 T-slot extrusion, 250 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2040-250.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2040-250')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2040-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2040-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          250
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion top face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x40",
+      "250mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x40",
+      "2040",
+      "20",
+      "250"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -20,
+        0
+      ],
+      "max": [
+        10,
+        20,
+        250
+      ]
+    },
+    "kernelEntryId": "ext-2040-250"
+  },
+  {
+    "id": "lib-part-ext-2040-500",
+    "name": "2040 T-slot extrusion, 500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2040-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2040-500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2040-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2040-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion top face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x40",
+      "500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x40",
+      "2040",
+      "20",
+      "500"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -20,
+        0
+      ],
+      "max": [
+        10,
+        20,
+        500
+      ]
+    },
+    "kernelEntryId": "ext-2040-500"
+  },
+  {
+    "id": "lib-part-ext-2040-1000",
+    "name": "2040 T-slot extrusion, 1000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2040-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2040-1000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2040-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2040-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion top face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x40",
+      "1000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x40",
+      "2040",
+      "20",
+      "1000"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -20,
+        0
+      ],
+      "max": [
+        10,
+        20,
+        1000
+      ]
+    },
+    "kernelEntryId": "ext-2040-1000"
+  },
+  {
+    "id": "lib-part-ext-2040-1500",
+    "name": "2040 T-slot extrusion, 1500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2040-1500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2040-1500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2040-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2040-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion top face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x40",
+      "1500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x40",
+      "2040",
+      "20",
+      "1500"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -20,
+        0
+      ],
+      "max": [
+        10,
+        20,
+        1500
+      ]
+    },
+    "kernelEntryId": "ext-2040-1500"
+  },
+  {
+    "id": "lib-part-ext-2040-2000",
+    "name": "2040 T-slot extrusion, 2000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-2040-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2040-2000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-2040-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-2040-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 20,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "20x40 extrusion top face"
+        },
+        "interfaceId": "profile-2040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "20-series",
+      "20x40",
+      "2000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "20x40",
+      "2040",
+      "20",
+      "2000"
+    ],
+    "boundingBox": {
+      "min": [
+        -10,
+        -20,
+        0
+      ],
+      "max": [
+        10,
+        20,
+        2000
+      ]
+    },
+    "kernelEntryId": "ext-2040-2000"
+  },
+  {
+    "id": "lib-part-ext-4040-250",
+    "name": "4040 T-slot extrusion, 250 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4040-250.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4040-250')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4040-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4040-250",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          250
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion top face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x40",
+      "250mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x40",
+      "4040",
+      "40",
+      "250"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -20,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        250
+      ]
+    },
+    "kernelEntryId": "ext-4040-250"
+  },
+  {
+    "id": "lib-part-ext-4040-500",
+    "name": "4040 T-slot extrusion, 500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4040-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4040-500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4040-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4040-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion top face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x40",
+      "500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x40",
+      "4040",
+      "40",
+      "500"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -20,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        500
+      ]
+    },
+    "kernelEntryId": "ext-4040-500"
+  },
+  {
+    "id": "lib-part-ext-4040-1000",
+    "name": "4040 T-slot extrusion, 1000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4040-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4040-1000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4040-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4040-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion top face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x40",
+      "1000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x40",
+      "4040",
+      "40",
+      "1000"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -20,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        1000
+      ]
+    },
+    "kernelEntryId": "ext-4040-1000"
+  },
+  {
+    "id": "lib-part-ext-4040-1500",
+    "name": "4040 T-slot extrusion, 1500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4040-1500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4040-1500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4040-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4040-1500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion top face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x40",
+      "1500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x40",
+      "4040",
+      "40",
+      "1500"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -20,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        1500
+      ]
+    },
+    "kernelEntryId": "ext-4040-1500"
+  },
+  {
+    "id": "lib-part-ext-4040-2000",
+    "name": "4040 T-slot extrusion, 2000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4040-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4040-2000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4040-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion bottom face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4040-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x40 extrusion top face"
+        },
+        "interfaceId": "profile-4040",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x40",
+      "2000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x40",
+      "4040",
+      "40",
+      "2000"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -20,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        2000
+      ]
+    },
+    "kernelEntryId": "ext-4040-2000"
+  },
+  {
+    "id": "lib-part-ext-4080-500",
+    "name": "4080 T-slot extrusion, 500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4080-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4080-500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4080-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4080-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion top face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x80",
+      "500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x80",
+      "4080",
+      "40",
+      "500"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -40,
+        0
+      ],
+      "max": [
+        20,
+        40,
+        500
+      ]
+    },
+    "kernelEntryId": "ext-4080-500"
+  },
+  {
+    "id": "lib-part-ext-4080-1000",
+    "name": "4080 T-slot extrusion, 1000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4080-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4080-1000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4080-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4080-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion top face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x80",
+      "1000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x80",
+      "4080",
+      "40",
+      "1000"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -40,
+        0
+      ],
+      "max": [
+        20,
+        40,
+        1000
+      ]
+    },
+    "kernelEntryId": "ext-4080-1000"
+  },
+  {
+    "id": "lib-part-ext-4080-2000",
+    "name": "4080 T-slot extrusion, 2000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-4080-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-4080-2000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-4080-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-4080-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "40x80 extrusion top face"
+        },
+        "interfaceId": "profile-4080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "40x80",
+      "2000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "40x80",
+      "4080",
+      "40",
+      "2000"
+    ],
+    "boundingBox": {
+      "min": [
+        -20,
+        -40,
+        0
+      ],
+      "max": [
+        20,
+        40,
+        2000
+      ]
+    },
+    "kernelEntryId": "ext-4080-2000"
+  },
+  {
+    "id": "lib-part-ext-8080-500",
+    "name": "8080 T-slot extrusion, 500 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-8080-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-8080-500')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-8080-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-8080-500",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          500
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion top face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "80x80",
+      "500mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "80x80",
+      "8080",
+      "40",
+      "500"
+    ],
+    "boundingBox": {
+      "min": [
+        -40,
+        -40,
+        0
+      ],
+      "max": [
+        40,
+        40,
+        500
+      ]
+    },
+    "kernelEntryId": "ext-8080-500"
+  },
+  {
+    "id": "lib-part-ext-8080-1000",
+    "name": "8080 T-slot extrusion, 1000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-8080-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-8080-1000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-8080-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-8080-1000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          1000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion top face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "80x80",
+      "1000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "80x80",
+      "8080",
+      "40",
+      "1000"
+    ],
+    "boundingBox": {
+      "min": [
+        -40,
+        -40,
+        0
+      ],
+      "max": [
+        40,
+        40,
+        1000
+      ]
+    },
+    "kernelEntryId": "ext-8080-1000"
+  },
+  {
+    "id": "lib-part-ext-8080-2000",
+    "name": "8080 T-slot extrusion, 2000 mm",
+    "category": "extrusion",
+    "source": "parametric",
+    "build": {
+      "type": "parametric",
+      "snippet": "# Delegates to kernel standard_parts builder for ext-8080-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-8080-2000')"
+    },
+    "connectors": [
+      {
+        "id": "end-bottom",
+        "parent": "lib-part-ext-8080-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion bottom face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      },
+      {
+        "id": "end-top",
+        "parent": "lib-part-ext-8080-2000",
+        "kind": "bore",
+        "gender": "female",
+        "size": {
+          "nominal": 40,
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          2000
+        ],
+        "mates_with": [
+          "bore",
+          "shaft"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "80x80 extrusion top face"
+        },
+        "interfaceId": "profile-8080",
+        "role": "extrusion-end"
+      }
+    ],
+    "tags": [
+      "extrusion",
+      "t-slot",
+      "aluminum",
+      "40-series",
+      "80x80",
+      "2000mm"
+    ],
+    "keywords": [
+      "extrusion",
+      "tslot",
+      "t-slot",
+      "alu",
+      "aluminium",
+      "aluminum",
+      "80x80",
+      "8080",
+      "40",
+      "2000"
+    ],
+    "boundingBox": {
+      "min": [
+        -40,
+        -40,
+        0
+      ],
+      "max": [
+        40,
+        40,
+        2000
+      ]
+    },
+    "kernelEntryId": "ext-8080-2000"
+  }
+]

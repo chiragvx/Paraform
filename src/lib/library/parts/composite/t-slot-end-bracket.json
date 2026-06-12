@@ -1,0 +1,33 @@
+{
+  "id": "lib-composite-t-slot-end-bracket",
+  "name": "T-Slot End Bracket",
+  "category": "bracket",
+  "source": "composite",
+  "build": null,
+  "members": [
+    {
+      "partRecordId": "lib-part-bracket-corner",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m4-12",
+      "transform": { "position": [10, 0, 0], "rotation": [0, 1.5707963, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m4-12",
+      "transform": { "position": [0, 10, 0], "rotation": [-1.5707963, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    }
+  ],
+  "connectors": [
+    { "id": "extrusion", "parent": "lib-composite-t-slot-end-bracket", "kind": "slot", "gender": "female",
+      "size": { "nominal": 20, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 10],
+      "mates_with": ["tab"], "inducedJoint": "fixed",
+      "metadata": { "description": "T-slot extrusion seat — 20mm series" } }
+  ],
+  "tags": ["composite", "t-slot", "extrusion", "20mm", "bracket"],
+  "keywords": ["t-slot", "extrusion", "bracket", "2020"],
+  "boundingBox": { "min": [-10, -10, -10], "max": [10, 10, 10] }
+}

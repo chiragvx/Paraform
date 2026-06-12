@@ -1,0 +1,835 @@
+[
+  {
+    "id": "lib-part-standoff-m3-5",
+    "name": "M3 Standoff 5mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-5",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-5",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-5",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          5
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "5mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "5mm",
+      "spacer"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m3-8",
+    "name": "M3 Standoff 8mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-8",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-8",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-8",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "8mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "8mm",
+      "spacer",
+      "hex"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        8
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m3-10",
+    "name": "M3 Standoff 10mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-10",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-10",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-10",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          10
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "10mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "10mm",
+      "spacer",
+      "hex"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        10
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m3-15",
+    "name": "M3 Standoff 15mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-15",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-15",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-15",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          15
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "15mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "15mm",
+      "spacer"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        15
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m3-20",
+    "name": "M3 Standoff 20mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-20",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-20",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-20",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          20
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "20mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "20mm",
+      "spacer"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        20
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m3-25",
+    "name": "M3 Standoff 25mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m3-25",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m3-25",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m3-25",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M3",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          25
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m3",
+      "25mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m3",
+      "25mm",
+      "spacer"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.887,
+        -2.887,
+        0
+      ],
+      "max": [
+        2.887,
+        2.887,
+        25
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m25-5",
+    "name": "M2.5 Standoff 5mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m25-5",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m25-5",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m25-5",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          5
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m2.5",
+      "5mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m2.5",
+      "5mm",
+      "spacer",
+      "pcb"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.309,
+        -2.309,
+        0
+      ],
+      "max": [
+        2.309,
+        2.309,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m25-8",
+    "name": "M2.5 Standoff 8mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m25-8",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m25-8",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m25-8",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          8
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m2.5",
+      "8mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m2.5",
+      "8mm",
+      "spacer",
+      "pcb"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.309,
+        -2.309,
+        0
+      ],
+      "max": [
+        2.309,
+        2.309,
+        8
+      ]
+    }
+  },
+  {
+    "id": "lib-part-standoff-m25-12",
+    "name": "M2.5 Standoff 12mm",
+    "category": "standoff",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "standoff-m25-12",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr-bot",
+        "parent": "lib-part-standoff-m25-12",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-bottom",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      },
+      {
+        "id": "thr-top",
+        "parent": "lib-part-standoff-m25-12",
+        "kind": "thread",
+        "gender": "female",
+        "role": "thread-top",
+        "interfaceId": "thread-M2.5",
+        "size": {
+          "nominal": "M2.5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          12
+        ],
+        "mates_with": [
+          "thread"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {}
+      }
+    ],
+    "tags": [
+      "standoff",
+      "brass",
+      "m2.5",
+      "12mm"
+    ],
+    "keywords": [
+      "standoff",
+      "m2.5",
+      "12mm",
+      "spacer",
+      "pcb"
+    ],
+    "manufacturer": "generic-brass",
+    "boundingBox": {
+      "min": [
+        -2.309,
+        -2.309,
+        0
+      ],
+      "max": [
+        2.309,
+        2.309,
+        12
+      ]
+    }
+  }
+]

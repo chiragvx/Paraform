@@ -1,0 +1,1038 @@
+[
+  {
+    "id": "lib-part-iso4762-m3-8",
+    "name": "M3x8 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m3-8",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m3-8",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "M3 male thread at head underside"
+        },
+        "interfaceId": "thread-M3",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m3",
+      "iso4762",
+      "metric"
+    ],
+    "keywords": [
+      "m3",
+      "screw",
+      "shcs",
+      "socket head cap screw",
+      "8mm",
+      "metric"
+    ],
+    "boundingBox": {
+      "min": [
+        -2.75,
+        -2.75,
+        -8
+      ],
+      "max": [
+        2.75,
+        2.75,
+        3
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m3-12",
+    "name": "M3x12 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m3-12",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m3-12",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {
+          "description": "M3 male thread"
+        },
+        "interfaceId": "thread-M3",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m3",
+      "iso4762",
+      "metric"
+    ],
+    "keywords": [
+      "m3",
+      "screw",
+      "shcs",
+      "12mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -2.75,
+        -2.75,
+        -12
+      ],
+      "max": [
+        2.75,
+        2.75,
+        3
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m3-16",
+    "name": "M3x16 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m3-16",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m3-16",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M3",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m3"
+    ],
+    "keywords": [
+      "m3",
+      "screw",
+      "16mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -2.75,
+        -2.75,
+        -16
+      ],
+      "max": [
+        2.75,
+        2.75,
+        3
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m3-20",
+    "name": "M3x20 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m3-20",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m3-20",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M3",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M3",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m3"
+    ],
+    "keywords": [
+      "m3",
+      "screw",
+      "20mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -2.75,
+        -2.75,
+        -20
+      ],
+      "max": [
+        2.75,
+        2.75,
+        3
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m4-10",
+    "name": "M4x10 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m4-10",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m4-10",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m4"
+    ],
+    "keywords": [
+      "m4",
+      "screw",
+      "10mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -3.5,
+        -3.5,
+        -10
+      ],
+      "max": [
+        3.5,
+        3.5,
+        4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m4-12",
+    "name": "M4x12 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m4-12",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m4-12",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m4"
+    ],
+    "keywords": [
+      "m4",
+      "screw",
+      "12mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -3.5,
+        -3.5,
+        -12
+      ],
+      "max": [
+        3.5,
+        3.5,
+        4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m4-16",
+    "name": "M4x16 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m4-16",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m4-16",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m4"
+    ],
+    "keywords": [
+      "m4",
+      "screw",
+      "16mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -3.5,
+        -3.5,
+        -16
+      ],
+      "max": [
+        3.5,
+        3.5,
+        4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m4-20",
+    "name": "M4x20 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m4-20",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m4-20",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M4",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M4",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m4"
+    ],
+    "keywords": [
+      "m4",
+      "screw",
+      "20mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -3.5,
+        -3.5,
+        -20
+      ],
+      "max": [
+        3.5,
+        3.5,
+        4
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m5-12",
+    "name": "M5x12 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m5-12",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m5-12",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m5"
+    ],
+    "keywords": [
+      "m5",
+      "screw",
+      "12mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -4.25,
+        -4.25,
+        -12
+      ],
+      "max": [
+        4.25,
+        4.25,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m5-16",
+    "name": "M5x16 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m5-16",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m5-16",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m5"
+    ],
+    "keywords": [
+      "m5",
+      "screw",
+      "16mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -4.25,
+        -4.25,
+        -16
+      ],
+      "max": [
+        4.25,
+        4.25,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m5-20",
+    "name": "M5x20 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m5-20",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m5-20",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m5"
+    ],
+    "keywords": [
+      "m5",
+      "screw",
+      "20mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -4.25,
+        -4.25,
+        -20
+      ],
+      "max": [
+        4.25,
+        4.25,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m5-25",
+    "name": "M5x25 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m5-25",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m5-25",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M5",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M5",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m5"
+    ],
+    "keywords": [
+      "m5",
+      "screw",
+      "25mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -4.25,
+        -4.25,
+        -25
+      ],
+      "max": [
+        4.25,
+        4.25,
+        5
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m6-16",
+    "name": "M6x16 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m6-16",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m6-16",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m6"
+    ],
+    "keywords": [
+      "m6",
+      "screw",
+      "16mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -5,
+        -5,
+        -16
+      ],
+      "max": [
+        5,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m6-20",
+    "name": "M6x20 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m6-20",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m6-20",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m6"
+    ],
+    "keywords": [
+      "m6",
+      "screw",
+      "20mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -5,
+        -5,
+        -20
+      ],
+      "max": [
+        5,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m6-25",
+    "name": "M6x25 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m6-25",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m6-25",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m6"
+    ],
+    "keywords": [
+      "m6",
+      "screw",
+      "25mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -5,
+        -5,
+        -25
+      ],
+      "max": [
+        5,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "id": "lib-part-iso4762-m6-30",
+    "name": "M6x30 SHCS",
+    "category": "fastener",
+    "source": "standard-part",
+    "build": {
+      "type": "standard-part",
+      "catalogId": "iso4762-m6-30",
+      "params": {}
+    },
+    "connectors": [
+      {
+        "id": "thr",
+        "parent": "lib-part-iso4762-m6-30",
+        "kind": "thread",
+        "gender": "male",
+        "size": {
+          "nominal": "M6",
+          "unit": "mm"
+        },
+        "axis": [
+          0,
+          0,
+          -1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "mates_with": [
+          "thread",
+          "bore"
+        ],
+        "inducedJoint": "fixed",
+        "metadata": {},
+        "interfaceId": "thread-M6",
+        "role": "screw-thread"
+      }
+    ],
+    "tags": [
+      "fastener",
+      "screw",
+      "shcs",
+      "m6"
+    ],
+    "keywords": [
+      "m6",
+      "screw",
+      "30mm"
+    ],
+    "boundingBox": {
+      "min": [
+        -5,
+        -5,
+        -30
+      ],
+      "max": [
+        5,
+        5,
+        6
+      ]
+    }
+  }
+]

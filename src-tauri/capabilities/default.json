@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        { "name": "b123d_server", "sidecar": true, "args": [{ "validator": "\\d+" }] }
+      ]
+    },
+    {
+      "identifier": "shell:allow-kill",
+      "allow": [
+        { "name": "b123d_server", "sidecar": true }
+      ]
+    },
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:default",
+    "fs:allow-read-file",
+    "fs:allow-write-file"
+  ]
+}

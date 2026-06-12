@@ -1,0 +1,44 @@
+{
+  "id": "lib-composite-ball-caster",
+  "name": "Ball Caster Wheel",
+  "category": "misc",
+  "source": "composite",
+  "build": null,
+  "members": [
+    {
+      "partRecordId": "lib-part-bracket-l-small",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-bearing-608",
+      "transform": { "position": [0, 0, -5], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m4-16",
+      "transform": { "position": [-5, -5, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    },
+    {
+      "partRecordId": "lib-part-iso4762-m4-16",
+      "transform": { "position": [5, -5, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "mates": []
+    }
+  ],
+  "connectors": [
+    { "id": "wheel-axis", "parent": "lib-composite-ball-caster", "kind": "shaft", "gender": "neutral",
+      "size": { "nominal": 8, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, -5],
+      "mates_with": ["bore"], "inducedJoint": "revolute",
+      "metadata": { "description": "Ball-caster rotation axis" } },
+    { "id": "mount-1", "parent": "lib-composite-ball-caster", "kind": "bore", "gender": "female",
+      "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, 1], "origin": [-5, -5, 0],
+      "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} },
+    { "id": "mount-2", "parent": "lib-composite-ball-caster", "kind": "bore", "gender": "female",
+      "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, 1], "origin": [5, -5, 0],
+      "mates_with": ["thread"], "inducedJoint": "fixed", "metadata": {} }
+  ],
+  "tags": ["composite", "caster", "ball", "wheel", "608"],
+  "keywords": ["ball", "caster", "wheel", "robot", "608"],
+  "boundingBox": { "min": [-11, -11, -12], "max": [11, 11, 20] }
+}

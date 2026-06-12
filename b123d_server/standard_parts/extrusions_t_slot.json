@@ -1,0 +1,195 @@
+[
+  {
+    "id": "ext-2020-250",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2020-250",
+    "name": "2020 T-slot extrusion, 250 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 1, "length": 250 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.45 }
+  },
+  {
+    "id": "ext-2020-500",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2020-500",
+    "name": "2020 T-slot extrusion, 500 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 1, "length": 500 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.45 }
+  },
+  {
+    "id": "ext-2020-1000",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2020-1000",
+    "name": "2020 T-slot extrusion, 1000 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 1, "length": 1000 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.45 }
+  },
+  {
+    "id": "ext-2020-1500",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2020-1500",
+    "name": "2020 T-slot extrusion, 1500 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 1, "length": 1500 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.45 }
+  },
+  {
+    "id": "ext-2020-2000",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2020-2000",
+    "name": "2020 T-slot extrusion, 2000 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 1, "length": 2000 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.45 }
+  },
+
+  {
+    "id": "ext-2040-250",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2040-250",
+    "name": "2040 T-slot extrusion, 250 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 2, "length": 250 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.88 }
+  },
+  {
+    "id": "ext-2040-500",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2040-500",
+    "name": "2040 T-slot extrusion, 500 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 2, "length": 500 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.88 }
+  },
+  {
+    "id": "ext-2040-1000",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2040-1000",
+    "name": "2040 T-slot extrusion, 1000 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 2, "length": 1000 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.88 }
+  },
+  {
+    "id": "ext-2040-1500",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2040-1500",
+    "name": "2040 T-slot extrusion, 1500 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 2, "length": 1500 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.88 }
+  },
+  {
+    "id": "ext-2040-2000",
+    "standard": "Misumi HFS5",
+    "category": "Extrusion",
+    "nominalSize": "2040-2000",
+    "name": "2040 T-slot extrusion, 2000 mm",
+    "dims": { "series": 20, "gridX": 1, "gridY": 2, "length": 2000 },
+    "metadata": { "slotSeries": "M5", "weightApproxKgPerM": 0.88 }
+  },
+
+  {
+    "id": "ext-4040-250",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4040-250",
+    "name": "4040 T-slot extrusion, 250 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 1, "length": 250 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 1.59 }
+  },
+  {
+    "id": "ext-4040-500",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4040-500",
+    "name": "4040 T-slot extrusion, 500 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 1, "length": 500 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 1.59 }
+  },
+  {
+    "id": "ext-4040-1000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4040-1000",
+    "name": "4040 T-slot extrusion, 1000 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 1, "length": 1000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 1.59 }
+  },
+  {
+    "id": "ext-4040-1500",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4040-1500",
+    "name": "4040 T-slot extrusion, 1500 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 1, "length": 1500 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 1.59 }
+  },
+  {
+    "id": "ext-4040-2000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4040-2000",
+    "name": "4040 T-slot extrusion, 2000 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 1, "length": 2000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 1.59 }
+  },
+
+  {
+    "id": "ext-4080-500",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4080-500",
+    "name": "4080 T-slot extrusion, 500 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 2, "length": 500 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 3.10 }
+  },
+  {
+    "id": "ext-4080-1000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4080-1000",
+    "name": "4080 T-slot extrusion, 1000 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 2, "length": 1000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 3.10 }
+  },
+  {
+    "id": "ext-4080-2000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "4080-2000",
+    "name": "4080 T-slot extrusion, 2000 mm",
+    "dims": { "series": 40, "gridX": 1, "gridY": 2, "length": 2000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 3.10 }
+  },
+
+  {
+    "id": "ext-8080-500",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "8080-500",
+    "name": "8080 T-slot extrusion, 500 mm",
+    "dims": { "series": 40, "gridX": 2, "gridY": 2, "length": 500 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 6.05 }
+  },
+  {
+    "id": "ext-8080-1000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "8080-1000",
+    "name": "8080 T-slot extrusion, 1000 mm",
+    "dims": { "series": 40, "gridX": 2, "gridY": 2, "length": 1000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 6.05 }
+  },
+  {
+    "id": "ext-8080-2000",
+    "standard": "Misumi HFS8",
+    "category": "Extrusion",
+    "nominalSize": "8080-2000",
+    "name": "8080 T-slot extrusion, 2000 mm",
+    "dims": { "series": 40, "gridX": 2, "gridY": 2, "length": 2000 },
+    "metadata": { "slotSeries": "M8", "weightApproxKgPerM": 6.05 }
+  }
+]

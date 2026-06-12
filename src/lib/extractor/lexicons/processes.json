@@ -1,0 +1,37 @@
+{
+    "_doc": "Process / manufacturing-method lexicon. 'canonical' is the slug stored on the constraint; aliases are case-insensitive multi-word phrases the tokeniser will match in order.",
+    "entries": [
+        {
+            "canonical": "3d-print",
+            "aliases": ["3d printed", "3d print", "3d-printed", "fdm", "fdm printed", "sla", "sla printed", "msla", "additive", "additively manufactured", "printed"]
+        },
+        {
+            "canonical": "cnc-mill",
+            "aliases": ["cnc machined", "cnc milled", "cnc mill", "milled", "machined", "cnc", "subtractive"]
+        },
+        {
+            "canonical": "cnc-turn",
+            "aliases": ["cnc turned", "lathed", "lathe-turned", "turned", "lathe"]
+        },
+        {
+            "canonical": "injection-mold",
+            "aliases": ["injection molded", "injection-molded", "injection moulded", "im moulded"]
+        },
+        {
+            "canonical": "cast",
+            "aliases": ["cast", "sand cast", "die cast", "die-cast", "investment cast", "lost-wax cast"]
+        },
+        {
+            "canonical": "sheet-metal",
+            "aliases": ["sheet metal", "sheet-metal", "laser cut", "laser-cut", "waterjet", "water jet", "press brake", "stamped"]
+        },
+        {
+            "canonical": "extrusion",
+            "aliases": ["extruded", "extrusion"]
+        },
+        {
+            "canonical": "forge",
+            "aliases": ["forged", "hot forged", "cold forged"]
+        }
+    ]
+}

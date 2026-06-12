@@ -1,0 +1,104 @@
+[
+  {
+    "id": "4dof-scara",
+    "text": "4-DOF SCARA arm",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "scara", "dof": 4 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "scara-bare",
+    "text": "SCARA pick-and-place",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "scara", "dof": 4 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "delta-3dof",
+    "text": "3-DOF delta robot",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "delta", "dof": 3 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "cartesian-xyz",
+    "text": "cartesian XYZ stage",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "cartesian", "dof": 3 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "gantry",
+    "text": "gantry-mounted spindle",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "gantry", "dof": 3 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "6dof-arm",
+    "text": "6-DOF arm payload 5 kg",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "six-axis-arm", "dof": 6 },
+        { "_c": "load", "payload": 5, "mode": "static", "unit": "kg" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "corexy-printer",
+    "text": "CoreXY printer frame",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "gantry", "dof": 3 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "delta-cartesian-vs",
+    "text": "delta robot, 200 mm/s tool speed",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "delta", "dof": 3 },
+        { "_c": "dimension", "axis": "speed", "value": 200, "unit": "mm/s" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "stewart-platform",
+    "text": "Stewart platform with 6-DOF",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "stewart", "dof": 6 }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "polar-arm",
+    "text": "polar manipulator",
+    "expected": {
+      "constraints": [
+        { "_c": "kinematic", "mechanism": "polar", "dof": 3 }
+      ],
+      "ambiguities": []
+    }
+  }
+]

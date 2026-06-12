@@ -1,0 +1,146 @@
+{
+    "_doc": "Material lexicon for the deterministic extractor. 'aliases' is a case-insensitive list. 'canonical' is the value stored on the constraint. 'family' lets the resolver group (aluminum, steel, plastic, ...). 'gradeDefault' is the assumption layer's default when a bare family name is used.",
+    "entries": [
+        {
+            "canonical": "aluminum",
+            "family": "aluminum",
+            "aliases": ["aluminum", "aluminium", "alu", "al"],
+            "gradeDefault": "6061",
+            "needsGrade": true
+        },
+        {
+            "canonical": "6061",
+            "family": "aluminum",
+            "aliases": ["6061", "6061-t6", "aluminum 6061", "al 6061", "al-6061"]
+        },
+        {
+            "canonical": "7075",
+            "family": "aluminum",
+            "aliases": ["7075", "7075-t6", "aluminum 7075", "al 7075"]
+        },
+        {
+            "canonical": "2024",
+            "family": "aluminum",
+            "aliases": ["2024", "2024-t3", "aluminum 2024"]
+        },
+        {
+            "canonical": "5052",
+            "family": "aluminum",
+            "aliases": ["5052", "5052-h32", "aluminum 5052"]
+        },
+        {
+            "canonical": "steel",
+            "family": "steel",
+            "aliases": ["steel", "mild steel", "carbon steel"],
+            "gradeDefault": "1018",
+            "needsGrade": true
+        },
+        {
+            "canonical": "1018",
+            "family": "steel",
+            "aliases": ["1018", "aisi 1018", "mild steel 1018"]
+        },
+        {
+            "canonical": "1045",
+            "family": "steel",
+            "aliases": ["1045", "aisi 1045"]
+        },
+        {
+            "canonical": "4140",
+            "family": "steel",
+            "aliases": ["4140", "aisi 4140", "chromoly"]
+        },
+        {
+            "canonical": "a36",
+            "family": "steel",
+            "aliases": ["a36", "astm a36"]
+        },
+        {
+            "canonical": "stainless",
+            "family": "stainless",
+            "aliases": ["stainless", "stainless steel", "ss"],
+            "gradeDefault": "304",
+            "needsGrade": true
+        },
+        {
+            "canonical": "304",
+            "family": "stainless",
+            "aliases": ["304", "ss304", "1.4301", "stainless 304", "aisi 304"]
+        },
+        {
+            "canonical": "316",
+            "family": "stainless",
+            "aliases": ["316", "ss316", "1.4401", "stainless 316", "aisi 316"]
+        },
+        {
+            "canonical": "303",
+            "family": "stainless",
+            "aliases": ["303", "ss303", "1.4305"]
+        },
+        {
+            "canonical": "brass",
+            "family": "copper",
+            "aliases": ["brass", "c360", "c260"]
+        },
+        {
+            "canonical": "copper",
+            "family": "copper",
+            "aliases": ["copper", "c110", "c10100"]
+        },
+        {
+            "canonical": "bronze",
+            "family": "copper",
+            "aliases": ["bronze", "phosphor bronze", "c932"]
+        },
+        {
+            "canonical": "titanium",
+            "family": "titanium",
+            "aliases": ["titanium", "ti", "ti-6al-4v", "grade 5"]
+        },
+        {
+            "canonical": "pla",
+            "family": "plastic",
+            "aliases": ["pla", "polylactic acid"]
+        },
+        {
+            "canonical": "abs",
+            "family": "plastic",
+            "aliases": ["abs"]
+        },
+        {
+            "canonical": "petg",
+            "family": "plastic",
+            "aliases": ["petg", "pet-g"]
+        },
+        {
+            "canonical": "nylon",
+            "family": "plastic",
+            "aliases": ["nylon", "pa", "pa6", "pa12", "polyamide"]
+        },
+        {
+            "canonical": "delrin",
+            "family": "plastic",
+            "aliases": ["delrin", "pom", "acetal"]
+        },
+        {
+            "canonical": "tpu",
+            "family": "plastic",
+            "aliases": ["tpu", "thermoplastic polyurethane"]
+        },
+        {
+            "canonical": "polycarbonate",
+            "family": "plastic",
+            "aliases": ["polycarbonate", "pc", "lexan"]
+        },
+        {
+            "canonical": "hdpe",
+            "family": "plastic",
+            "aliases": ["hdpe", "high density polyethylene"]
+        },
+        {
+            "canonical": "uhmw",
+            "family": "plastic",
+            "aliases": ["uhmw", "uhmwpe"]
+        }
+    ]
+}

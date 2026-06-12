@@ -1,0 +1,118 @@
+[
+  {
+    "id": "alu-bare",
+    "text": "aluminum housing",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "aluminum" }
+      ],
+      "ambiguities": [
+        { "kind": "material-grade" }
+      ]
+    }
+  },
+  {
+    "id": "6061-housing",
+    "text": "6061 aluminum housing",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "6061" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "7075-bracket",
+    "text": "bracket out of 7075-T6",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "7075" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "1.4301",
+    "text": "1.4301 stainless steel sleeve",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "304" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "316-marine",
+    "text": "316 stainless for marine environment",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "316" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "pla-printed",
+    "text": "PLA 3D printed enclosure",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "pla" },
+        { "_c": "process", "process": "3d-print" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "abs-injection",
+    "text": "ABS injection molded shell",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "abs" },
+        { "_c": "process", "process": "injection-mold" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "delrin-spacer",
+    "text": "Delrin spacer, lathed",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "delrin" },
+        { "_c": "process", "process": "cnc-turn" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "brass-cnc",
+    "text": "CNC machined brass insert",
+    "expected": {
+      "constraints": [
+        { "_c": "process", "process": "cnc-mill" },
+        { "_c": "material", "material": "brass" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "nylon-petg",
+    "text": "nylon bushing",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "nylon" }
+      ],
+      "ambiguities": []
+    }
+  },
+  {
+    "id": "polycarbonate-shield",
+    "text": "polycarbonate shield",
+    "expected": {
+      "constraints": [
+        { "_c": "material", "material": "polycarbonate" }
+      ],
+      "ambiguities": []
+    }
+  }
+]

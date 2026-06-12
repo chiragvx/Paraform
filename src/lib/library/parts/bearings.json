@@ -1,0 +1,156 @@
+[
+  {
+    "id": "lib-part-bearing-608",
+    "name": "608 Bearing (8x22x7)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-608", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-608", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-8mm",
+        "size": { "nominal": 8, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3.5],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "Inner ring bore for an 8 mm shaft (bore-8mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-608", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-22mm",
+        "size": { "nominal": 22, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3.5],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer ring fits a 22 mm bore (race-22mm)" } }
+    ],
+    "tags": ["bearing", "608", "skate", "8mm", "shaft"],
+    "keywords": ["bearing", "608", "8mm", "22mm", "skate", "revolute"],
+    "boundingBox": { "min": [-11, -11, 0], "max": [11, 11, 7] }
+  },
+  {
+    "id": "lib-part-bearing-623",
+    "name": "623 Bearing (3x10x4)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-623", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-623", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-3mm",
+        "size": { "nominal": 3, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "Inner bore for a 3 mm shaft (bore-3mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-623", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-10mm",
+        "size": { "nominal": 10, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 10 mm (race-10mm)" } }
+    ],
+    "tags": ["bearing", "623", "miniature", "3mm"],
+    "keywords": ["bearing", "623", "3mm", "10mm", "miniature"],
+    "boundingBox": { "min": [-5, -5, 0], "max": [5, 5, 4] }
+  },
+  {
+    "id": "lib-part-bearing-624",
+    "name": "624 Bearing (4x13x5)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-624", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-624", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-4mm",
+        "size": { "nominal": 4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2.5],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "Inner bore for a 4 mm shaft (bore-4mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-624", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-13mm",
+        "size": { "nominal": 13, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2.5],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 13 mm (race-13mm)" } }
+    ],
+    "tags": ["bearing", "624", "miniature", "4mm"],
+    "keywords": ["bearing", "624", "4mm", "13mm", "miniature"],
+    "boundingBox": { "min": [-6.5, -6.5, 0], "max": [6.5, 6.5, 5] }
+  },
+  {
+    "id": "lib-part-bearing-626",
+    "name": "626 Bearing (6x19x6)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-626", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-626", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-6mm",
+        "size": { "nominal": 6, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "Inner bore for a 6 mm shaft (bore-6mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-626", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-19mm",
+        "size": { "nominal": 19, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 19 mm (race-19mm)" } }
+    ],
+    "tags": ["bearing", "626", "6mm"],
+    "keywords": ["bearing", "626", "6mm", "19mm"],
+    "boundingBox": { "min": [-9.5, -9.5, 0], "max": [9.5, 9.5, 6] }
+  },
+  {
+    "id": "lib-part-bearing-f623",
+    "name": "F623 Flanged Bearing (3x10x4, flange 12)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-f623", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-f623", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-3mm",
+        "size": { "nominal": 3, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "Inner bore for a 3 mm shaft (bore-3mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-f623", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-10mm",
+        "size": { "nominal": 10, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 10 mm; 12 mm flange seats against a bore lip (race-10mm)" } }
+    ],
+    "tags": ["bearing", "f623", "flanged", "3mm"],
+    "keywords": ["bearing", "f623", "flanged", "3mm", "10mm", "flange"],
+    "boundingBox": { "min": [-6, -6, 0], "max": [6, 6, 5] }
+  },
+  {
+    "id": "lib-part-bearing-6800",
+    "name": "6800 Bearing (10x19x5)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-6800", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-6800", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-10mm",
+        "size": { "nominal": 10, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2.5],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "10 mm bore (bore-10mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-6800", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-19mm",
+        "size": { "nominal": 19, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 2.5],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 19 mm (race-19mm)" } }
+    ],
+    "tags": ["bearing", "6800", "thin-section", "10mm"],
+    "keywords": ["bearing", "6800", "thin", "10mm"],
+    "boundingBox": { "min": [-9.5, -9.5, 0], "max": [9.5, 9.5, 5] }
+  },
+  {
+    "id": "lib-part-bearing-6900",
+    "name": "6900 Bearing (10x22x6)",
+    "category": "bearing",
+    "source": "standard-part",
+    "build": { "type": "standard-part", "catalogId": "bearing-6900", "params": {} },
+    "connectors": [
+      { "id": "id", "parent": "lib-part-bearing-6900", "kind": "bore", "gender": "female",
+        "role": "shaft-bore", "interfaceId": "bore-10mm",
+        "size": { "nominal": 10, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3],
+        "mates_with": ["shaft"], "inducedJoint": "revolute",
+        "metadata": { "description": "10 mm bore (bore-10mm)" } },
+      { "id": "od", "parent": "lib-part-bearing-6900", "kind": "shaft", "gender": "male",
+        "role": "outer-race", "interfaceId": "race-22mm",
+        "size": { "nominal": 22, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 3],
+        "mates_with": ["bore"], "inducedJoint": "fixed",
+        "metadata": { "description": "Outer race 22 mm (race-22mm)" } }
+    ],
+    "tags": ["bearing", "6900", "thin-section", "10mm"],
+    "keywords": ["bearing", "6900", "thin", "10mm"],
+    "boundingBox": { "min": [-11, -11, 0], "max": [11, 11, 6] }
+  }
+]

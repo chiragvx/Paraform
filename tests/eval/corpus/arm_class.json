@@ -1,0 +1,31 @@
+[
+  {
+    "id": "pan-tilt-2dof",
+    "category": "kinematic",
+    "spec": "pan-tilt 2-DOF arm gimbal",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "arm", "dof": 2 }
+    ],
+    "notes": "2-DOF pan-tilt servo assembly. Extractor-level DOF assertion here; the geometric/kinematic assertions (2 revolute joints, driving pan to max swings the tip's world X/Y, no interference at rest or along the swept trajectory) live in src/lib/kinematics/__tests__/articulation.mjs since the eval harness has no kernel."
+  },
+  {
+    "id": "arm-3dof-reach",
+    "category": "kinematic",
+    "spec": "3-DOF arm 200 mm reach",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "arm", "dof": 3 },
+      { "_c": "dimension", "axis": null, "value": 200, "unit": "mm" }
+    ],
+    "notes": "3-DOF arm with a stated reach. DOF + reach dimension extracted; per-joint FK/clamp + swept-interference assertions are in the standalone articulation test (kernel-free solver math)."
+  },
+  {
+    "id": "arm-6dof-payload",
+    "category": "kinematic",
+    "spec": "6-DOF arm payload 2 kg",
+    "expectedConstraints": [
+      { "_c": "kinematic", "mechanism": "six-axis-arm", "dof": 6 },
+      { "_c": "load", "payload": 2, "mode": "static", "unit": "kg" }
+    ],
+    "notes": "Six-axis arm + static payload. Regression net for the headline robotic-arm prompt class. computeDof on the assembled doc must report 6 movable DOF (see articulation.mjs); each revolute contributes 1, fixed brackets 0."
+  }
+]

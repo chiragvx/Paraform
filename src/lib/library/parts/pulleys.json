@@ -1,0 +1,48 @@
+[
+  {
+    "id": "lib-part-pulley-gt2-16t",
+    "name": "GT2 Pulley 16T",
+    "category": "pulley",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — GT2 16T pulley, 5mm bore, 6mm belt\nfrom build123d import Cylinder\nbody = Cylinder(radius=5.0, height=12)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-pulley-gt2-16t", "kind": "bore", "gender": "female",
+        "size": { "nominal": 5, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 6],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "5 mm shaft bore (set-screw clamped)" } }
+    ],
+    "tags": ["pulley", "gt2", "16T", "small", "5mm"],
+    "keywords": ["pulley", "gt2", "16", "teeth", "5mm bore"],
+    "boundingBox": { "min": [-5.5, -5.5, 0], "max": [5.5, 5.5, 12] }
+  },
+  {
+    "id": "lib-part-pulley-gt2-20t",
+    "name": "GT2 Pulley 20T",
+    "category": "pulley",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — GT2 20T pulley, 5mm bore, 6mm belt\nfrom build123d import Cylinder\nbody = Cylinder(radius=6.4, height=12)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-pulley-gt2-20t", "kind": "bore", "gender": "female",
+        "size": { "nominal": 5, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 6],
+        "mates_with": ["shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["pulley", "gt2", "20T", "medium", "5mm"],
+    "keywords": ["pulley", "gt2", "20", "teeth"],
+    "boundingBox": { "min": [-6.8, -6.8, 0], "max": [6.8, 6.8, 12] }
+  },
+  {
+    "id": "lib-part-pulley-gt2-36t",
+    "name": "GT2 Pulley 36T",
+    "category": "pulley",
+    "source": "parametric",
+    "build": { "type": "parametric", "snippet": "# TODO: refine geometry — GT2 36T pulley, 8mm bore, 6mm belt\nfrom build123d import Cylinder\nbody = Cylinder(radius=11.5, height=12)" },
+    "connectors": [
+      { "id": "bore", "parent": "lib-part-pulley-gt2-36t", "kind": "bore", "gender": "female",
+        "size": { "nominal": 8, "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 6],
+        "mates_with": ["shaft"], "inducedJoint": "fixed", "metadata": {} }
+    ],
+    "tags": ["pulley", "gt2", "36T", "large", "8mm"],
+    "keywords": ["pulley", "gt2", "36", "teeth", "large"],
+    "boundingBox": { "min": [-11.8, -11.8, 0], "max": [11.8, 11.8, 12] }
+  }
+]
