@@ -252,7 +252,7 @@ const FULL_SETTINGS_SCHEMA = [
         label: 'Model',
         kind: 'select',
         options: [
-          { value: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B (OpenRouter)' },
+          { value: 'openai/gpt-oss-120b', label: 'openai/gpt-oss-120b' },
           { value: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B (OpenRouter)' },
           { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (OpenRouter → Google)' },
           { value: 'gpt-oss-120b', label: 'gpt-oss-120b (bare id — for Groq/Together/Ollama)' },
