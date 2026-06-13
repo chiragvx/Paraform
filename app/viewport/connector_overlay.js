@@ -6,20 +6,21 @@
  * snap_drag.js can answer "which connector is under the cursor?" in the exact
  * world frame the user sees.
  *
- * Two node shapes:
- *   - point connectors (bore/shaft/thread/planar/tab) → a filled sphere node
- *     plus a thin axis ring, screen-space-sized so it reads the same at any
- *     zoom (like KSP's attach balls).
- *   - slot / line ports (topology 'line') → the whole channel drawn as a
- *     glowing line spanning its `extent`, with grab balls at both ends and the
- *     middle. The cursor magnetizes to *anywhere along the channel*, so a
- *     t-nut drops in wherever you point and slides along it — the KSP rail feel.
+ * Per-kind shapes (so a glance tells you what mate this affords):
+ *   - slot / line ports (topology 'line') → a glowing channel TUBE spanning the
+ *     `extent`, with small caps at each end. No middle grab ball — the channel
+ *     itself is the picking target; the cursor magnetizes to anywhere along it.
+ *   - planar / tab (topology 'plane') → a translucent face DISK normal to the
+ *     connector axis, with a small contact dot at the origin. You see the
+ *     plane the mating face will sit on, not just a point.
+ *   - bore / shaft / thread (axial) → a sphere at the origin + axis ring,
+ *     telling you where to thread / press in.
  *
- * Colour states (the green-glow lock-on is the whole point):
+ * Colour states (only ONE connector lights up as lock-on at a time):
  *   - idle           → per-kind colour, translucent
- *   - compatible     → bright green (probe says this mates the dragged part)
- *   - incompatible   → dimmed grey (probe says it can't mate)
- *   - highlighted    → near-white, enlarged (cursor is locked onto it)
+ *   - compatible     → calm cyan-green — "the probe could mate me"
+ *   - highlighted    → bright lock-on green, larger — "I AM the active target"
+ *   - incompatible   → dimmed grey — "probe says no"
  *
  * Z-up correct: connectors are component-local mm; we walk the component-origin
  * chain via `worldConnectorFor` to get the world frame each rebuild. The root
@@ -35,13 +36,25 @@ const KIND_COLOURS = Object.freeze({
     bore: 0xff8c42, shaft: 0xff8c42, thread: 0xff8c42,
     planar: 0x4fb3ff, tab: 0x4fb3ff, slot: 0x6bd0ff, rail: 0x6bcf63,
 });
-const COL_COMPATIBLE   = 0x35e06a;   // KSP lock-on green
+// Compatible = calm hint that the probe could mate (one of N candidates).
+// Highlighted = the ONE active target the cursor is locked onto. Two distinct
+// greens so the user can always tell "this is where it'll land" at a glance.
+const COL_COMPATIBLE   = 0x2aa85a;   // calm green hint
 const COL_INCOMPATIBLE = 0x3a3f44;   // dimmed
-const COL_HIGHLIGHT    = 0xbfffd0;   // near-white green
+const COL_HIGHLIGHT    = 0x6dff96;   // bright lock-on green
 
 const NODE_PX        = 13;    // on-screen node diameter target
 const PICK_TARGET_PX = 14;    // magnet radius the picker treats as a hit
 const NODE_RADIUS_MM = 1.0;   // unscaled sphere radius; rescaled per frame
+// Slot channel tube — kept in world mm so the channel hugs the actual extrusion
+// surface at any zoom. 0.6mm radius reads clearly without dominating the part.
+const CHANNEL_TUBE_RADIUS_MM = 0.6;
+const CHANNEL_CAP_RADIUS_MM  = 0.7;  // small end-marker sphere (world mm)
+// Planar face disk — sized as a fraction of the connector's nominal size so the
+// disk visually matches the contact area. Clamped to a sensible range.
+const PLANAR_DISK_FRACTION   = 0.45; // fraction of nominal size → disk radius
+const PLANAR_DISK_MIN_MM     = 4;
+const PLANAR_DISK_MAX_MM     = 25;
 
 export class ConnectorOverlay {
     /**
@@ -83,8 +96,24 @@ export class ConnectorOverlay {
         this.pickables = [];
     }
 
-    setVisible(b) { this.root.visible = !!b; }
+    setVisible(b) {
+        const next = !!b;
+        // Hidden→visible transition: refresh if a doc commit landed while
+        // we were hidden. The Viewport.svelte subscriber skips rebuilds when
+        // !isVisible() to keep idle cost zero, so we catch up here. Use a
+        // simple dirty flag set by `markDirty` whenever a skipped commit
+        // wanted us; first show ever (no _byId entries) also catches up.
+        if (next && !this.root.visible && (this._dirty || this._byId.size === 0)) {
+            this._dirty = false;
+            this.root.visible = true;
+            this.rebuild();
+            return;
+        }
+        this.root.visible = next;
+    }
     isVisible() { return this.root.visible; }
+    /** Note a doc change happened while hidden; next setVisible(true) will rebuild. */
+    markDirty() { this._dirty = true; }
     setConnectorFilter(fn) { this.connectorFilter = typeof fn === 'function' ? fn : null; }
 
     /** Set / clear the dragged part's connectors used to colour mate targets. */
@@ -124,17 +153,44 @@ export class ConnectorOverlay {
     }
 
     _buildPointNode(id, c, world) {
-        const colour = KIND_COLOURS[c.kind] || 0xffffff;
+        const kind = c.kind;
+        const colour = KIND_COLOURS[kind] || 0xffffff;
         const balls = [];
         const lines = [];
 
+        // Planar / tab: render the mating face as a translucent disk normal to
+        // the connector axis, with a small contact dot at the origin. The disk
+        // makes the plane orientation legible at a glance (rule 3: axis = out).
+        if (kind === 'planar' || kind === 'tab') {
+            const sizeMm = _nominalMm(c, 20);
+            const r = Math.max(PLANAR_DISK_MIN_MM,
+                Math.min(PLANAR_DISK_MAX_MM, sizeMm * PLANAR_DISK_FRACTION));
+            const disk = _faceDisk(colour, r);
+            disk.position.set(world.origin[0], world.origin[1], world.origin[2]);
+            _orientZTo(disk, world.axis);
+            this.root.add(disk);
+            lines.push(disk);
+
+            const dot = new THREE.Mesh(_sharedBallGeom(), _ballMat(colour));
+            dot.position.set(world.origin[0], world.origin[1], world.origin[2]);
+            dot.renderOrder = 999;
+            this.root.add(dot);
+            balls.push(dot);
+
+            return {
+                connector: c, world, kind, isSlot: false,
+                point: world.origin.slice(), seg: null, balls, lines, state: 'idle',
+            };
+        }
+
+        // Bore / shaft / thread (and any unhandled axial kind): sphere at the
+        // origin + axis ring telling you where to press / thread.
         const ball = new THREE.Mesh(_sharedBallGeom(), _ballMat(colour));
         ball.position.set(world.origin[0], world.origin[1], world.origin[2]);
         ball.renderOrder = 999;
         this.root.add(ball);
         balls.push(ball);
 
-        // Thin axis ring so orientation is legible.
         const ring = _ringLine(colour);
         ring.position.set(world.origin[0], world.origin[1], world.origin[2]);
         _orientZTo(ring, world.axis);
@@ -142,7 +198,7 @@ export class ConnectorOverlay {
         lines.push(ring);
 
         return {
-            connector: c, world, kind: c.kind, isSlot: false,
+            connector: c, world, kind, isSlot: false,
             point: world.origin.slice(), seg: null, balls, lines, state: 'idle',
         };
     }
@@ -158,24 +214,25 @@ export class ConnectorOverlay {
         const lines = [];
         const balls = [];
 
-        // The channel guide line.
-        const line = new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(...p0), new THREE.Vector3(...p1),
-            ]),
-            new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.85, depthTest: false }),
-        );
-        line.renderOrder = 998;
-        this.root.add(line);
-        lines.push(line);
+        // The channel itself — a visible tube along the slide range. Replaces
+        // the thin 1-px line + 3 grab balls that used to dominate the view with
+        // no context. World-sized so it hugs the actual extrusion face at any
+        // zoom; picking still uses the screen-space segment distance.
+        const tube = _channelTube(p0, p1, colour);
+        this.root.add(tube);
+        lines.push(tube);
 
-        // Grab balls at both ends + middle.
-        for (const p of [p0, o.slice(), p1]) {
-            const b = new THREE.Mesh(_sharedBallGeom(), _ballMat(colour));
-            b.position.set(p[0], p[1], p[2]);
-            b.renderOrder = 999;
-            this.root.add(b);
-            balls.push(b);
+        // Small end caps so the run direction + extent are unambiguous. No
+        // middle ball — the channel IS the picking target and the highlighted
+        // state will indicate "this one" without visual noise.
+        for (const p of [p0, p1]) {
+            const cap = new THREE.Mesh(_sharedCapGeom(), _ballMat(colour));
+            cap.position.set(p[0], p[1], p[2]);
+            cap.renderOrder = 999;
+            // Caps keep their world size; opt out of screen-space rescale.
+            cap.userData._fixedWorldScale = true;
+            this.root.add(cap);
+            balls.push(cap);
         }
 
         return {
@@ -326,7 +383,7 @@ export class ConnectorOverlay {
         return best ? { connectorId: best.connector.id, distancePx: bestD } : null;
     }
 
-    /** Keep nodes a constant on-screen size. Lines keep their world length. */
+    /** Keep nodes a constant on-screen size. Lines/tubes/disks keep world size. */
     updateScreenSpaceSize(viewportHeightPx = 600) {
         if (!this.root.visible) return;
         const cam = this.camera;
@@ -335,6 +392,9 @@ export class ConnectorOverlay {
         const vFov = (cam.fov * Math.PI) / 180;
         for (const e of this._byId.values()) {
             for (const b of e.balls) {
+                // Channel end caps (and any other ball flagged) stay in world mm
+                // so they sit on the physical channel ends at any zoom.
+                if (b.userData._fixedWorldScale) continue;
                 const dist = cam.position.distanceTo(tmp.copy(b.position)) || 1;
                 const worldPerPx = (2 * Math.tan(vFov / 2) * dist) / viewportHeightPx;
                 const stateScale = b.userData._stateScale || 1;
@@ -359,6 +419,11 @@ function _sharedBallGeom() {
     if (!_BALL_GEOM) _BALL_GEOM = new THREE.SphereGeometry(NODE_RADIUS_MM, 16, 12);
     return _BALL_GEOM;
 }
+let _CAP_GEOM = null;
+function _sharedCapGeom() {
+    if (!_CAP_GEOM) _CAP_GEOM = new THREE.SphereGeometry(CHANNEL_CAP_RADIUS_MM, 12, 8);
+    return _CAP_GEOM;
+}
 function _ballMat(colour) {
     return new THREE.MeshBasicMaterial({
         color: colour, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false,
@@ -375,6 +440,77 @@ function _ringLine(colour) {
         new THREE.BufferGeometry().setFromPoints(pts),
         new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthTest: false }),
     );
+}
+/**
+ * Build a thin tube along the segment p0→p1, using a CylinderGeometry rotated
+ * so its long axis matches the segment. Replaces the invisible 1-px line for
+ * slot channels — the tube reads clearly at any zoom because it's world-sized
+ * (it hugs the extrusion face), not screen-space-scaled.
+ */
+function _channelTube(p0, p1, colour) {
+    const dx = p1[0] - p0[0], dy = p1[1] - p0[1], dz = p1[2] - p0[2];
+    const len = Math.hypot(dx, dy, dz) || 1e-6;
+    const geom = new THREE.CylinderGeometry(
+        CHANNEL_TUBE_RADIUS_MM, CHANNEL_TUBE_RADIUS_MM, len, 12, 1, false,
+    );
+    const mat = new THREE.MeshBasicMaterial({
+        color: colour, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    // Cylinder default axis is +Y; rotate so +Y maps to (p1-p0)/len, then place
+    // midpoint at the segment center.
+    const dir = new THREE.Vector3(dx, dy, dz).normalize();
+    mesh.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
+    mesh.position.set((p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5, (p0[2] + p1[2]) * 0.5);
+    mesh.renderOrder = 998;
+    return mesh;
+}
+/**
+ * A translucent disk in the plane normal to local +Z (caller orients to the
+ * connector axis). Renders a planar mating site as the face you'd actually bolt
+ * against — not just a point. Outer ring traces the perimeter for clarity.
+ */
+function _faceDisk(colour, radiusMm) {
+    const grp = new THREE.Group();
+    const disk = new THREE.Mesh(
+        new THREE.CircleGeometry(radiusMm, 40),
+        new THREE.MeshBasicMaterial({
+            color: colour, transparent: true, opacity: 0.22,
+            side: THREE.DoubleSide, depthTest: false, depthWrite: false,
+        }),
+    );
+    disk.renderOrder = 997;
+    grp.add(disk);
+    // Perimeter ring at the disk edge — gives the plane a hard boundary.
+    const pts = [];
+    const N = 48;
+    for (let i = 0; i <= N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(t) * radiusMm, Math.sin(t) * radiusMm, 0));
+    }
+    const ring = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.95, depthTest: false }),
+    );
+    ring.renderOrder = 998;
+    grp.add(ring);
+    // Mirror the .material API the state-update loop reads on lines: expose a
+    // single material whose color/opacity getter+setter fan out to both the
+    // disk fill and the perimeter ring.
+    grp.material = {
+        color: {
+            setHex(hex) { disk.material.color.setHex(hex); ring.material.color.setHex(hex); },
+        },
+        set opacity(v) { disk.material.opacity = v * 0.25; ring.material.opacity = v; },
+        get opacity() { return ring.material.opacity; },
+    };
+    return grp;
+}
+/** Read a numeric nominal size in mm; falls back to `def` for sentinels. */
+function _nominalMm(c, def) {
+    const n = c && c.size && c.size.nominal;
+    const num = Number(n);
+    return Number.isFinite(num) && num > 0 ? num : def;
 }
 function _orientZTo(obj, axis) {
     const a = new THREE.Vector3(axis[0], axis[1], axis[2]);
@@ -393,10 +529,12 @@ function _stateStyle(state, kindColour) {
 function _disposeRecursive(node) {
     if (!node) return;
     node.traverse?.((n) => {
-        if (n.geometry && n.geometry !== _BALL_GEOM) { try { n.geometry.dispose(); } catch {} }
+        if (n.geometry && n.geometry !== _BALL_GEOM && n.geometry !== _CAP_GEOM) {
+            try { n.geometry.dispose(); } catch {}
+        }
         if (n.material) {
             if (Array.isArray(n.material)) n.material.forEach((m) => { try { m.dispose(); } catch {} });
-            else { try { n.material.dispose(); } catch {} }
+            else if (typeof n.material.dispose === 'function') { try { n.material.dispose(); } catch {} }
         }
     });
 }

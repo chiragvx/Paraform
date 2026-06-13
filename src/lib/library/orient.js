@@ -118,6 +118,129 @@ function _currentSlide(doc, mate, hostWorld, partConnector) {
     return ((p[0] - o[0]) * a[0] + (p[1] - o[1]) * a[1] + (p[2] - o[2]) * a[2]) / m;
 }
 
+/**
+ * Slide-along-channel — pure math for the keyboard slide-nudge (the "," / "."
+ * gesture, mirror of the "[" / "]" rotate-to-fit). Adjusts where a placed,
+ * channel-mated component sits along its slot/rail run, preserving the seat
+ * (face normal alignment, seat depth) and any accumulated roll.
+ *
+ * Returns `null` for components that aren't channel-mated — keyboard handler
+ * uses null to fall through (no-op) so non-slot selections don't beep.
+ *
+ * Channel must be solver-routable (`topology: 'line'` or `kind: 'slot'`, with
+ * a `normal` on the host) — bare rail-rail mates fall through. The slide is
+ * clamped to the host `extent` so the part can't leave the channel.
+ *
+ * @param {object} doc          — DocumentStore.doc
+ * @param {string} componentId
+ * @param {number} deltaMm      — slide increment (mm); sign = direction along run
+ * @returns {null | {
+ *   origin: { position:[number,number,number], rotation:[number,number,number] },
+ *   mateId: string,
+ *   slide: number,
+ *   roll?: number,
+ *   regime: 'channel',
+ * }}
+ */
+export function computeSlidPlacement(doc, componentId, deltaMm, opts = {}) {
+    if (!doc || !componentId || !Number.isFinite(deltaMm)) return null;
+    const comp = doc.components && doc.components[componentId];
+    if (!comp) return null;
+
+    const mate = _firstMateFor(doc, componentId);
+    if (!mate) return null;
+
+    const hostWorld = _resolveHostWorld(doc, mate);
+    if (!hostWorld) return null;
+
+    const isChannel = hostWorld.topology === 'line'
+        || hostWorld.kind === 'slot'
+        || hostWorld.kind === 'rail';
+    if (!isChannel) return null;
+
+    // We re-solve via solveSlotMate (triggered by line topology + host normal).
+    // Bare rail-rail mates would fall through solveMateTransform's single-axis
+    // path which ignores `slide` — skip those so we never silently no-op.
+    const channelSolvable = (hostWorld.topology === 'line' || hostWorld.kind === 'slot')
+        && Array.isArray(hostWorld.normal);
+    if (!channelSolvable) return null;
+
+    const partConnector = mate.partConnectorRef && mate.partConnectorRef.connectorId
+        ? (doc.connectors && doc.connectors[mate.partConnectorRef.connectorId])
+        : null;
+    if (!partConnector) return null;
+
+    // Live-edit baseSlide override: the keyboard handler accumulates slide
+    // locally during a key-mash without committing each press to the doc, then
+    // hands us its running total so we re-solve from the right baseline. With
+    // no override we read the persisted offset (or project the current seat),
+    // which is what one-shot callers want.
+    const prevSlide = Number.isFinite(opts.baseSlide)
+        ? opts.baseSlide
+        : _currentSlide(doc, mate, hostWorld, partConnector);
+    const base = Number.isFinite(prevSlide) ? prevSlide : 0;
+    let slide = base + deltaMm;
+    if (hostWorld.extent) {
+        slide = Math.max(hostWorld.extent.from, Math.min(hostWorld.extent.to, slide));
+    }
+
+    const prevRoll = (mate.offset && Number.isFinite(mate.offset.roll))
+        ? mate.offset.roll : undefined;
+    const solveOpts = Number.isFinite(prevRoll) ? { slide, roll: prevRoll } : { slide };
+    const solved = solveMateTransform(hostWorld, partConnector, solveOpts);
+
+    return {
+        origin: {
+            position: solved.position.slice(),
+            rotation: solved.euler.slice(),
+        },
+        mateId: mate.id,
+        slide,
+        ...(Number.isFinite(prevRoll) ? { roll: prevRoll } : {}),
+        regime: 'channel',
+    };
+}
+
+/**
+ * Pick the component the slide-keys should act on.
+ *
+ * If `preferredId` is given and that component has a channel mate, return it
+ * unchanged. Otherwise, scan every Mate in the doc and collect components whose
+ * host is a slot/line/rail port: if exactly ONE exists, return it (the obvious
+ * answer when there's a single t-nut on a single extrusion); if more than one,
+ * return null with `reason: 'ambiguous'`; if none, `reason: 'none'`. Callers
+ * use the reason to surface a helpful toast instead of silently no-op'ing.
+ *
+ * @param {object} doc
+ * @param {string|null} preferredId
+ * @returns {{ componentId: string }|{ componentId: null, reason: 'ambiguous'|'none' }}
+ */
+export function findSlidableComponent(doc, preferredId) {
+    if (!doc || !doc.mates) return { componentId: null, reason: 'none' };
+    const mates = Object.values(doc.mates);
+    const isChannelMate = (m) => {
+        if (!m || !m.componentId) return false;
+        const ref = m.hostConnectorRef;
+        if (!ref) return false;
+        let host = null;
+        if (ref.connectorId && doc.connectors) host = doc.connectors[ref.connectorId];
+        else if (ref.world) host = ref.world;
+        if (!host) return false;
+        return host.topology === 'line' || host.kind === 'slot' || host.kind === 'rail';
+    };
+    if (preferredId) {
+        const hit = mates.find((m) => m.componentId === preferredId && isChannelMate(m));
+        if (hit) return { componentId: preferredId };
+    }
+    const slidable = new Set();
+    for (const m of mates) {
+        if (isChannelMate(m)) slidable.add(m.componentId);
+    }
+    if (slidable.size === 0) return { componentId: null, reason: 'none' };
+    if (slidable.size === 1) return { componentId: [...slidable][0] };
+    return { componentId: null, reason: 'ambiguous' };
+}
+
 function _freeSpin(comp, axis, deltaRad) {
     const o = comp.origin || {};
     const pos = Array.isArray(o.position) ? o.position.slice() : [0, 0, 0];

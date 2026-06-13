@@ -72,6 +72,69 @@ parameter on `Box` / `Cylinder` means "centered in XY, sitting on Z=0" —
 **not** "centered in XYZ." Using `Align.CENTER` on Z would bury half the
 body below the grid.
 
+## The connector contract
+
+A **connector** is the project's snap point — the contract that says
+"this is a spot on this part where something can attach. Here is *where*
+they touch, *which way* they line up, and *who* is allowed." The data
+shape lives at [lib/document/types.js:451](lib/document/types.js#L451)
+(`makeConnector`). The mate solver / compatibility logic lives at
+[src/lib/library/mate_solver.js:219](src/lib/library/mate_solver.js#L219).
+
+**The nine rules.** Every connector — hand-authored, library-stamped,
+profile-generated, AI-emitted — obeys all nine. Tooling enforces what it
+can; the rest is on the author:
+
+1. **Anchored.** Belongs to exactly one part. `origin` and `axis` are in
+   **part-local mm, Z-up** — never world. The connector rides the part.
+2. **Contact.** `origin` is the exact point where the two parts physically
+   touch (hole entry, face center, lip edge), **not the body center**.
+   The solver makes `part.origin == host.origin`.
+3. **Outward.** `axis` points **out toward the mate** — the direction the
+   connector "reaches." Bolt-shank points down the shank away from the
+   head; tapped-hole points out of the surface. Never "the part's up."
+4. **Compatibility is explicit.** Pick one, by precedence:
+   `profile` (cross-section family, overrides everything) →
+   `interfaceId` (named contract) →
+   `kind` + `gender` + `size` + `mates_with` (fallback whitelist).
+5. **Gender enforces fit direction.** `male` mates `female`; `neutral`
+   mates anything. **Do not default to neutral** — that's how parts clip
+   through each other.
+6. **Size is declared or sentinel.** Always: `{ nominal: 5, unit: 'mm' }`
+   or `{ nominal: 'unspecified', unit: 'mm' }`. Never empty.
+7. **Atomic.** One mating site = one connector. A face that takes either
+   an M3 *or* an M4 is **two** records at the same origin.
+8. **Joint declared.** `inducedJoint: 'fixed'|'revolute'|'prismatic'`.
+   Bearing+shaft → revolute. Slot+nut → prismatic. Otherwise fixed.
+9. **Channels.** For line/slot ports only: `axis` is the **slide
+   direction**, `normal` is the **seating face outward**. Perpendicular,
+   not interchangeable — the solver needs both to land the part *in* the
+   channel, not above it.
+
+**Immutability rule.** Once a connector is committed to the document, it
+is **immutable**. There is no "edit this connector" flow — to change
+one, you delete it and add a new one. This is enforced two ways:
+
+- The data has a `locked` flag (set true on every library-stamped,
+  profile-generated, or AI-authored connector). The typed ops
+  `updateConnector` / `removeConnector` in
+  [lib/document/operations.js:1375](lib/document/operations.js#L1375) refuse
+  to touch a locked record unless the caller passes `{ force: true }`. The
+  op layer is the single gate — the fold applier
+  ([lib/document/fold.js](lib/document/fold.js)) trusts whatever change
+  arrives, because change records are infrastructure data and do not
+  carry `force`.
+- The AI tool surface ([src/lib/ai/tools.js](src/lib/ai/tools.js)) does
+  **not** export `updateConnector` or `removeConnector` at all. AI agents
+  can place library parts, mate them, and (in the future) declare
+  connectors on custom build123d code, but they cannot manipulate a
+  connector that already exists.
+
+`{ force: true }` is reserved for system-internal paths that legitimately
+need to clean up — `replaceComponent` deleting the old component's
+connectors, the cascade-on-remove path. Never sprinkle `force` into
+feature code; if you reach for it, you are about to violate the contract.
+
 ## Face / edge picking: prefer exact, not heuristic
 
 The kernel ships per-face triangulation and per-edge polylines in

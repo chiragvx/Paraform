@@ -168,6 +168,10 @@ export function slotPortsForExtrusion(rec) {
                 fit: 'detent',
                 mates_with: ['rail', 'slot'],
                 inducedJoint: 'prismatic',
+                // Profile-generated slot ports are a deterministic function of
+                // the cross-section + length. They're part of the part's
+                // contract — immutable. See CLAUDE.md "The connector contract".
+                locked: true,
                 metadata: {
                     description: `${prof.size}-series t-slot channel, face [${n}]`,
                     generated: true,

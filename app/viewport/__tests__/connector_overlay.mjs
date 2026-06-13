@@ -59,7 +59,11 @@ t('slot connector builds a channel node with extent endpoints', () => {
     assert.ok(e && e.isSlot, 'slot is a channel node');
     assert.ok(approxV(e.seg[0], [10, 0, 8]),   `p0 ${e.seg[0]}`);   // 125 - 117
     assert.ok(approxV(e.seg[1], [10, 0, 242]), `p1 ${e.seg[1]}`);   // 125 + 117
-    assert.equal(e.balls.length, 3);                                 // ends + middle
+    // Channel-as-tube redesign: the channel itself is the visible target, with
+    // small caps at each end. No middle grab ball — the highlighted state is
+    // how "this one will fire" is communicated.
+    assert.equal(e.balls.length, 2);                                 // both end caps
+    assert.equal(e.lines.length, 1);                                 // the channel tube
 });
 
 t('point connector builds a single-ball node, no segment', () => {
@@ -76,7 +80,10 @@ t('probe colours the matching slot green, mismatching thread grey', () => {
     ov.setCompatibilityProbe([RAIL_PROBE]);
     assert.equal(ov._byId.get('slot-x').state, 'compatible');
     assert.equal(ov._byId.get('thr').state, 'incompatible');
-    assert.equal(ov._byId.get('slot-x').balls[0].material.color.getHex(), 0x35e06a);
+    // Compatible = calm green hint (candidate, not lock-on). The bright
+    // lock-on green is reserved for the highlighted state — see the
+    // setHighlighted test below.
+    assert.equal(ov._byId.get('slot-x').balls[0].material.color.getHex(), 0x2aa85a);
 });
 
 t('clearing the probe reverts to idle', () => {

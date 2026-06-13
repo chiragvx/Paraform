@@ -58,18 +58,91 @@ const EDGE_PREFERENCE_MM = 3.0;
  */
 function pickFaceOrEdge(bridge, camera, raycaster, ndc, pickProxies) {
     if (pickProxies && typeof pickProxies.pick === 'function') {
+        // CRITICAL: run BOTH picks and prefer whichever is closer to the
+        // camera. A face-only approach loses parts that ride in front of an
+        // extrusion (e.g. a t-nut sitting in a slot): the t-nut has no face
+        // proxies (the kernel's StandardPart path doesn't emit descriptors),
+        // so a proxy-only pick hits the extrusion's slot-wall proxy BEHIND
+        // the t-nut, and the user can't ever select the part they clicked.
+        // Standard CAD behaviour: closest-surface wins.
         const proxyHit = pickProxies.pick(camera, raycaster, ndc);
-        if (proxyHit) return proxyHit;
-        // Proxies exist but missed — the ray genuinely cleared the body.
-        // Don't fall through to the heuristic; it would produce a phantom
-        // pick on a far face the user never aimed at.
-        return null;
+        const bodyHit  = _pickBodyHits(bridge, camera, raycaster, ndc)[0] || null;
+        return _preferCloser(proxyHit, bodyHit);
     }
     // Fallback: legacy topology-center heuristic.
     const facePick = bridge.pickFaceAt(camera, raycaster, ndc);
     const edgePick = bridge.pickEdgeAt(camera, raycaster, ndc);
     if (edgePick && edgePick.distance <= EDGE_PREFERENCE_MM) return edgePick;
     return facePick;
+}
+
+// When a face proxy and a body hit are within this distance of each other
+// they're treated as the same surface, and the proxy wins (precise face
+// descriptor). Larger gap = stacked bodies; closer one wins.
+const STACKED_TOLERANCE_MM = 0.5;
+
+/**
+ * Pick the closer of a proxy hit and a body hit. Defaults to the proxy when
+ * they're at the same depth (within `STACKED_TOLERANCE_MM`), because the
+ * proxy carries a precise face/edge descriptor while the body fallback only
+ * carries a component-level reference.
+ */
+function _preferCloser(proxyHit, bodyHit) {
+    if (!proxyHit && !bodyHit) return null;
+    if (!proxyHit) return bodyHit;
+    if (!bodyHit)  return proxyHit;
+    const pd = Number.isFinite(proxyHit.distance) ? proxyHit.distance : Infinity;
+    const bd = Number.isFinite(bodyHit.distance)  ? bodyHit.distance  : Infinity;
+    return (bd + STACKED_TOLERANCE_MM < pd) ? bodyHit : proxyHit;
+}
+
+/**
+ * All body-level raycast hits against `bridge.bodyTransform`, in distance
+ * order. Each hit walks up from the intersected mesh to find an ancestor
+ * carrying `userData.featureId` / `userData.componentId`, so the result is a
+ * component-level reference (no precise face descriptor) but enough for
+ * selection + activation. De-duplicates by featureId (same body, multiple
+ * triangle hits → one entry at the closest distance).
+ *
+ * Empty array when the ray misses everything renderable.
+ */
+function _pickBodyHits(bridge, camera, raycaster, ndc) {
+    if (!bridge || !bridge.bodyTransform) return [];
+    raycaster.setFromCamera({ x: ndc.x, y: ndc.y }, camera);
+    const hits = raycaster.intersectObject(bridge.bodyTransform, true);
+    const out = [];
+    const seen = new Set();
+    for (const h of hits) {
+        let obj = h.object;
+        let featureId = null;
+        let componentId = null;
+        while (obj) {
+            const ud = obj.userData;
+            if (ud) {
+                if (!featureId && ud.featureId) featureId = ud.featureId;
+                if (!componentId && ud.componentId) componentId = ud.componentId;
+            }
+            if (featureId && componentId) break;
+            obj = obj.parent;
+        }
+        if (!featureId && !componentId) continue;
+        const key = featureId || `c:${componentId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const worldHit = h.point ? [h.point.x, h.point.y, h.point.z] : null;
+        out.push({
+            descriptor: { kind: 'body', feature: featureId, featureId },
+            kind:       'body',
+            featureId,
+            center:     worldHit,
+            normal:     null,
+            tangent:    null,
+            worldHit,
+            distance:   h.distance,
+            componentPath: null,
+        });
+    }
+    return out;
 }
 
 /**
@@ -80,10 +153,38 @@ function pickFaceOrEdge(bridge, camera, raycaster, ndc, pickProxies) {
  */
 function pickAllFaceOrEdge(bridge, camera, raycaster, ndc, pickProxies) {
     if (pickProxies && typeof pickProxies.pickAll === 'function') {
-        return pickProxies.pickAll(camera, raycaster, ndc) || [];
+        const proxyHits = pickProxies.pickAll(camera, raycaster, ndc) || [];
+        const bodyHits  = _pickBodyHits(bridge, camera, raycaster, ndc);
+        // Merge by distance so the click-cycle steps through stacked picks
+        // (proxy faces + descriptor-less bodies) in the order the user sees
+        // them. Body hits that coincide with a proxy hit on the same feature
+        // are dropped — the proxy already represents that body, more
+        // precisely. The result is sorted closest → farthest.
+        return _mergePicksByDistance(proxyHits, bodyHits);
     }
     const single = pickFaceOrEdge(bridge, camera, raycaster, ndc, pickProxies);
     return single ? [single] : [];
+}
+
+/**
+ * Interleave proxy hits and body hits by distance, dropping each body hit
+ * whose featureId already appears in the proxy stack (the proxy is the more
+ * precise representation of the same surface).
+ */
+function _mergePicksByDistance(proxyHits, bodyHits) {
+    const proxyFeatureIds = new Set();
+    for (const p of proxyHits) {
+        const fid = p && (p.featureId || (p.descriptor && p.descriptor.feature));
+        if (fid) proxyFeatureIds.add(fid);
+    }
+    const filteredBody = bodyHits.filter((b) => !proxyFeatureIds.has(b.featureId));
+    const merged = [...proxyHits, ...filteredBody];
+    merged.sort((a, b) => {
+        const da = Number.isFinite(a.distance) ? a.distance : Infinity;
+        const db = Number.isFinite(b.distance) ? b.distance : Infinity;
+        return da - db;
+    });
+    return merged;
 }
 
 // Pick-cycle thresholds. A repeat click within both windows is treated as
@@ -101,7 +202,7 @@ const CYCLE_TIME_MS      = 500;   // re-click within 500 ms advances
  * @param {object} args.overlay      - PickingOverlay instance
  * @param {() => boolean} [args.isPickingActive] - return false to suppress picking (e.g. during sketch mode)
  */
-export function attachPicking({ viewport, bridge, selection, overlay, isPickingActive = () => true, onHoverChange = null, pickProxies = null } = {}) {
+export function attachPicking({ viewport, bridge, selection, overlay, isPickingActive = () => true, onHoverChange = null, pickProxies = null, onComponentPick = null } = {}) {
     if (!viewport || !viewport.renderer || !viewport.camera) throw new Error('attachPicking: missing viewport');
     if (!bridge)    throw new Error('attachPicking: missing bridge');
     if (!selection) throw new Error('attachPicking: missing selection');
@@ -294,6 +395,25 @@ export function attachPicking({ viewport, bridge, selection, overlay, isPickingA
         if (!pick || !pick.descriptor) {
             if (!shift) selection.clear();
             return;
+        }
+        // Body-fallback picks (kind:'body') route to the host's
+        // setActiveComponent (sidebar tree highlight) AND store.selectFeature
+        // (3D body-highlight wireframe — see src/lib/picking/body_highlight.js
+        // which subscribes only to store.selectedFeatureId). Pass the
+        // featureId alongside the componentId so the host can do both in one
+        // call. Face/edge picks bypass this — their descriptor-level pick
+        // already drives both.
+        if (pick.kind === 'body' && typeof onComponentPick === 'function') {
+            const path = pick.componentPath;
+            const cid = Array.isArray(path) && path.length > 0
+                ? path[path.length - 1]
+                : null;
+            const fid = pick.featureId || null;
+            if (cid && cid !== 'root') {
+                try { onComponentPick({ componentId: cid, featureId: fid }); } catch (err) {
+                    console.warn('[picking] onComponentPick threw', err);
+                }
+            }
         }
         // Edges expose `tangent`, faces expose `normal`. Both go in payload
         // so the overlay can render either with whatever orientation hint

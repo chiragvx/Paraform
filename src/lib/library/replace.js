@@ -199,7 +199,9 @@ export function replaceComponent(oldComponentId, newPartId, opts = {}) {
         try { deleteFeature(fid); } catch (_) { /* idempotent */ }
     }
     for (const cid of oldConnectorIds) {
-        try { removeConnector(cid); } catch (_) { /* idempotent */ }
+        // force: replaceComponent legitimately clears the old part's locked
+        // library-stamped connectors. See "The connector contract" in CLAUDE.md.
+        try { removeConnector(cid, { force: true }); } catch (_) { /* idempotent */ }
     }
     for (const mid of oldMateIds) {
         try { removeMate(mid); } catch (_) { /* idempotent */ }

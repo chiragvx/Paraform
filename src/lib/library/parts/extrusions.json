@@ -8,100 +8,50 @@
       "type": "parametric",
       "snippet": "# Delegates to kernel standard_parts builder for ext-2020-250.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-250')"
     },
+    "_connector_notes": "Only the two end-face connectors are authored here. The four longitudinal slot channels are auto-appended by expandPortsInPlace() / slotPortsForExtrusion() at library load (driven by interfaceId='profile-2020' → tslot-2020 profile in profiles.js). See CLAUDE.md 'The connector contract' for the 9 rules. All connectors get locked:true when stamped onto a Component (place.js).",
     "connectors": [
       {
         "id": "end-bottom",
         "parent": "lib-part-ext-2020-250",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          -1
-        ],
-        "origin": [
-          0,
-          0,
-          0
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, -1],
+        "origin": [0, 0, 0],
+        "topology": "plane",
+        "normal": [0, 0, -1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion bottom face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Bottom end face (20×20). Butt joints, corner brackets, end plates."
+        }
       },
       {
         "id": "end-top",
         "parent": "lib-part-ext-2020-250",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          1
-        ],
-        "origin": [
-          0,
-          0,
-          250
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, 1],
+        "origin": [0, 0, 250],
+        "topology": "plane",
+        "normal": [0, 0, 1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion top face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Top end face (20×20). Butt joints, corner brackets, end plates."
+        }
       }
     ],
-    "tags": [
-      "extrusion",
-      "t-slot",
-      "aluminum",
-      "20-series",
-      "20x20",
-      "250mm"
-    ],
-    "keywords": [
-      "extrusion",
-      "tslot",
-      "t-slot",
-      "alu",
-      "aluminium",
-      "aluminum",
-      "20x20",
-      "2020",
-      "20",
-      "250"
-    ],
-    "boundingBox": {
-      "min": [
-        -10,
-        -10,
-        0
-      ],
-      "max": [
-        10,
-        10,
-        250
-      ]
-    },
+    "tags": ["extrusion", "t-slot", "aluminum", "20-series", "20x20", "250mm"],
+    "keywords": ["extrusion", "tslot", "t-slot", "alu", "aluminium", "aluminum", "20x20", "2020", "20", "250"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 250] },
     "kernelEntryId": "ext-2020-250"
   },
   {
@@ -113,100 +63,50 @@
       "type": "parametric",
       "snippet": "# Delegates to kernel standard_parts builder for ext-2020-500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-500')"
     },
+    "_connector_notes": "Two end-face planar connectors authored here; four longitudinal slot ports auto-appended at load. See lib-part-ext-2020-250 for the full contract notes.",
     "connectors": [
       {
         "id": "end-bottom",
         "parent": "lib-part-ext-2020-500",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          -1
-        ],
-        "origin": [
-          0,
-          0,
-          0
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, -1],
+        "origin": [0, 0, 0],
+        "topology": "plane",
+        "normal": [0, 0, -1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion bottom face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Bottom end face (20×20). Butt joints, corner brackets, end plates."
+        }
       },
       {
         "id": "end-top",
         "parent": "lib-part-ext-2020-500",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          1
-        ],
-        "origin": [
-          0,
-          0,
-          500
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, 1],
+        "origin": [0, 0, 500],
+        "topology": "plane",
+        "normal": [0, 0, 1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion top face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Top end face (20×20). Butt joints, corner brackets, end plates."
+        }
       }
     ],
-    "tags": [
-      "extrusion",
-      "t-slot",
-      "aluminum",
-      "20-series",
-      "20x20",
-      "500mm"
-    ],
-    "keywords": [
-      "extrusion",
-      "tslot",
-      "t-slot",
-      "alu",
-      "aluminium",
-      "aluminum",
-      "20x20",
-      "2020",
-      "20",
-      "500"
-    ],
-    "boundingBox": {
-      "min": [
-        -10,
-        -10,
-        0
-      ],
-      "max": [
-        10,
-        10,
-        500
-      ]
-    },
+    "tags": ["extrusion", "t-slot", "aluminum", "20-series", "20x20", "500mm"],
+    "keywords": ["extrusion", "tslot", "t-slot", "alu", "aluminium", "aluminum", "20x20", "2020", "20", "500"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 500] },
     "kernelEntryId": "ext-2020-500"
   },
   {
@@ -218,100 +118,50 @@
       "type": "parametric",
       "snippet": "# Delegates to kernel standard_parts builder for ext-2020-1000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-1000')"
     },
+    "_connector_notes": "Two end-face planar connectors authored here; four longitudinal slot ports auto-appended at load. See lib-part-ext-2020-250 for the full contract notes.",
     "connectors": [
       {
         "id": "end-bottom",
         "parent": "lib-part-ext-2020-1000",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          -1
-        ],
-        "origin": [
-          0,
-          0,
-          0
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, -1],
+        "origin": [0, 0, 0],
+        "topology": "plane",
+        "normal": [0, 0, -1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion bottom face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Bottom end face (20×20). Butt joints, corner brackets, end plates."
+        }
       },
       {
         "id": "end-top",
         "parent": "lib-part-ext-2020-1000",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          1
-        ],
-        "origin": [
-          0,
-          0,
-          1000
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, 1],
+        "origin": [0, 0, 1000],
+        "topology": "plane",
+        "normal": [0, 0, 1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion top face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Top end face (20×20). Butt joints, corner brackets, end plates."
+        }
       }
     ],
-    "tags": [
-      "extrusion",
-      "t-slot",
-      "aluminum",
-      "20-series",
-      "20x20",
-      "1000mm"
-    ],
-    "keywords": [
-      "extrusion",
-      "tslot",
-      "t-slot",
-      "alu",
-      "aluminium",
-      "aluminum",
-      "20x20",
-      "2020",
-      "20",
-      "1000"
-    ],
-    "boundingBox": {
-      "min": [
-        -10,
-        -10,
-        0
-      ],
-      "max": [
-        10,
-        10,
-        1000
-      ]
-    },
+    "tags": ["extrusion", "t-slot", "aluminum", "20-series", "20x20", "1000mm"],
+    "keywords": ["extrusion", "tslot", "t-slot", "alu", "aluminium", "aluminum", "20x20", "2020", "20", "1000"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 1000] },
     "kernelEntryId": "ext-2020-1000"
   },
   {
@@ -323,100 +173,50 @@
       "type": "parametric",
       "snippet": "# Delegates to kernel standard_parts builder for ext-2020-1500.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-1500')"
     },
+    "_connector_notes": "Two end-face planar connectors authored here; four longitudinal slot ports auto-appended at load. See lib-part-ext-2020-250 for the full contract notes.",
     "connectors": [
       {
         "id": "end-bottom",
         "parent": "lib-part-ext-2020-1500",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          -1
-        ],
-        "origin": [
-          0,
-          0,
-          0
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, -1],
+        "origin": [0, 0, 0],
+        "topology": "plane",
+        "normal": [0, 0, -1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion bottom face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Bottom end face (20×20). Butt joints, corner brackets, end plates."
+        }
       },
       {
         "id": "end-top",
         "parent": "lib-part-ext-2020-1500",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          1
-        ],
-        "origin": [
-          0,
-          0,
-          1500
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, 1],
+        "origin": [0, 0, 1500],
+        "topology": "plane",
+        "normal": [0, 0, 1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion top face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Top end face (20×20). Butt joints, corner brackets, end plates."
+        }
       }
     ],
-    "tags": [
-      "extrusion",
-      "t-slot",
-      "aluminum",
-      "20-series",
-      "20x20",
-      "1500mm"
-    ],
-    "keywords": [
-      "extrusion",
-      "tslot",
-      "t-slot",
-      "alu",
-      "aluminium",
-      "aluminum",
-      "20x20",
-      "2020",
-      "20",
-      "1500"
-    ],
-    "boundingBox": {
-      "min": [
-        -10,
-        -10,
-        0
-      ],
-      "max": [
-        10,
-        10,
-        1500
-      ]
-    },
+    "tags": ["extrusion", "t-slot", "aluminum", "20-series", "20x20", "1500mm"],
+    "keywords": ["extrusion", "tslot", "t-slot", "alu", "aluminium", "aluminum", "20x20", "2020", "20", "1500"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 1500] },
     "kernelEntryId": "ext-2020-1500"
   },
   {
@@ -428,100 +228,50 @@
       "type": "parametric",
       "snippet": "# Delegates to kernel standard_parts builder for ext-2020-2000.\nfrom standard_parts.catalog import build_from_id\nbody = build_from_id('ext-2020-2000')"
     },
+    "_connector_notes": "Two end-face planar connectors authored here; four longitudinal slot ports auto-appended at load. See lib-part-ext-2020-250 for the full contract notes.",
     "connectors": [
       {
         "id": "end-bottom",
         "parent": "lib-part-ext-2020-2000",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          -1
-        ],
-        "origin": [
-          0,
-          0,
-          0
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, -1],
+        "origin": [0, 0, 0],
+        "topology": "plane",
+        "normal": [0, 0, -1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion bottom face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Bottom end face (20×20). Butt joints, corner brackets, end plates."
+        }
       },
       {
         "id": "end-top",
         "parent": "lib-part-ext-2020-2000",
-        "kind": "bore",
-        "gender": "female",
-        "size": {
-          "nominal": 20,
-          "unit": "mm"
-        },
-        "axis": [
-          0,
-          0,
-          1
-        ],
-        "origin": [
-          0,
-          0,
-          2000
-        ],
-        "mates_with": [
-          "bore",
-          "shaft"
-        ],
+        "kind": "planar",
+        "gender": "neutral",
+        "size": { "nominal": 20, "unit": "mm" },
+        "axis": [0, 0, 1],
+        "origin": [0, 0, 2000],
+        "topology": "plane",
+        "normal": [0, 0, 1],
+        "mates_with": ["planar"],
         "inducedJoint": "fixed",
-        "metadata": {
-          "description": "20x20 extrusion top face"
-        },
         "interfaceId": "profile-2020",
-        "role": "extrusion-end"
+        "role": "extrusion-end",
+        "fit": "press",
+        "metadata": {
+          "description": "Top end face (20×20). Butt joints, corner brackets, end plates."
+        }
       }
     ],
-    "tags": [
-      "extrusion",
-      "t-slot",
-      "aluminum",
-      "20-series",
-      "20x20",
-      "2000mm"
-    ],
-    "keywords": [
-      "extrusion",
-      "tslot",
-      "t-slot",
-      "alu",
-      "aluminium",
-      "aluminum",
-      "20x20",
-      "2020",
-      "20",
-      "2000"
-    ],
-    "boundingBox": {
-      "min": [
-        -10,
-        -10,
-        0
-      ],
-      "max": [
-        10,
-        10,
-        2000
-      ]
-    },
+    "tags": ["extrusion", "t-slot", "aluminum", "20-series", "20x20", "2000mm"],
+    "keywords": ["extrusion", "tslot", "t-slot", "alu", "aluminium", "aluminum", "20x20", "2020", "20", "2000"],
+    "boundingBox": { "min": [-10, -10, 0], "max": [10, 10, 2000] },
     "kernelEntryId": "ext-2020-2000"
   },
   {

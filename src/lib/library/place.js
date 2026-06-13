@@ -203,6 +203,9 @@ export function placeLibraryPart(args) {
             // Port-model v2 — preserve richer-mating fields on the placed copy.
             topology: c.topology ?? null, normal: c.normal ?? null,
             extent: c.extent ?? null, profile: c.profile ?? null, fit: c.fit ?? null,
+            // Library connectors are part of the part's contract — immutable
+            // once stamped. See CLAUDE.md "The connector contract".
+            locked: true,
             metadata: { ...(c.metadata || {}), sourcePartId: part.id, sourceConnectorId: c.id },
         });
         if (partConnector && c.id === partConnector.id) {

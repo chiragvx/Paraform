@@ -27,6 +27,7 @@ export function bootPicking({
   isPickingActive = () => true,
   onHoverChange = null,
   onPick = null,
+  onComponentPick = null,
 } = {}) {
   if (!scene || !camera || !renderer) throw new Error('bootPicking: scene/camera/renderer required');
   if (!bridge) throw new Error('bootPicking: bridge required');
@@ -141,6 +142,7 @@ export function bootPicking({
     pickProxies,
     isPickingActive,
     onHoverChange: composedHover,
+    onComponentPick,
   });
 
   // Bridge selection events back to caller. Selection emits on add/remove/clear.

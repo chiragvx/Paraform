@@ -46,12 +46,13 @@
   import MeasureToolMount from './MeasureToolMount.svelte';
   import { libraryDrag } from './LibraryPalette.svelte';
   import { placeLibraryPart } from '$lib/library/place.js';
-  import { computeRolledOrigin } from '$lib/library/orient.js';
+  import { computeRolledOrigin, computeSlidPlacement, findSlidableComponent } from '$lib/library/orient.js';
   import { insertEntry as insertStandardEntry } from '$lib/library/standard.js';
   import * as v4 from '../../../../lib/document/index.js';
   import { ConnectorOverlay } from '../../../../app/viewport/connector_overlay.js';
   import { TransformGizmo } from '../../../../app/viewport/transform_gizmo.js';
   import { SnapDragController } from '../../../../app/viewport/snap_drag.js';
+  import { composeMatrix, localForWorldPose } from '../../../../app/viewport/snap_frames.js';
   import { DragGhost, cursorOnGroundPlane } from '../../../../app/viewport/drag_ghost.js';
   import { snapGroundPosition, closestParamOnLine, clamp, normalize3 } from '../../../../app/viewport/snap_math.js';
   import { solveMateTransform, connectorsCompatible } from '$lib/library/mate_solver.js';
@@ -97,17 +98,31 @@
   // Drives the discoverability hint; resolved from the picking selection.
   let selectedComponentId = $state(null);
 
-  /** First non-root component owning a selected feature, or null. */
+  /**
+   * First non-root component owning a selected feature; falls back to the
+   * sidebar tree's active component when the 3D picking selection is empty.
+   *
+   * Without the fallback, a placed part that's too small or occluded to click
+   * reliably (e.g. an M5 t-nut inside a 2020 channel) is unreachable from the
+   * keyboard shortcuts — `,` / `.` and `[` / `]` no-op because no body feature
+   * was hit by a raycast. With the fallback, clicking the part's row in the
+   * Sidebar tree (which sets `studio.activeComponentId`) is enough.
+   */
   function resolveSelectedComponentId(sel, doc) {
-    if (!sel || typeof sel.toArray !== 'function') return null;
-    const features = (doc && doc.features) || {};
-    for (const e of sel.toArray()) {
-      const d = e && e.descriptor;
-      const fid = d && (d.featureId || d.feature);
-      if (!fid) continue;
-      const f = features[fid];
-      const cid = f && f.componentId;
-      if (cid && cid !== 'root') return cid;
+    if (sel && typeof sel.toArray === 'function') {
+      const features = (doc && doc.features) || {};
+      for (const e of sel.toArray()) {
+        const d = e && e.descriptor;
+        const fid = d && (d.featureId || d.feature);
+        if (!fid) continue;
+        const f = features[fid];
+        const cid = f && f.componentId;
+        if (cid && cid !== 'root') return cid;
+      }
+    }
+    const active = studio && studio.activeComponentId;
+    if (active && active !== 'root' && doc && doc.components && doc.components[active]) {
+      return active;
     }
     return null;
   }
@@ -624,7 +639,22 @@
       docProvider: () => store.doc,
     });
     // Refresh whenever the doc changes (cheap — connector counts stay small).
-    const offConnectors = store.subscribe(() => connectorOverlay.refresh());
+    // Two guards:
+    //   1. Skip selection-only events ('select'/'refs') — selecting a part
+    //      doesn't move any connector, but the rebuild walks every
+    //      doc.connectors entry and reallocates scene meshes. Without this
+    //      filter, every click stalls for ~tens of ms in heavy docs.
+    //   2. Skip when invisible — the overlay is hidden except during a
+    //      library palette drag or a gizmo snap-drag. Mirrors the sibling
+    //      subscriber in app/viewport/index.js:500.
+    const offConnectors = store.subscribe((_doc, eventLabel) => {
+      if (eventLabel === 'select' || eventLabel === 'refs') return;
+      if (!connectorOverlay.isVisible()) {
+        connectorOverlay.markDirty();
+        return;
+      }
+      connectorOverlay.refresh();
+    });
 
     // Spec 18 v2 — translucent placement ghost for library drags. Lives at
     // scene identity; the drag handlers above call setPart / setPose /
@@ -877,7 +907,15 @@
     // removing a CosmeticThread feature is reflected without waiting for
     // the next kernel cycle.
     const offThreadRender = documentBoot.bridge.onRender(rebuildThreadOverlay);
-    const offThreadDoc = store.subscribe(() => rebuildThreadOverlay());
+    // Skip selection-only events — they can't change which CosmeticThread
+    // features exist. The rebuild walks every feature, resolves a face
+    // descriptor against bridge.geometry, builds a Box3 by iterating the
+    // face's vertex buffer, then allocates fresh LineSegments per thread —
+    // too expensive to run on every part click.
+    const offThreadDoc = store.subscribe((_doc, eventLabel) => {
+      if (eventLabel === 'select' || eventLabel === 'refs') return;
+      rebuildThreadOverlay();
+    });
 
     // ── Reference-plane visibility & sizing ────────────────────────────────
     // Hide planes when: a sketch is active, a body is selected (the user is
@@ -1039,6 +1077,23 @@
       controls: viewport.controls,
       bridge: documentBoot.bridge,
       isPickingActive: () => !isSketchActive(),
+      // Body-fallback path (placed StandardParts whose faces don't reach the
+      // proxy layer):
+      //   - setActiveComponent → sidebar tree highlights the row
+      //   - selectFeature → 3D wireframe highlight on the body (the body
+      //     highlight layer subscribes only to store.selectedFeatureId)
+      //   - both together let the user see what's selected, and the slide /
+      //     rotate keyboard handlers can act on it.
+      onComponentPick: ({ componentId, featureId }) => {
+        try { studio.setActiveComponent(componentId); } catch (err) {
+          console.warn('[picking] setActiveComponent failed', err);
+        }
+        if (featureId) {
+          try { store.selectFeature(featureId); } catch (err) {
+            console.warn('[picking] selectFeature failed', err);
+          }
+        }
+      },
       onPick: (evt) => {
         // ── Face-pick gesture interception (E2.1 / E2.4) ────────────────
         // When the studio runtime has armed `facePickMode`, the next valid
@@ -1329,6 +1384,138 @@
       return true;
     }
 
+    // ── Slide-along-channel (live preview + debounced commit) ────────────────
+    // `,` / `.` nudge a channel-mated component (e.g. a t-nut) along its slot
+    // run. Two key UX requirements: (1) instant visual feedback per press,
+    // and (2) no kernel re-bake per press (each commit triggers a Python
+    // recompile that's ~200ms+).
+    //
+    // The pattern (same as snap_drag's live drag):
+    //   - First press captures the component subgroup + the matrices needed
+    //     to translate "desired component world pose" into "local subgroup
+    //     transform that puts the baked mesh there." All math via
+    //     snap_frames.localForWorldPose.
+    //   - Each subsequent press accumulates `baseSlide` locally (so we don't
+    //     have to commit + read back from doc), re-solves the mate transform,
+    //     and pushes the new pose into the subgroup directly. Visually
+    //     instant.
+    //   - SLIDE_COMMIT_MS after the last press, we flush the commit:
+    //     updateMate(offset.slide) + commitComponentMove. The kernel re-bakes;
+    //     bridge resets the subgroup to identity (per its placement-baked
+    //     contract); the new GLB has the part at the new position. No flicker
+    //     because the re-baked mesh lands at the same world spot we were
+    //     previewing.
+    const SLIDE_STEP = 10;       // mm — default coarse step
+    const SLIDE_FINE = 1;        // mm — Shift = fine
+    const SLIDE_COMMIT_MS = 350; // debounce before the kernel re-bake fires
+    let _slideLive = null;       // { componentId, subgroup, Pinv, objStart, W0inv, slide, lastRes, commitTimer }
+
+    function _captureSlideLive(componentId) {
+      const bridge = documentBoot.bridge;
+      const subgroup = bridge && bridge.componentSubgroup && bridge.componentSubgroup(componentId);
+      const parent = subgroup && subgroup.parent;
+      if (!subgroup || !parent) return null;
+      parent.updateMatrixWorld(true);
+      subgroup.updateMatrixWorld(true);
+      const Pinv     = parent.matrixWorld.clone().invert();
+      const objStart = subgroup.matrixWorld.clone();
+      const comp = store.doc?.components?.[componentId];
+      const origin = (comp && comp.origin) || { position: [0,0,0], rotation: [0,0,0] };
+      const W0     = composeMatrix(origin.position, origin.rotation);
+      const W0inv  = W0.clone().invert();
+      // Initial slide baseline — persisted offset, else 0.
+      let slide = 0;
+      const mates = store.doc?.mates || {};
+      for (const m of Object.values(mates)) {
+        if (m && m.componentId === componentId && m.offset && Number.isFinite(m.offset.slide)) {
+          slide = m.offset.slide;
+          break;
+        }
+      }
+      return { componentId, subgroup, Pinv, objStart, W0inv, slide, lastRes: null, commitTimer: null };
+    }
+
+    function _flushSlideCommit() {
+      if (!_slideLive || !_slideLive.lastRes) {
+        if (_slideLive) _slideLive.commitTimer = null;
+        return;
+      }
+      const cid = _slideLive.componentId;
+      const res = _slideLive.lastRes;
+      if (res.mateId && Number.isFinite(res.slide)) {
+        const offset = Number.isFinite(res.roll)
+          ? { roll: res.roll, slide: res.slide }
+          : { slide: res.slide };
+        try { v4.updateMate(res.mateId, { offset }); }
+        catch (err) { console.warn('[slide-nudge] updateMate failed:', err); }
+      }
+      try { commitComponentMove(cid, res.origin); }
+      catch (err) { console.warn('[slide-nudge] commitComponentMove failed:', err); }
+      // Clear lastRes so we don't re-commit on a stale timer; keep the live
+      // state so subsequent keys keep editing the same part smoothly.
+      _slideLive.lastRes = null;
+      _slideLive.commitTimer = null;
+    }
+
+    function slideSelected(ev, dir) {
+      const preferred = resolveSelectedComponentId(pickingSel, store.doc);
+      const found = findSlidableComponent(store.doc, preferred);
+      if (!found.componentId) {
+        if (found.reason === 'ambiguous') {
+          showMarkingToast('Multiple sliding parts — click the one you want in the left sidebar tree first.');
+        } else {
+          showMarkingToast('Nothing to slide. Place a t-nut on a slot first, or click a channel-mated part.');
+        }
+        return true;
+      }
+      const cid = found.componentId;
+      if (studio.activeComponentId !== cid) {
+        try { studio.setActiveComponent(cid); } catch {}
+      }
+
+      // (Re-)capture live state when we change components or the bridge has
+      // replaced the subgroup beneath us (re-bake invalidates the cache).
+      const bridge = documentBoot.bridge;
+      const currentSubgroup = bridge && bridge.componentSubgroup && bridge.componentSubgroup(cid);
+      if (!_slideLive
+          || _slideLive.componentId !== cid
+          || _slideLive.subgroup !== currentSubgroup) {
+        // If we have a pending commit on a different component, flush it now.
+        if (_slideLive && _slideLive.commitTimer) {
+          clearTimeout(_slideLive.commitTimer);
+          _flushSlideCommit();
+        }
+        _slideLive = _captureSlideLive(cid);
+        if (!_slideLive) return false;
+      }
+
+      const mag = ev.shiftKey ? SLIDE_FINE : SLIDE_STEP;
+      const res = computeSlidPlacement(store.doc, cid, dir * mag, { baseSlide: _slideLive.slide });
+      if (!res) {
+        showMarkingToast('Selection has no channel mate.');
+        return true;
+      }
+
+      // Drive the subgroup directly. Mesh visually lands at the new pose with
+      // zero kernel involvement — instant feedback.
+      const Wnew = composeMatrix(res.origin.position, res.origin.rotation);
+      const local = localForWorldPose(_slideLive.Pinv, _slideLive.objStart, _slideLive.W0inv, Wnew);
+      local.decompose(_slideLive.subgroup.position, _slideLive.subgroup.quaternion, _slideLive.subgroup.scale);
+      _slideLive.subgroup.updateMatrixWorld(true);
+
+      _slideLive.slide   = res.slide;
+      _slideLive.lastRes = res;
+
+      // Debounce the commit (re-bake) until the user settles.
+      if (_slideLive.commitTimer) clearTimeout(_slideLive.commitTimer);
+      _slideLive.commitTimer = setTimeout(_flushSlideCommit, SLIDE_COMMIT_MS);
+
+      const compName = store.doc?.components?.[cid]?.name || 'part';
+      showMarkingToast(`${compName} · slide ${res.slide.toFixed(1)} mm`);
+      try { viewport.controls?.dispatchEvent?.({ type: 'change' }); } catch {}
+      return true;
+    }
+
     // ── Face-pick: Esc cancels the gesture; window-level so it fires even
     // when the pointer isn't over the canvas. ──────────────────────────────
     const onKeyDown = (ev) => {
@@ -1346,12 +1533,33 @@
           ev.stopPropagation();
         }
       }
+      // Slide-along-channel — `,` and `.` (use ev.code so Shift+`,` (which the
+      // browser reports as `<`) doesn't slip through). Same input-blocker /
+      // nav-modifier rules as rotate-to-fit.
+      if (ev.code === 'Comma' || ev.code === 'Period') {
+        const t = ev.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+        if (slideSelected(ev, ev.code === 'Period' ? 1 : -1)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+      }
     };
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       if (_markingToastTimer) clearTimeout(_markingToastTimer);
+      // Flush any pending slide commit so the user doesn't lose unconfirmed
+      // nudges when the viewport unmounts (route change, hot reload).
+      if (_slideLive && _slideLive.commitTimer) {
+        clearTimeout(_slideLive.commitTimer);
+        try { _flushSlideCommit(); } catch (err) {
+          console.warn('[slide-nudge] flush on dispose failed', err);
+        }
+        _slideLive = null;
+      }
       // E4 — tear down rubber-band + marking menu + section + interference.
       try {
         viewport.renderer.domElement.removeEventListener('pointermove', onSnapPointerMove);

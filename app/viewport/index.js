@@ -494,10 +494,16 @@ export function upgradeViewport(viewport, opts = {}) {
             docProvider: () => opts.store.doc,
         });
         // Rebuild whenever the doc changes (new placement, gizmo commit, …).
-        // Cheap enough to do unconditionally — overlay walks doc.connectors
-        // once per change and most docs have < 100 entries.
-        _unsubConnectorRebuild = opts.store.subscribe(() => {
-            if (connectorOverlay.isVisible()) connectorOverlay.rebuild();
+        // Skip selection-only events — they don't move any connector but the
+        // rebuild reallocates every node in the scene. Hidden overlays mark
+        // themselves dirty so `setVisible(true)` catches up.
+        _unsubConnectorRebuild = opts.store.subscribe((_doc, eventLabel) => {
+            if (eventLabel === 'select' || eventLabel === 'refs') return;
+            if (!connectorOverlay.isVisible()) {
+                connectorOverlay.markDirty?.();
+                return;
+            }
+            connectorOverlay.rebuild();
         });
         snapDrag = new SnapDragController({
             transformGizmo,
