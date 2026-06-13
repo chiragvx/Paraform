@@ -155,14 +155,14 @@ export async function signInWithOtp(email) {
 }
 
 /**
- * OAuth sign-in with Google (full-page redirect). Resolves to
+ * OAuth sign-in with GitHub (full-page redirect). Resolves to
  * `{ error: string|null }` — on success the browser navigates away.
  */
-export async function signInWithGoogle() {
+export async function signInWithGithub() {
   if (!isAuthConfigured()) return { error: 'Sign-in is not configured on this deployment.' };
   try {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: 'github',
       options: {
         redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
       },

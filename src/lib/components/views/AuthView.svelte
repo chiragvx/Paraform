@@ -1,13 +1,13 @@
 <script>
   import Button from '$lib/components/ui/button.svelte';
   import Input from '$lib/components/ui/input.svelte';
-  import LogIn from '@lucide/svelte/icons/log-in';
+  import FileCode from '@lucide/svelte/icons/file-code';
   import Mail from '@lucide/svelte/icons/mail';
   import Hexagon from '@lucide/svelte/icons/hexagon';
   import Boxes from '@lucide/svelte/icons/boxes';
   import Box from '@lucide/svelte/icons/box';
   import Download from '@lucide/svelte/icons/download';
-  import { session, isAuthConfigured, signInWithOtp, signInWithGoogle } from '$lib/auth/session.svelte.js';
+  import { session, isAuthConfigured, signInWithOtp, signInWithGithub } from '$lib/auth/session.svelte.js';
   import { navigate } from '$lib/router.svelte.js';
 
   let email = $state('');
@@ -23,11 +23,11 @@
     if (session.user) navigate('studio');
   });
 
-  async function onGoogle() {
+  async function onGithub() {
     error = null;
-    const res = await signInWithGoogle();
+    const res = await signInWithGithub();
     if (res.error) error = res.error;
-    // On success the browser redirects to Google — nothing else to do here.
+    // On success the browser redirects to GitHub — nothing else to do here.
   }
 
   async function onSubmit(e) {
@@ -133,9 +133,9 @@
           </button>
         </div>
       {:else}
-        <Button variant="outline" class="w-full" onclick={onGoogle}>
-          <LogIn class="size-4" />
-          Continue with Google
+        <Button variant="outline" class="w-full" onclick={onGithub}>
+          <FileCode class="size-4" />
+          Continue with GitHub
         </Button>
 
         <div class="my-6 flex items-center gap-3">
