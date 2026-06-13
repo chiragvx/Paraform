@@ -54,6 +54,11 @@ export class TransformGizmo {
      * @param {() => THREE.Object3D|null} [args.bodyRoot] — getter for the bridge's bodyTransform.
      * @param {() => void}          [args.onChange]     — request a re-render after a drag step.
      * @param {string}              [args.initialMode]  — 'translate' | 'rotate' | 'scale' (default translate).
+     * @param {string[]}            [args.allowedModes] — which modes the user may switch to. Defaults to all three.
+     *        The studio passes `['translate']` because rotate/scale drags are
+     *        NOT yet committed to the document (see TODO above) — exposing them
+     *        would let the user move a body that silently snaps back on the next
+     *        kernel regen. Restricting the modes disables the dead W/E/R paths.
      * @param {boolean}             [args.installHotkeys] — default true.
      */
     constructor({
@@ -63,6 +68,7 @@ export class TransformGizmo {
         bodyRoot = null,
         onChange = null,
         initialMode = 'translate',
+        allowedModes = ['translate', 'rotate', 'scale'],
         installHotkeys = true,
     }) {
         if (!camera || !renderer || !scene) {
@@ -76,6 +82,11 @@ export class TransformGizmo {
         this.bodyRoot = (typeof bodyRoot === 'function') ? bodyRoot : (() => null);
         this.onChange = (typeof onChange === 'function') ? onChange : null;
 
+        // Whitelist of modes the user can switch to. Filter to known modes;
+        // fall back to translate-only if the caller passed nothing valid.
+        const allowed = (Array.isArray(allowedModes) ? allowedModes : []).filter((m) => MODES.has(m));
+        this._allowedModes = new Set(allowed.length ? allowed : ['translate']);
+
         this._enabled = true;
         this._attached = null;       // THREE.Object3D currently held by the gizmo
         this._wasCameraEnabled = true;
@@ -85,7 +96,8 @@ export class TransformGizmo {
         // GLB data into world Z, so 'world' is what users expect.
         try { this._controls.setSpace('world'); } catch {}
         this._controls.setSize(0.85);
-        this._controls.setMode(MODES.has(initialMode) ? initialMode : 'translate');
+        const startMode = this._allowedModes.has(initialMode) ? initialMode : [...this._allowedModes][0];
+        this._controls.setMode(startMode);
         // Render gizmo on top of the body so users can grab handles even when
         // a face is fully covering them.
         const giz = this._controls.getHelper ? this._controls.getHelper() : this._controls;
@@ -144,9 +156,9 @@ export class TransformGizmo {
         this._controls.visible = false;
     }
 
-    /** 'translate' | 'rotate' | 'scale' */
+    /** 'translate' | 'rotate' | 'scale' — ignored if the mode isn't allowed. */
     setMode(mode) {
-        if (!MODES.has(mode)) return;
+        if (!MODES.has(mode) || !this._allowedModes.has(mode)) return;
         this._controls.setMode(mode);
     }
 
@@ -213,10 +225,15 @@ export class TransformGizmo {
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         const k = e.key.toLowerCase();
-        if (k === 'w') { e.preventDefault(); this.setMode('translate'); }
-        else if (k === 'e') { e.preventDefault(); this.setMode('rotate'); }
-        else if (k === 'r') { e.preventDefault(); this.setMode('scale'); }
-        else if (k === 'q') { e.preventDefault(); this.setEnabled(!this._enabled); }
+        const modeForKey = { w: 'translate', e: 'rotate', r: 'scale' };
+        if (k in modeForKey) {
+            // Let disallowed-mode keys fall through to other handlers (e.g. the
+            // studio binds W elsewhere) instead of being swallowed by a gizmo
+            // mode that can't be entered.
+            if (!this._allowedModes.has(modeForKey[k])) return;
+            e.preventDefault();
+            this.setMode(modeForKey[k]);
+        } else if (k === 'q') { e.preventDefault(); this.setEnabled(!this._enabled); }
     }
 
     dispose() {

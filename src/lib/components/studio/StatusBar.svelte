@@ -93,40 +93,34 @@
 
   {#if dfmStatus.errorCount > 0 || dfmStatus.warningCount > 0}
     <span class="opacity-30">|</span>
-    <button
-      type="button"
+    <span
       class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
       title={`${dfmStatus.errorCount} errors, ${dfmStatus.warningCount} warnings (${dfmStatus.profileId ?? ''})`}
-      onclick={() => { /* future: scroll inspector to DFM section */ console.info('[dfm] chip clicked'); }}
     >
       ⚠ {dfmStatus.errorCount + dfmStatus.warningCount} DFM
-    </button>
+    </span>
   {/if}
 
   {#if invariantStatus.errorCount > 0 || invariantStatus.warningCount > 0}
     <span class="opacity-30">|</span>
-    <button
-      type="button"
+    <span
       class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
       title={`${invariantStatus.errorCount} errors, ${invariantStatus.warningCount} warnings`}
-      onclick={() => { /* future: scroll inspector to Invariants section */ console.info('[invariants] chip clicked'); }}
     >
       ⚠ {invariantStatus.errorCount + invariantStatus.warningCount} INV
-    </button>
+    </span>
   {/if}
 
   {#if assumptionStatus.unacknowledged > 0}
     <span class="opacity-30">|</span>
-    <button
-      type="button"
+    <span
       class={`rounded border px-1.5 py-0.5 text-[10px] ${assumptionStatus.maxSeverity === 'warning'
         ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
         : 'border-border bg-muted/30 text-muted-foreground'}`}
       title={`${assumptionStatus.unacknowledged} unacknowledged assumption${assumptionStatus.unacknowledged === 1 ? '' : 's'}`}
-      onclick={() => { console.info('[assumptions] chip clicked'); }}
     >
       {assumptionStatus.maxSeverity === 'warning' ? '⚠' : '·'} {assumptionStatus.unacknowledged} ASM
-    </button>
+    </span>
   {/if}
 
   {#if kernelLabel}

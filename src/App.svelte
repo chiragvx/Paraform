@@ -22,7 +22,6 @@
   import AppLoader from '$lib/components/studio/AppLoader.svelte';
   import GlobalNav from '$lib/components/studio/GlobalNav.svelte';
   import LandingView from '$lib/components/views/LandingView.svelte';
-  import ExploreView from '$lib/components/views/ExploreView.svelte';
   import ManageView from '$lib/components/views/ManageView.svelte';
   import AuthView from '$lib/components/views/AuthView.svelte';
   import PricingView from '$lib/components/views/PricingView.svelte';
@@ -228,9 +227,7 @@
   <div class="flex h-full flex-col">
     <GlobalNav />
     <main class="flex-1 min-h-0">
-      {#if router.route === 'explore'}
-        <ExploreView />
-      {:else if router.route === 'manage'}
+      {#if router.route === 'manage'}
         <ManageView />
       {:else if router.route === 'pricing'}
         <PricingView />

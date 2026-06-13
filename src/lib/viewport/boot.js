@@ -86,7 +86,9 @@ export function bootViewport(container) {
   scene.background = resolveBackground(vp.background);
   scene.environment = createRoomEnvironmentTexture(renderer);
   addStandardLighting(scene);
-  addContactShadow(scene, { size: 600, opacity: 0.28, lightHeight: 300 });
+  // Keep the handle so dispose() can free the shadow map / plane / material —
+  // env.js documents that the caller owns disposal of these GPU resources.
+  const contactShadow = addContactShadow(scene, { size: 600, opacity: 0.28, lightHeight: 300 });
 
   // Grid & axes live in mutable holders so the setters can swap them when
   // gridSize changes or toggle their .visible without re-walking the scene.
@@ -237,6 +239,25 @@ export function bootViewport(container) {
     cancelAnimationFrame(rafId);
     resizeObs.disconnect();
     holder.controls?.dispose?.();
+
+    // Free the GPU resources this boot allocated. renderer.dispose() does NOT
+    // walk the scene graph, so the PMREM environment target, the gradient
+    // background texture, the grid/axes geometry+material, and the contact
+    // shadow's 2048² shadow map all leak across remounts (route changes, HMR)
+    // unless released explicitly here.
+    const disposeTexture = (t) => { if (t && typeof t.dispose === 'function') t.dispose(); };
+    disposeTexture(scene.environment);
+    disposeTexture(scene.background);
+    scene.environment = null;
+    scene.background = null;
+    try { grid?.geometry?.dispose?.(); grid?.material?.dispose?.(); } catch {}
+    try { axes?.geometry?.dispose?.(); axes?.material?.dispose?.(); } catch {}
+    try {
+      contactShadow?.plane?.geometry?.dispose?.();
+      contactShadow?.plane?.material?.dispose?.();
+      contactShadow?.light?.shadow?.map?.dispose?.();
+    } catch {}
+
     renderer.dispose();
     material.dispose();
     if (renderer.domElement.parentNode === container) {

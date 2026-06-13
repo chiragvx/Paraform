@@ -32,7 +32,7 @@
   import { mountSnapIndicators, buildSnapCandidates } from '../../../../app/viewport/snap_indicators.js';
   import { getDocumentStore } from '../../../../lib/document/index.js';
   import { getPickingSelection } from '../../../../lib/picking/selection.js';
-  import { COMMANDS, MARKING_MENU_ACTIONS, pickedBodyIds } from '$lib/commands/registry.js';
+  import { COMMANDS, MARKING_MENU_ACTIONS } from '$lib/commands/registry.js';
   import { loadMarkingMenuBindings, MARKING_MENU_SECTORS } from '$lib/viewport/shortcuts.js';
   import { dialogs } from '$lib/dialogs/dialogs.svelte.js';
   // E3 v2 — Press-Pull drag-handle gizmo. The math is in this module;
@@ -585,7 +585,7 @@
   // True for browser fetch/network failures (kernel server down / unreachable),
   // as opposed to a real kernel compile error returned over HTTP.
   function isKernelOfflineError(raw) {
-    return /failed to fetch|networkerror|load failed|err_connection|fetch failed|econnrefused|connection refused|net::/i.test(
+    return /failed to fetch|networkerror|load failed|err_connection|fetch failed|econnrefused|connection refused|net::|aborted|abort|timed out|timeout|signal is aborted/i.test(
       String(raw ?? ''),
     );
   }
@@ -696,6 +696,10 @@
         bodyRoot: () => documentBoot.bridge?.bodyTransform || null,
         onChange: () => { try { viewport.controls?.dispatchEvent?.({ type: 'change' }); } catch {} },
         initialMode: 'translate',
+        // Translate only: rotate (E) / scale (R) drags are not yet committed to
+        // the document, so they'd silently revert on the next kernel regen.
+        // Restrict the gizmo until the rotate/scale commit path exists.
+        allowedModes: ['translate'],
         installHotkeys: true,
       });
     } catch (err) {

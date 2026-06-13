@@ -55,9 +55,6 @@
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';        // revolve / circular array
   import Box from '@lucide/svelte/icons/box';                     // extrude
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import Eye from '@lucide/svelte/icons/eye';
-  import Calculator from '@lucide/svelte/icons/calculator';
-  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import Anchor from '@lucide/svelte/icons/anchor';
   import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
   import MoveVertical from '@lucide/svelte/icons/move-vertical';
@@ -76,12 +73,6 @@
   let selCount = $state(0);
   let drivenDimMode = $state(false);
   let polygonSides = $state(6);
-
-  // Local visual toggles for show-constraints / show-expressions / show-errors.
-  // Backing API doesn't exist yet; document via console.warn at click time.
-  let showConstraints = $state(true);
-  let showExpressions = $state(false);
-  let showErrors = $state(true);
 
   // Dropdown popovers (Rect/Arc/Pattern groups).
   let openMenu = $state(null);   // 'rect' | 'arc' | 'pattern' | null
@@ -201,20 +192,6 @@
       },
       onCancel: () => {},
     });
-  }
-
-  // ── Show toggles (no backing API yet) ─────────────────────────────
-  function toggleShowConstraints() {
-    showConstraints = !showConstraints;
-    console.warn('[sketch] showConstraints toggle: TODO — needs controller hook (setShowConstraints)', showConstraints);
-  }
-  function toggleShowExpressions() {
-    showExpressions = !showExpressions;
-    console.warn('[sketch] showExpressions toggle: TODO — needs controller hook (setShowExpressions)', showExpressions);
-  }
-  function toggleShowErrors() {
-    showErrors = !showErrors;
-    console.warn('[sketch] showErrors toggle: TODO — needs controller hook (setShowErrors)', showErrors);
   }
 
   // ── Styling tokens — match the rest of the viewport HUD ──────────
@@ -423,13 +400,15 @@
 
       <div class="mx-1 h-5 w-px bg-border"></div>
 
-      <!-- Project / Intersect -->
-      <button type="button" class={BTN} onclick={startProject}
-        title="Project geometry — project a body face/edge onto this sketch" aria-label="Project geometry">
+      <!-- Project / Intersect — disabled: the sketcher hook that turns the
+           picked face/edge into projected/intersection geometry hasn't shipped,
+           so these would no-op. Disabled (not hidden) to keep the slot. -->
+      <button type="button" class={`${BTN} opacity-40 cursor-not-allowed`} disabled onclick={startProject}
+        title="Project geometry — coming soon" aria-label="Project geometry (coming soon)">
         <Share2 class={ICON} />
       </button>
-      <button type="button" class={BTN} onclick={startIntersect}
-        title="Intersect geometry — intersect a body face with this sketch plane" aria-label="Intersect geometry">
+      <button type="button" class={`${BTN} opacity-40 cursor-not-allowed`} disabled onclick={startIntersect}
+        title="Intersect geometry — coming soon" aria-label="Intersect geometry (coming soon)">
         <Diff class={ICON} />
       </button>
 
@@ -470,21 +449,9 @@
           </span>
         {/if}
 
-        <!-- Show toggles -->
-        <button type="button" class={showConstraints ? BTN_ON : BTN}
-          onclick={toggleShowConstraints} title="Show constraints" aria-label="Show constraints">
-          <Eye class={ICON} />
-        </button>
-        <button type="button" class={showExpressions ? BTN_ON : BTN}
-          onclick={toggleShowExpressions} title="Show expressions" aria-label="Show expressions">
-          <Calculator class={ICON} />
-        </button>
-        <button type="button" class={showErrors ? BTN_ON : BTN}
-          onclick={toggleShowErrors} title="Show errors" aria-label="Show errors">
-          <TriangleAlert class={ICON} />
-        </button>
-
-        <div class="mx-1 h-5 w-px bg-border"></div>
+        <!-- Show-constraints / expressions / errors toggles were removed:
+             the sketch renderer has no visibility gate to drive, so they only
+             flipped local state. Re-add when the controller hooks exist. -->
 
         <!-- Done / Cancel (primary actions) -->
         <button

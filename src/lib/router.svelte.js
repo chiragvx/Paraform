@@ -2,7 +2,6 @@
 //
 // Route map:
 //   ''        | '#/'         → 'landing'
-//   '#/explore'                → 'explore'
 //   '#/manage'                 → 'manage'
 //   '#/auth'                   → 'auth'
 //   '#/studio' | '#/create'    → 'studio'
@@ -17,7 +16,6 @@ function parseHash(hash) {
   const h = (hash || '').trim();
   const base = h.split('?')[0];
   if (base === '' || base === '#' || base === '#/') return 'landing';
-  if (base === '#/explore') return 'explore';
   if (base === '#/manage') return 'manage';
   if (base === '#/auth') return 'auth';
   if (base === '#/pricing') return 'pricing';
@@ -54,9 +52,6 @@ export function navigate(name) {
       break;
     case 'studio':
       hash = '#/studio';
-      break;
-    case 'explore':
-      hash = '#/explore';
       break;
     case 'manage':
       hash = '#/manage';

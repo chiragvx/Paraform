@@ -7,12 +7,15 @@
   let status = $state('Initializing CAD engine…');
 
   // Status copy progression — three beats so the loader feels alive even when
-  // the kernel is the slow link. The 3s fallback below ensures we never sit
-  // here forever even if the bridge never delivers its first render.
+  // the kernel is the slow link. The fallback below ensures we never sit here
+  // forever even if the bridge never delivers its first render. The floor is
+  // intentionally short: for an empty/fresh doc there's no compile to wait on,
+  // and the studio underneath is already interactive — a long splash just
+  // masks a ready editor.
   $effect(() => {
-    const t1 = setTimeout(() => { if (!dismissed) status = 'Restoring document…'; }, 600);
-    const t2 = setTimeout(() => { if (!dismissed) status = 'Loading viewport…'; }, 1200);
-    const fallback = setTimeout(() => { dismissed = true; }, 3000);
+    const t1 = setTimeout(() => { if (!dismissed) status = 'Restoring document…'; }, 350);
+    const t2 = setTimeout(() => { if (!dismissed) status = 'Loading viewport…'; }, 700);
+    const fallback = setTimeout(() => { dismissed = true; }, 1000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -20,16 +23,24 @@
     };
   });
 
-  // Watch for the bridge to come online, then subscribe to its first render.
+  // Watch for the bridge to come online, then dismiss on whichever lands first:
+  // the first render (geometry arrived) OR a kernel error (offline / mock /
+  // failed compile). Without the error path the splash would otherwise sit for
+  // the full fallback window whenever the kernel is unreachable, even though
+  // the studio is interactive and the error banner is already showing.
   $effect(() => {
     const bridge = studio.bridge;
     if (!bridge || typeof bridge.onRender !== 'function') return;
-    let unsub = null;
-    unsub = bridge.onRender(() => {
+    let offRender = null;
+    let offError = null;
+    const done = () => {
       dismissed = true;
-      if (unsub) { unsub(); unsub = null; }
-    });
-    return () => { if (unsub) unsub(); };
+      if (offRender) { offRender(); offRender = null; }
+      if (offError) { offError(); offError = null; }
+    };
+    offRender = bridge.onRender(done);
+    if (typeof bridge.onError === 'function') offError = bridge.onError(done);
+    return () => { if (offRender) offRender(); if (offError) offError(); };
   });
 
   // After the fade transition completes, drop the node out of the tree.
