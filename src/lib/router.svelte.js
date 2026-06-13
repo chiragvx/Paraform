@@ -6,15 +6,22 @@
 //   '#/manage'                 → 'manage'
 //   '#/auth'                   → 'auth'
 //   '#/studio' | '#/create'    → 'studio'
+//   '#/pricing'                → 'pricing'
 //   anything else              → 'landing'
+//
+// Query strings on the hash are tolerated: '#/studio?checkout=success' and
+// '#/pricing?checkout=cancel' match their base route. We strip everything from
+// the first '?' before comparing.
 
 function parseHash(hash) {
   const h = (hash || '').trim();
-  if (h === '' || h === '#' || h === '#/') return 'landing';
-  if (h === '#/explore') return 'explore';
-  if (h === '#/manage') return 'manage';
-  if (h === '#/auth') return 'auth';
-  if (h === '#/studio' || h === '#/create') return 'studio';
+  const base = h.split('?')[0];
+  if (base === '' || base === '#' || base === '#/') return 'landing';
+  if (base === '#/explore') return 'explore';
+  if (base === '#/manage') return 'manage';
+  if (base === '#/auth') return 'auth';
+  if (base === '#/pricing') return 'pricing';
+  if (base === '#/studio' || base === '#/create') return 'studio';
   return 'landing';
 }
 
@@ -56,6 +63,9 @@ export function navigate(name) {
       break;
     case 'auth':
       hash = '#/auth';
+      break;
+    case 'pricing':
+      hash = '#/pricing';
       break;
     default:
       hash = '#/';

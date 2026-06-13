@@ -52,11 +52,21 @@ function _fetch() {
     return (typeof fetch !== 'undefined') ? fetch.bind(globalThis) : null;
 }
 
-/** JSON headers + `Authorization: Bearer <token>` when a session exists. */
-async function _headers() {
+/**
+ * JSON headers + `Authorization: Bearer <token>` when a session exists.
+ *
+ * Bring-your-own credentials: when the caller passes a user-entered `apiKey`
+ * (and, for OpenAI-compatible hosts, a `baseUrl`), forward them to the proxy as
+ * `X-Provider-Api-Key` / `X-Provider-Base-Url`. The proxy uses them in place of
+ * its server env key for this request. Sent as headers (not the JSON body) so
+ * they stay out of any request-body logging.
+ */
+async function _headers({ apiKey, baseUrl } = {}) {
     const headers = { 'Content-Type': 'application/json' };
     const token = await getAuthToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (apiKey) headers['X-Provider-Api-Key'] = apiKey;
+    if (baseUrl) headers['X-Provider-Base-Url'] = baseUrl;
     return headers;
 }
 
@@ -90,7 +100,7 @@ export async function checkAiHealth({ endpoint } = {}) {
  * @param {{ endpoint?:string, signal?:AbortSignal }} [opts]
  * @returns {Promise<object>}
  */
-export async function sendChat(body, { endpoint, signal } = {}) {
+export async function sendChat(body, { endpoint, signal, apiKey, baseUrl } = {}) {
     const base = aiBaseUrl(endpoint);
     const f = _fetch();
     if (!base) throw new Error('AI proxy endpoint not configured');
@@ -98,7 +108,7 @@ export async function sendChat(body, { endpoint, signal } = {}) {
 
     const res = await f(`${base}/ai/chat`, {
         method: 'POST',
-        headers: await _headers(),
+        headers: await _headers({ apiKey, baseUrl }),
         body: JSON.stringify({ ...body, stream: false }),
         signal,
     });
@@ -117,7 +127,7 @@ export async function sendChat(body, { endpoint, signal } = {}) {
  * @param {{ endpoint?:string, signal?:AbortSignal }} [opts]
  * @returns {Promise<void>}
  */
-export async function streamChat(body, onData = () => {}, { endpoint, signal } = {}) {
+export async function streamChat(body, onData = () => {}, { endpoint, signal, apiKey, baseUrl } = {}) {
     const base = aiBaseUrl(endpoint);
     const f = _fetch();
     if (!base) throw new Error('AI proxy endpoint not configured');
@@ -125,7 +135,7 @@ export async function streamChat(body, onData = () => {}, { endpoint, signal } =
 
     const res = await f(`${base}/ai/chat`, {
         method: 'POST',
-        headers: await _headers(),
+        headers: await _headers({ apiKey, baseUrl }),
         body: JSON.stringify({ ...body, stream: true }),
         signal,
     });

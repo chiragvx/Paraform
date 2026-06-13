@@ -20,11 +20,17 @@
 
   // The model field whose key matches the selected provider; the other model
   // dropdown is hidden. 'mock' has no model knob.
-  const provider = $derived(values.provider ?? 'gemini');
+  const provider = $derived(values.provider ?? 'openai');
 
+  // Only show the model + key fields for the currently selected provider.
+  const FIELD_PROVIDER = {
+    openaiModel: 'openai', openaiApiKey: 'openai', openaiBaseUrl: 'openai',
+    geminiModel: 'gemini', geminiApiKey: 'gemini',
+    anthropicModel: 'anthropic', anthropicApiKey: 'anthropic',
+  };
   function fieldVisible(field) {
-    if (field.key === 'geminiModel') return provider === 'gemini';
-    if (field.key === 'anthropicModel') return provider === 'anthropic';
+    const owner = FIELD_PROVIDER[field.key];
+    if (owner) return provider === owner;
     return true; // provider, maxTokens
   }
 
@@ -62,8 +68,17 @@
               step={field.step}
               oninput={(e) => update(field.key, Number(e.currentTarget.value))}
             />
+          {:else if field.kind === 'secret'}
+            <Input
+              type="password"
+              autocomplete="off"
+              placeholder={field.placeholder}
+              value={values[field.key]}
+              oninput={(e) => update(field.key, e.currentTarget.value)}
+            />
           {:else}
             <Input
+              placeholder={field.placeholder}
               value={values[field.key]}
               oninput={(e) => update(field.key, e.currentTarget.value)}
             />
@@ -74,8 +89,24 @@
   {/each}
 
   <p class="pt-2 text-[11px] leading-relaxed text-muted-foreground/70">
-    The provider's API key lives on the kernel server (set
-    <code>GEMINI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code> and restart the
-    kernel). The chat panel shows which providers are configured.
+    {#if provider === 'openai'}
+      Recommended path: get an <strong>OpenRouter</strong> key at
+      <a class="underline" href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>
+      — one key, every model (GPT-OSS, Claude, Gemini). Leave "Host base URL"
+      blank to use OpenRouter, or set it to your own host (Groq, Together,
+      Fireworks, Ollama, …).
+    {:else if provider === 'anthropic'}
+      Connect Claude directly by pasting an Anthropic API key. Get one at
+      <a class="underline" href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+    {:else if provider === 'gemini'}
+      Connect Gemini directly with a Google AI Studio key:
+      <a class="underline" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>.
+    {:else}
+      Mock mode runs deterministic offline rules — no key needed.
+    {/if}
+    Keys are held in <strong>session storage</strong> only — they live in this
+    tab while it's open and are cleared when you close it. They're never written
+    to localStorage and never persisted server-side. v1 is bring-your-own-key:
+    you must add a key to use the assistant.
   </p>
 </div>

@@ -15,10 +15,9 @@ download STL **is** the entire marketing message.
 
 ## What's missing for revenue (build order)
 
-1. **Billing** — nothing charges money today. Use a merchant-of-record
-   (Lemon Squeezy or Polar; they handle global sales tax, ~1 day vs
-   Stripe's compliance work). Checkout → webhook → `plan` column in
-   Supabase → caps lift.
+1. **Billing** — nothing charges money today. **Stripe** (Checkout +
+   billing portal + webhook). Checkout → webhook → `plan` column in
+   Supabase ('free'/'paid') → caps lift.
 2. **Auth gate + usage caps** — Supabase client exists (`lib/cloud.js`,
    local-first sync) but the AI proxy and kernel are open. Gate the studio
    behind Supabase email/Google auth; session token required by
@@ -39,7 +38,7 @@ download STL **is** the entire marketing message.
 | Day | Deliverable |
 |---|---|
 | 1 | Merge branch → main. Supabase auth gating studio + AI proxy + kernel. Per-user daily caps. |
-| 2 | Lemon Squeezy/Polar checkout + webhook → plan flag in Supabase. |
+| 2 | Stripe checkout + billing portal + webhook → plan flag in Supabase ('free'/'paid'). |
 | 3 | Deploy: frontend on Vercel; kernel on Fly.io/Railway (~$25–50/mo, one always-on worker; HF Spaces playbook in `paraform-engine/DEPLOY_HUGGINGFACE.md` as free-tier overflow). Sandbox the kernel container. |
 | 4 | Record the 75-second hero video; cut GIFs; ship the landing page. |
 | 5 | Dogfood 5 builds end-to-end as a stranger would; fix only what breaks; verify STL prints clean in a slicer. |
@@ -48,16 +47,16 @@ download STL **is** the entire marketing message.
 
 ## Pricing
 
-- **Free:** 5 AI generations/mo, watermark-free STL.
-- **Maker:** $19/mo or $149/yr.
-- **Early-bird lifetime:** $129, capped at 100 seats — this is the
-  week-one revenue engine.
+Two tiers, processed by **Stripe** (Checkout + billing portal + webhook):
 
-**Honest math:** recurring $5K/mo needs ~260 subscribers — a month-2/3
-goal. Week-one revenue comes from the lifetime cap: 40–80 sales from a
-good HN/PH launch = $5–10K in month one. COGS per user is low (Gemini
-Flash pennies/session + kernel CPU-seconds), so margins survive
-aggressive pricing.
+- **Free:** 15 AI generations/day, 60 compiles/day, full studio,
+  STL/STEP export.
+- **Pro — $9.99/month:** 200 AI generations/day, 1000 compiles/day,
+  priority compiles.
+
+**Honest math:** recurring $5K/mo needs ~500 Pro subscribers at $9.99 —
+a month-2/3 goal. COGS per user is low (Gemini Flash pennies/session +
+kernel CPU-seconds), so margins survive aggressive pricing.
 
 ## Scope cuts (ship without these)
 

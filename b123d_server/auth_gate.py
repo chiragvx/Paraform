@@ -24,13 +24,14 @@ Usage counting is per (user, UTC day, kind) with kind ∈ {'ai', 'execute'}:
 Caps (per UTC day) are env-tunable:
 
   free            CAP_AI_PER_DAY=15        CAP_EXECUTE_PER_DAY=60
-  maker/lifetime  CAP_AI_PER_DAY_PRO=200   CAP_EXECUTE_PER_DAY_PRO=1000
+  paid            CAP_AI_PER_DAY_PRO=200   CAP_EXECUTE_PER_DAY_PRO=1000
 
-Public surface (used by server.py + ai_proxy.py):
+Public surface (used by server.py + ai_proxy.py + billing.py):
   auth_required()                       → bool
   verify_token(bearer_token)            → {user_id, email} | None
-  get_plan(user_id)                     → 'free' | 'maker' | 'lifetime'
+  get_plan(user_id)                     → 'free' | 'paid'
   check_and_count(user_id, kind)        → (allowed, count, cap)
+  get_usage(user_id)                    → {ai:{count,cap}, execute:{count,cap}}
   gate_request(flask_request, kind)     → None | (json_dict, status_code)
 
 Transport: the `requests` library (already a server dependency via ai_proxy).
@@ -57,8 +58,8 @@ _CACHE_SWEEP_AT = 1024
 
 _HTTP_TIMEOUT_S = 10
 
-_PRO_PLANS = ("maker", "lifetime")
-_KNOWN_PLANS = ("free", "maker", "lifetime")
+_PRO_PLANS = ("paid",)
+_KNOWN_PLANS = ("free", "paid")
 
 # All mutable module state below is guarded by this lock — the server runs
 # threaded=True, so concurrent requests hit the gate in parallel.
@@ -180,7 +181,7 @@ def verify_token(bearer_token):
 # ── Plan lookup ──────────────────────────────────────────────────────────────
 
 def get_plan(user_id: str) -> str:
-    """'free' | 'maker' | 'lifetime' from profiles.plan; 'free' on any failure.
+    """'free' | 'paid' from profiles.plan; 'free' on any failure.
 
     Requires the service key (RLS hides other users' profile rows from the
     publishable key). Without one, everybody is treated as 'free'.
@@ -275,6 +276,63 @@ def check_and_count(user_id: str, kind: str):
         count = max(remote, mem_count)
 
     return (count <= cap, count, cap)
+
+
+def _remote_usage_counts(user_id: str, day: str) -> dict:
+    """Read today's durable per-kind counts from usage_daily (read-only).
+
+    Returns {kind: count} for whatever rows exist; {} on any failure or when
+    the service key is unset. Does NOT mutate any counter.
+    """
+    skey = _service_key()
+    url = _supabase_url()
+    if not skey or not url or not user_id:
+        return {}
+    out: dict = {}
+    try:
+        resp = requests.get(
+            f"{url}/rest/v1/usage_daily",
+            params={
+                "user_id": f"eq.{user_id}",
+                "day": f"eq.{day}",
+                "select": "kind,count",
+            },
+            headers={"apikey": skey, "Authorization": f"Bearer {skey}"},
+            timeout=_HTTP_TIMEOUT_S,
+        )
+        if resp.status_code == 200:
+            rows = resp.json()
+            if isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict):
+                        kind = row.get("kind")
+                        cnt = row.get("count")
+                        if isinstance(kind, str) and isinstance(cnt, int):
+                            out[kind] = cnt
+    except Exception as e:
+        print(f"[paraform] auth: usage read failed for {user_id}: {e}", file=sys.stderr)
+    return out
+
+
+def get_usage(user_id: str) -> dict:
+    """Today's (UTC) counts + caps for both kinds WITHOUT incrementing.
+
+    Shape: {"ai": {"count": int, "cap": int},
+            "execute": {"count": int, "cap": int}}.
+    Durable counts (usage_daily) are folded with max() against the in-memory
+    floor; on any failure we degrade to the in-memory counter / zeros.
+    """
+    plan = get_plan(user_id)
+    day = _utc_day()
+    remote = _remote_usage_counts(user_id, day)
+
+    result = {}
+    for kind in ("ai", "execute"):
+        with _state_lock:
+            mem_count = _mem_counts.get((user_id, day, kind), 0)
+        count = max(mem_count, remote.get(kind, 0))
+        result[kind] = {"count": count, "cap": _cap_for(plan, kind)}
+    return result
 
 
 # ── Flask glue ───────────────────────────────────────────────────────────────

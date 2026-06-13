@@ -141,3 +141,35 @@ on the next kernel call (Ctrl+S, any v4 op, or a document mutation).
 | Wiring | [main.js](main.js) `createRenderer` | composes the above into one viewport |
 
 When something looks wrong in the scene, check **conventions.js** first.
+
+## Billing & plans (Phase 4)
+
+Two plans, stored in `profiles.plan` ∈ `('free','paid')`: **Free** and
+**Pro = $9.99/month** ('paid'). Billing is driven by **Stripe** (Checkout +
+billing portal + signature-verified webhook) in
+[b123d_server/billing.py](b123d_server/billing.py), registered in
+`server.py`:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /billing/me` | current plan + usage for the signed-in user |
+| `POST /billing/checkout` | start a Stripe Checkout session → Pro |
+| `POST /billing/portal` | open the Stripe billing portal (manage/cancel) |
+| `POST /billing/webhook` | Stripe → flips `profiles.plan` via service role |
+
+The webhook is the only writer of `profiles.plan` — it verifies the Stripe
+signature (`STRIPE_WEBHOOK_SECRET`) and updates Supabase with the
+**service-role key** (so it can write rows RLS would otherwise block).
+Daily caps live in [b123d_server/auth_gate.py](b123d_server/auth_gate.py)
+(`_PRO_PLANS` / `_cap_for`): Free = 15 AI / 60 compiles per day, Pro = 200 /
+1000. The client reads plan + usage from `GET /billing/me` into the session
+store ([src/lib/auth/session.svelte.js](src/lib/auth/session.svelte.js)),
+which feeds the nav plan badge + Upgrade/Manage and the Pricing page
+(`#/pricing`).
+
+**Login is mandatory whenever Supabase is configured** — the studio gate
+(`App.svelte`) auto-requires sign-in in any real deployment; set
+`VITE_REQUIRE_AUTH=0` as an explicit escape hatch, and unconfigured
+dev/tests stay open. Stripe env vars (`STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `APP_URL`) are documented in
+`.env.example`; leave them unset to run free-only.

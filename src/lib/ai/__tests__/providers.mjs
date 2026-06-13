@@ -34,13 +34,14 @@ async function t(name, fn) {
 
 console.log('── Phase 2 — AI provider abstraction ──');
 
-await t('getProvider: default is gemini; unknown falls back to default', () => {
-    assert.equal(DEFAULT_PROVIDER, 'gemini');
-    assert.equal(getProvider().name, 'gemini');
+await t('getProvider: default is openai; unknown falls back to default', () => {
+    assert.equal(DEFAULT_PROVIDER, 'openai');
+    assert.equal(getProvider().name, 'openai');
+    assert.equal(getProvider('openai').name, 'openai');
     assert.equal(getProvider('gemini').name, 'gemini');
     assert.equal(getProvider('anthropic').name, 'anthropic');
-    assert.equal(getProvider('totally-bogus').name, 'gemini');
-    assert.equal(getProvider('GEMINI').name, 'gemini');
+    assert.equal(getProvider('totally-bogus').name, 'openai');
+    assert.equal(getProvider('OpenAI').name, 'openai');
 });
 
 await t('(a) gemini.toolsForProvider → functionDeclarations with parameters (not input_schema)', () => {
@@ -246,6 +247,120 @@ await t('anthropic.makeStreamHandler assembles text + tool_use over SSE events',
     assert.equal(out.toolCalls.length, 1);
     assert.equal(out.toolCalls[0].name, 'addBox');
     assert.deepEqual(out.toolCalls[0].input, { length: 3 });
+    assert.equal(out.stop, false);
+    assert.ok(final);
+});
+
+// ── OpenAI-compatible (GPT-OSS) provider ──────────────────────────────────────
+
+await t('openai.toolsForProvider → [{type:function, function:{name,description,parameters}}]', () => {
+    const openai = getProvider('openai');
+    const tools = openai.toolsForProvider(AGENT_TOOLS);
+    assert.equal(tools.length, AGENT_TOOLS.length, 'one tool per canonical tool');
+    for (const tdef of tools) {
+        assert.equal(tdef.type, 'function');
+        assert.equal(typeof tdef.function.name, 'string');
+        assert.equal(typeof tdef.function.description, 'string');
+        assert.ok(tdef.function.parameters && tdef.function.parameters.type === 'object',
+            `${tdef.function.name} has an object parameters schema`);
+    }
+    const addBox = tools.find((x) => x.function.name === 'addBox');
+    assert.deepEqual(addBox.function.parameters.required, ['length', 'width', 'height']);
+    // A no-input tool still carries a valid (empty) object schema.
+    const summary = tools.find((x) => x.function.name === 'get_document_summary');
+    assert.equal(summary.function.parameters.type, 'object');
+});
+
+await t('openai.parseResponse extracts text + tool_calls (arguments JSON-parsed)', () => {
+    const openai = getProvider('openai');
+    const sample = {
+        choices: [{
+            index: 0,
+            message: {
+                role: 'assistant',
+                content: 'Placing a box.',
+                tool_calls: [{
+                    id: 'call_1', type: 'function',
+                    function: { name: 'addBox', arguments: '{"length":10,"width":5,"height":3}' },
+                }],
+            },
+            finish_reason: 'tool_calls',
+        }],
+        usage: { total_tokens: 42 },
+    };
+    const parsed = openai.parseResponse(sample);
+    assert.equal(parsed.text, 'Placing a box.');
+    assert.equal(parsed.toolCalls.length, 1);
+    assert.equal(parsed.toolCalls[0].id, 'call_1');
+    assert.equal(parsed.toolCalls[0].name, 'addBox');
+    assert.deepEqual(parsed.toolCalls[0].input, { length: 10, width: 5, height: 3 });
+    assert.equal(parsed.stop, false, 'tool calls present → not stopped');
+    assert.ok(parsed.usage);
+});
+
+await t('openai.parseResponse: text-only → stop:true', () => {
+    const openai = getProvider('openai');
+    const parsed = openai.parseResponse({
+        choices: [{ message: { role: 'assistant', content: 'Done.' }, finish_reason: 'stop' }],
+    });
+    assert.equal(parsed.text, 'Done.');
+    assert.equal(parsed.toolCalls.length, 0);
+    assert.equal(parsed.stop, true);
+});
+
+await t('openai.buildBody: system message prepended; assistant tool_calls + tool results round-trip', () => {
+    const openai = getProvider('openai');
+    const history = [{ role: 'user', text: 'make a cube' }];
+    openai.appendAssistantTurn(history, { text: 'sure', toolCalls: [{ id: 'call_9', name: 'addBox', input: { length: 3 } }] });
+    openai.appendToolResults(history, [{ id: 'call_9', name: 'addBox', result: { ok: true, featureId: 'box_1' } }]);
+    const tools = openai.toolsForProvider(AGENT_TOOLS);
+    const { body, path } = openai.buildBody({
+        system: 'SYS', history, tools, model: 'openai/gpt-oss-120b', maxTokens: 512, stream: true,
+    });
+    assert.equal(body.provider, 'openai');
+    assert.equal(body.model, 'openai/gpt-oss-120b');
+    assert.equal(body.max_tokens, 512);
+    assert.equal(body.tool_choice, 'auto');
+    assert.deepEqual(body.stream_options, { include_usage: true });
+    assert.match(path, /chat\/completions$/);
+    // messages: system, user, assistant(tool_calls), tool
+    assert.equal(body.messages[0].role, 'system');
+    assert.equal(body.messages[0].content, 'SYS');
+    assert.equal(body.messages[1].role, 'user');
+    const asst = body.messages[2];
+    assert.equal(asst.role, 'assistant');
+    assert.equal(asst.tool_calls[0].id, 'call_9');
+    assert.equal(asst.tool_calls[0].function.name, 'addBox');
+    assert.equal(asst.tool_calls[0].function.arguments, JSON.stringify({ length: 3 }));
+    const toolMsg = body.messages[3];
+    assert.equal(toolMsg.role, 'tool');
+    assert.equal(toolMsg.tool_call_id, 'call_9');
+    assert.equal(toolMsg.content, JSON.stringify({ ok: true, featureId: 'box_1' }));
+});
+
+await t('openai.makeStreamHandler accumulates content + tool_call arguments across chunks', () => {
+    const openai = getProvider('openai');
+    const texts = [];
+    let final = null;
+    const handler = openai.makeStreamHandler({
+        onText: (t2) => texts.push(t2),
+        onStop: (r) => { final = r; },
+    });
+    // content streamed in two pieces
+    handler(JSON.stringify({ choices: [{ index: 0, delta: { content: 'Pla' } }] }));
+    handler(JSON.stringify({ choices: [{ index: 0, delta: { content: 'cing.' } }] }));
+    // tool call: first chunk carries id+name, later chunks append arguments
+    handler(JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 'call_7', type: 'function', function: { name: 'addBox', arguments: '{"len' } }] } }] }));
+    handler(JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: 'gth":4}' } }] }, finish_reason: 'tool_calls' }] }));
+    handler(JSON.stringify({ choices: [], usage: { total_tokens: 5 } }));
+    handler('[DONE]');
+    const out = handler.finalize();
+    assert.deepEqual(texts, ['Pla', 'cing.']);
+    assert.equal(out.text, 'Placing.');
+    assert.equal(out.toolCalls.length, 1);
+    assert.equal(out.toolCalls[0].id, 'call_7');
+    assert.equal(out.toolCalls[0].name, 'addBox');
+    assert.deepEqual(out.toolCalls[0].input, { length: 4 });
     assert.equal(out.stop, false);
     assert.ok(final);
 });

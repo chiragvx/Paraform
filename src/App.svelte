@@ -25,6 +25,7 @@
   import ExploreView from '$lib/components/views/ExploreView.svelte';
   import ManageView from '$lib/components/views/ManageView.svelte';
   import AuthView from '$lib/components/views/AuthView.svelte';
+  import PricingView from '$lib/components/views/PricingView.svelte';
   import { palette } from '$lib/commands/palette.svelte.js';
   import { studio } from '$lib/studio/runtime.svelte.js';
   import { NUMERIC_VIEW_KEYS } from '$lib/viewport/views.js';
@@ -34,16 +35,17 @@
   import { getPickingSelection } from '../lib/picking/selection.js';
   import { isSketchActive } from '$lib/sketch/boot.js';
   import { router, navigate } from '$lib/router.svelte.js';
-  import { session } from '$lib/auth/session.svelte.js';
+  import { session, isAuthConfigured, refreshAccount } from '$lib/auth/session.svelte.js';
 
-  // Route gating — opt-in via VITE_REQUIRE_AUTH=1 (or 'true'). Default OFF so
-  // local dev and the test harness behave exactly as before. When on, the
-  // studio route requires a signed-in session: while the session is still
-  // loading we render nothing for that route (no flash-of-studio), and once
-  // it resolves signed-out we bounce to #/auth.
-  const REQUIRE_AUTH = ['1', 'true'].includes(
-    String(import.meta.env.VITE_REQUIRE_AUTH ?? '').toLowerCase()
-  );
+  // Route gating. Login is mandatory in any real (Supabase-configured)
+  // deployment. Set VITE_REQUIRE_AUTH=0 to force it off (e.g. a local
+  // kernel-only demo); when Supabase is unconfigured (dev/tests) the gate is
+  // naturally inert. When on, the studio route requires a signed-in session:
+  // while the session is still loading we render nothing for that route (no
+  // flash-of-studio), and once it resolves signed-out we bounce to #/auth.
+  const _authFlag = String(import.meta.env.VITE_REQUIRE_AUTH ?? '').toLowerCase();
+  const _authDisabled = _authFlag === '0' || _authFlag === 'false';
+  const REQUIRE_AUTH = isAuthConfigured() && !_authDisabled;
   const studioAllowed = $derived(!REQUIRE_AUTH || !!session.user);
 
   $effect(() => {
@@ -57,6 +59,17 @@
     const tag = target.tagName;
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
   }
+
+  // Post-checkout return. Stripe's success_url is `.../#/studio?checkout=success`.
+  // Refresh the account (so the new plan/usage lands) and strip the query so
+  // a reload/back doesn't re-fire it.
+  onMount(() => {
+    const hash = typeof window !== 'undefined' ? (window.location.hash || '') : '';
+    if (hash.includes('checkout=success')) {
+      refreshAccount?.();
+      window.location.hash = '#/studio';
+    }
+  });
 
   onMount(() => {
     const store = getDocumentStore();
@@ -219,6 +232,8 @@
         <ExploreView />
       {:else if router.route === 'manage'}
         <ManageView />
+      {:else if router.route === 'pricing'}
+        <PricingView />
       {:else if router.route === 'auth'}
         <AuthView />
       {:else}

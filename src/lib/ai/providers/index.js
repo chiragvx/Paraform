@@ -54,13 +54,18 @@
 
 import { anthropicProvider } from './anthropic.js';
 import { geminiProvider } from './gemini.js';
+import { openaiProvider } from './openai.js';
 
-/** Default provider id — Gemini is the working path. */
-export const DEFAULT_PROVIDER = 'gemini';
+/**
+ * Default provider id — OpenAI-compatible GPT-OSS is the core path (open-weight,
+ * widely available, native tool calling). Gemini + Anthropic stay selectable.
+ */
+export const DEFAULT_PROVIDER = 'openai';
 
 const _byName = new Map([
     [anthropicProvider.name, anthropicProvider],
     [geminiProvider.name, geminiProvider],
+    [openaiProvider.name, openaiProvider],
 ]);
 
 /**
@@ -75,4 +80,4 @@ export function getProvider(name) {
     return _byName.get(key) || _byName.get(DEFAULT_PROVIDER);
 }
 
-export { anthropicProvider, geminiProvider };
+export { anthropicProvider, geminiProvider, openaiProvider };

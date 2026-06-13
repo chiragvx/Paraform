@@ -22,6 +22,25 @@
 
 export const SETTINGS_KEY = 'paraform_app_settings';
 
+/**
+ * Separate session-only blob for secret values (BYO API keys). Stored in
+ * sessionStorage so they live only for the current tab and never sit at rest
+ * in localStorage. The persistent SETTINGS_KEY blob never contains a key.
+ */
+export const SESSION_SECRETS_KEY = 'paraform_session_secrets';
+
+/**
+ * Setting paths that MUST live in sessionStorage, not localStorage. Any value
+ * written to these paths is routed to the session blob; any persisted value
+ * found at these paths in old localStorage is ignored on read. Update this
+ * list when adding new browser-held secrets.
+ */
+const SESSION_ONLY_PATHS = Object.freeze([
+    'ai.openaiApiKey',
+    'ai.anthropicApiKey',
+    'ai.geminiApiKey',
+]);
+
 /** Recursively freeze a value so the constants below are immutable end-to-end. */
 function deepFreeze(value) {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -65,11 +84,16 @@ export const DEFAULT_SETTINGS = deepFreeze({
     diagnostics: { showFPS: false, showPolygonCount: true, showCompileTime: true },
     // Phase 2 — switchable AI provider. `provider` selects the backend the chat
     // + repair loop route through via the Flask /ai/chat proxy (keys live on the
-    // server, never the client). Gemini is the default working path; Anthropic
-    // is selectable; `'mock'` keeps the deterministic repair rules offline.
-    // `geminiModel` / `anthropicModel` pin the model per provider. The legacy
-    // `model` key is still honoured for back-compat (see agent.js).
-    ai:          { provider: 'gemini', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 4096 },
+    // server, never the client). OpenAI-compatible GPT-OSS is the default core
+    // path (open-weight, widely available, native tool calling); Gemini +
+    // Anthropic stay selectable; `'mock'` keeps the deterministic repair rules
+    // offline. `openaiModel` / `geminiModel` / `anthropicModel` pin the model per
+    // provider. The legacy `model` key is still honoured for back-compat (agent.js).
+    // `*ApiKey` / `openaiBaseUrl` are optional bring-your-own credentials: stored
+    // in THIS browser and sent to the user's own kernel proxy (X-Provider-Api-Key
+    // header), which uses them in place of its server env keys. Blank = fall back
+    // to the server-configured key.
+    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 4096, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
     keybindings: { ...DEFAULT_KEYBINDINGS },
 });
 
@@ -98,6 +122,74 @@ export const BG_COLORS = deepFreeze({
     blue:    0x080d14,
 });
 
+// ── Path utilities for routing session-only settings ─────────────────────────
+
+function _hasPath(obj, path) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (const p of parts) {
+        if (cur == null || typeof cur !== 'object' || !(p in cur)) return false;
+        cur = cur[p];
+    }
+    return true;
+}
+
+function _getPath(obj, path) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (const p of parts) {
+        if (cur == null || typeof cur !== 'object') return undefined;
+        cur = cur[p];
+    }
+    return cur;
+}
+
+function _setPath(obj, path, value) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const p = parts[i];
+        if (cur[p] == null || typeof cur[p] !== 'object') cur[p] = {};
+        cur = cur[p];
+    }
+    cur[parts[parts.length - 1]] = value;
+}
+
+function _deletePath(obj, path) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const p = parts[i];
+        if (cur == null || typeof cur !== 'object') return;
+        cur = cur[p];
+    }
+    if (cur && typeof cur === 'object') delete cur[parts[parts.length - 1]];
+}
+
+/**
+ * Split a settings patch into a persistent half (localStorage) and a
+ * secret half (sessionStorage). The persistent half is the patch with the
+ * SESSION_ONLY_PATHS removed; the secret half is just those paths.
+ */
+function _splitSecrets(patch) {
+    if (!patch || typeof patch !== 'object') return { persistent: {}, secret: {}, hasSecret: false };
+    const persistent = JSON.parse(JSON.stringify(patch));
+    const secret = {};
+    let hasSecret = false;
+    for (const p of SESSION_ONLY_PATHS) {
+        if (_hasPath(persistent, p)) {
+            _setPath(secret, p, _getPath(persistent, p));
+            _deletePath(persistent, p);
+            hasSecret = true;
+        }
+    }
+    return { persistent, secret, hasSecret };
+}
+
+function _defaultSession() {
+    return (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+}
+
 /**
  * Recursive deep merge — leaves arrays and primitives as-is, recurses into
  * plain objects so partial settings patches merge correctly.
@@ -119,38 +211,106 @@ export function deepMerge(target, source) {
 }
 
 /**
- * Load settings from localStorage, merged with the defaults. Never throws —
- * a corrupted blob falls back to defaults cleanly. Inject `storage` for tests.
+ * Load settings from localStorage (persistent) AND sessionStorage (secrets),
+ * merged with the defaults. Never throws — a corrupted blob falls back to
+ * defaults cleanly. Inject `storage`/`session` for tests.
  *
- * @param {Storage|object} [storage] — defaults to `globalThis.localStorage`
+ * The persistent blob NEVER carries a SESSION_ONLY_PATHS value; old values that
+ * snuck in are ignored on read (they'll be erased on the next write of that
+ * path). Session secrets overlay the persistent tree last, so they win.
+ *
+ * @param {Storage|object|null} [storage] — defaults to `globalThis.localStorage`
+ * @param {Storage|object|null} [session] — defaults to `globalThis.sessionStorage`
  */
-export function readSettings(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
-    if (!storage) return cloneDefaults();
+export function readSettings(
+    storage = (typeof localStorage !== 'undefined' ? localStorage : null),
+    session = _defaultSession(),
+) {
+    // Persistent half: localStorage merged onto defaults, with any straggling
+    // session-only values scrubbed so they can't be seen here. We JSON-clone so
+    // the tree is fully mutable (DEFAULT_SETTINGS is deepFreeze-d, and
+    // deepMerge only shallow-copies the top level — untouched subtrees can
+    // still point at the frozen original).
+    let base;
+    if (!storage) {
+        base = cloneDefaults();
+    } else {
+        try {
+            const raw = storage.getItem(SETTINGS_KEY);
+            const stored = raw ? JSON.parse(raw) : {};
+            base = deepMerge(DEFAULT_SETTINGS, stored);
+        } catch {
+            base = cloneDefaults();
+        }
+    }
+    base = JSON.parse(JSON.stringify(base));
+    for (const p of SESSION_ONLY_PATHS) _setPath(base, p, '');
+
+    // Secret half: sessionStorage, overlaid last so it wins.
+    if (!session) return base;
     try {
-        const raw = storage.getItem(SETTINGS_KEY);
-        const stored = raw ? JSON.parse(raw) : {};
-        return deepMerge(DEFAULT_SETTINGS, stored);
+        const raw = session.getItem(SESSION_SECRETS_KEY);
+        const secrets = raw ? JSON.parse(raw) : {};
+        return deepMerge(base, secrets);
     } catch {
-        return cloneDefaults();
+        return base;
     }
 }
 
 /**
- * Persist a partial settings patch — merges with the current stored value
- * and writes the result back. Returns the new settings tree.
+ * Persist a partial settings patch. SESSION_ONLY_PATHS go to sessionStorage;
+ * everything else goes to localStorage. Returns the merged settings tree.
  *
  * @param {object} patch
- * @param {Storage|object} [storage] — defaults to `globalThis.localStorage`
+ * @param {Storage|object|null} [storage] — defaults to `globalThis.localStorage`
+ * @param {Storage|object|null} [session] — defaults to `globalThis.sessionStorage`
  */
-export function writeSettings(patch, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
-    const updated = deepMerge(readSettings(storage), patch);
-    if (storage) storage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-    return updated;
+export function writeSettings(
+    patch,
+    storage = (typeof localStorage !== 'undefined' ? localStorage : null),
+    session = _defaultSession(),
+) {
+    const { persistent, secret, hasSecret } = _splitSecrets(patch);
+
+    // Build the persistent half (always — used both for storage write AND for
+    // the returned merged tree, so behaviour matches the no-storage case).
+    const baseNow = readSettings(storage, null);
+    // JSON-clone before mutating: deepMerge shallow-copies, so subtrees not
+    // touched by `persistent` may still reference the frozen defaults.
+    const updatedBase = JSON.parse(JSON.stringify(deepMerge(baseNow, persistent)));
+    // Belt-and-suspenders: scrub session-only paths before persisting.
+    for (const p of SESSION_ONLY_PATHS) _setPath(updatedBase, p, '');
+    if (storage) {
+        try { storage.setItem(SETTINGS_KEY, JSON.stringify(updatedBase)); } catch { /* quota etc. */ }
+    }
+
+    // Build the secret half: existing session blob + secret patch.
+    let secretsNow = {};
+    if (session) {
+        try {
+            const raw = session.getItem(SESSION_SECRETS_KEY);
+            secretsNow = raw ? JSON.parse(raw) : {};
+        } catch { secretsNow = {}; }
+    }
+    if (hasSecret) {
+        secretsNow = deepMerge(secretsNow, secret);
+        if (session) {
+            try { session.setItem(SESSION_SECRETS_KEY, JSON.stringify(secretsNow)); } catch { /* quota etc. */ }
+        }
+    }
+
+    // Return the merged view (defaults + persistent patch + secret patch),
+    // regardless of whether either storage was actually available.
+    return deepMerge(updatedBase, secretsNow);
 }
 
-/** Erase any persisted settings — useful for "reset to defaults" UI. */
-export function clearSettings(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+/** Erase persisted + session settings — useful for "reset to defaults" UI. */
+export function clearSettings(
+    storage = (typeof localStorage !== 'undefined' ? localStorage : null),
+    session = _defaultSession(),
+) {
     if (storage) storage.removeItem(SETTINGS_KEY);
+    if (session) session.removeItem(SESSION_SECRETS_KEY);
 }
 
 function cloneDefaults() {

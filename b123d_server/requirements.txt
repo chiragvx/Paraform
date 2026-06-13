@@ -8,3 +8,6 @@ requests>=2.31
 # Only needed when producing the desktop sidecar; the runtime doesn't import it.
 pyinstaller>=6.0
 python-dotenv>=1.0
+# Stripe billing (b123d_server/billing.py) — only needed when billing is
+# configured; billing.py imports stripe lazily so the kernel runs without it.
+stripe>=7.0

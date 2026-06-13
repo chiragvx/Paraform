@@ -76,7 +76,7 @@ CREATE POLICY "Authenticated Thumbnail Upload" ON storage.objects
 -- 6. User plans
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'maker', 'lifetime')),
+    plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'paid')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -152,3 +152,20 @@ $$;
 REVOKE ALL ON FUNCTION public.increment_usage(UUID, DATE, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.increment_usage(UUID, DATE, TEXT) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.increment_usage(UUID, DATE, TEXT) TO service_role;
+
+-- ============================================================
+-- PHASE 4: BILLING — collapse plans to free/paid + Stripe linkage.
+-- Idempotent + re-runnable. usage_daily + increment_usage stay UNCHANGED.
+-- ============================================================
+
+-- Stripe linkage columns on profiles (CREATE TABLE IF NOT EXISTS above won't
+-- alter an existing table, so add them here).
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS plan_status TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+
+-- Migrate any legacy maker/lifetime rows, then re-point the CHECK constraint.
+UPDATE profiles SET plan = 'paid' WHERE plan IN ('maker','lifetime');
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_plan_check;
+ALTER TABLE profiles ADD CONSTRAINT profiles_plan_check CHECK (plan IN ('free','paid'));

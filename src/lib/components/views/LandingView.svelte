@@ -100,6 +100,23 @@
       </ol>
     </section>
 
+    <!-- Pricing teaser -->
+    <section class="py-16 border-t border-border">
+      <div class="rounded-xl border border-border bg-card px-6 py-8 sm:px-10 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-semibold tracking-tight text-card-foreground">
+            Free to start &middot; Pro at $9.99/mo
+          </h2>
+          <p class="mt-2 text-sm text-muted-foreground max-w-md">
+            Design for free, then unlock more AI generations and priority compiles when you're ready.
+          </p>
+        </div>
+        <Button size="lg" variant="outline" onclick={() => navigate('pricing')}>
+          See pricing
+        </Button>
+      </div>
+    </section>
+
     <!-- Footer -->
     <footer class="py-12 mt-8 border-t border-border">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">

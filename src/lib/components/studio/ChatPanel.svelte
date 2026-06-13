@@ -18,6 +18,7 @@
   import { checkAiHealth } from '$lib/ai/provider.js';
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
+  import ClaudeConnect from './ClaudeConnect.svelte';
 
   // Visible transcript — a flat list of rendered items (not the raw Anthropic
   // history, which we keep separately for multi-turn context).
@@ -26,30 +27,43 @@
   let input = $state('');
   let running = $state(false);
   let health = $state(undefined); // undefined=loading, null=unreachable, obj=known
-  let provider = $state('gemini'); // selected provider from settings
+  let provider = $state('openai'); // selected provider from settings
+  let localKey = $state(false);    // user entered their own key for this provider
   let controller = null;
   let listEl = null;
 
-  // The selected provider is ready when /ai/health reports its key configured.
-  // 'mock' has no key requirement (offline repair rules), so treat it as ready
-  // whenever the proxy is reachable.
+  // The selected provider is ready when /ai/health reports its env key
+  // configured, OR the user has pasted their own key in Settings (sent straight
+  // to the proxy). 'mock' has no key requirement (offline repair rules), so
+  // treat it as ready whenever the proxy is reachable.
   const configured = $derived(
-    !!health && (
-      provider === 'mock'
-        ? true
-        : !!(health[provider] && health[provider].configured === true)
-    )
+    provider === 'mock'
+      ? !!health
+      : localKey || !!(health && health[provider] && health[provider].configured === true)
   );
 
   // Friendly label + env var for the "not configured" banner.
-  const providerLabel = $derived(provider === 'anthropic' ? 'Anthropic' : 'Gemini');
-  const providerEnvVar = $derived(provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'GEMINI_API_KEY');
+  const providerLabel = $derived(
+    provider === 'anthropic' ? 'Anthropic'
+      : provider === 'gemini' ? 'Gemini'
+      : 'GPT-OSS'
+  );
+  const providerEnvVar = $derived(
+    provider === 'anthropic' ? 'ANTHROPIC_API_KEY'
+      : provider === 'gemini' ? 'GEMINI_API_KEY'
+      : 'OPENAI_API_KEY'
+  );
 
   onMount(async () => {
     try {
       const s = readSettings();
-      if (s && s.ai && typeof s.ai.provider === 'string') provider = s.ai.provider;
-    } catch { /* defaults to gemini */ }
+      const ai = (s && s.ai) || {};
+      if (typeof ai.provider === 'string') provider = ai.provider;
+      const keyField = provider === 'anthropic' ? 'anthropicApiKey'
+        : provider === 'gemini' ? 'geminiApiKey'
+        : 'openaiApiKey';
+      localKey = !!(typeof ai[keyField] === 'string' && ai[keyField].trim());
+    } catch { /* defaults to openai */ }
     health = await checkAiHealth();
   });
 
@@ -172,6 +186,7 @@
   <div class="flex items-center justify-between border-b border-border px-3 py-2">
     <div class="text-xs font-medium uppercase tracking-wider text-muted-foreground">AI Assistant</div>
     <div class="flex items-center gap-1">
+      <ClaudeConnect />
       <button
         class="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent disabled:opacity-40"
         onclick={clearChat}

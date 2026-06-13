@@ -46,6 +46,20 @@ jobs:
       - name: DFM runner tests
         run: node src/lib/dfm/__tests__/runner.mjs
 
+      - name: AI tool layer tests
+        run: node --import ./src/lib/commands/__tests__/_register.mjs src/lib/ai/__tests__/tools.mjs
+      - name: AI provider abstraction tests
+        run: node --import ./src/lib/commands/__tests__/_register.mjs src/lib/ai/__tests__/providers.mjs
+      - name: AI agent build — end-to-end (scripted model)
+        run: node --import ./src/lib/commands/__tests__/_register.mjs src/lib/ai/__tests__/agent_build_e2e.mjs
+
+      - name: MCP handlers (Claude connector)
+        run: node --import ./src/lib/commands/__tests__/_register.mjs mcp/__tests__/handlers.mjs
+      - name: MCP server stdio integration
+        run: node mcp/__tests__/server_stdio.mjs
+      - name: MCP remote server (HTTP gateway) integration
+        run: node mcp/__tests__/remote_server.mjs
+
       - name: Eval harness — runner unit tests
         run: node --import ./src/lib/commands/__tests__/_register.mjs tests/eval/__tests__/runner.mjs
 

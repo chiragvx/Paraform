@@ -134,14 +134,14 @@ class TestAuthRequired(AuthGateTestCase):
 
 
 class TestProPlan(AuthGateTestCase):
-    def test_maker_plan_gets_pro_caps(self):
+    def test_paid_plan_gets_pro_caps(self):
         self.set_env(**SUPABASE_ENV, SUPABASE_SERVICE_ROLE_KEY="sb_secret_test")
 
         def fake_get(url, **kwargs):
             if "/auth/v1/user" in url:
                 return _auth_user_response("pro-user")
             if "/rest/v1/profiles" in url:
-                return FakeResponse(200, [{"plan": "maker"}])
+                return FakeResponse(200, [{"plan": "paid"}])
             raise AssertionError(f"unexpected GET {url}")
 
         def fake_post(url, **kwargs):
@@ -151,7 +151,7 @@ class TestProPlan(AuthGateTestCase):
 
         with mock.patch.object(auth_gate.requests, "get", side_effect=fake_get), \
              mock.patch.object(auth_gate.requests, "post", side_effect=fake_post):
-            self.assertEqual(auth_gate.get_plan("pro-user"), "maker")
+            self.assertEqual(auth_gate.get_plan("pro-user"), "paid")
             allowed, count, cap = auth_gate.check_and_count("pro-user", "ai")
             self.assertTrue(allowed)
             self.assertEqual(cap, 200)   # pro AI default, not free's 15

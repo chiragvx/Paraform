@@ -35,33 +35,51 @@ import { readSettings } from '../../../app/settings/index.js';
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
+// OpenAI-compatible GPT-OSS — the core path. The `openai/` prefix matches the
+// model id most aggregators use (Groq / OpenRouter / Together / Fireworks).
+// Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
+export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_MAX_TOKENS = 4096;
 export const MAX_ITERATIONS = 12;
 
-/** Pull { providerName, model, maxTokens } from persisted settings. */
+/** Pull { providerName, model, maxTokens, apiKey, baseUrl } from settings. */
 function resolveModelConfig() {
     let providerName = DEFAULT_PROVIDER;
     let geminiModel = DEFAULT_GEMINI_MODEL;
     let anthropicModel = DEFAULT_ANTHROPIC_MODEL;
+    let openaiModel = DEFAULT_OPENAI_MODEL;
     let maxTokens = DEFAULT_MAX_TOKENS;
+    let ai = {};
     try {
         const s = readSettings();
-        const ai = (s && s.ai) || {};
+        ai = (s && s.ai) || {};
         if (typeof ai.provider === 'string' && ai.provider.trim()) providerName = ai.provider.trim();
         if (typeof ai.geminiModel === 'string' && ai.geminiModel.trim()) geminiModel = ai.geminiModel.trim();
         if (typeof ai.anthropicModel === 'string' && ai.anthropicModel.trim()) anthropicModel = ai.anthropicModel.trim();
+        if (typeof ai.openaiModel === 'string' && ai.openaiModel.trim()) openaiModel = ai.openaiModel.trim();
         // Back-compat: an older `model` key applies to whichever provider it names.
         if (typeof ai.model === 'string' && ai.model.trim()) {
             if (ai.model.startsWith('gemini')) geminiModel = ai.model.trim();
             else if (ai.model.startsWith('claude')) anthropicModel = ai.model.trim();
+            else if (ai.model.includes('gpt')) openaiModel = ai.model.trim();
         }
         if (Number.isFinite(ai.maxTokens) && ai.maxTokens > 0) maxTokens = ai.maxTokens;
     } catch { /* settings unavailable — use defaults */ }
     // 'mock' / unknown provider falls back to the default real provider here;
     // the chat surface always wants a real backend.
-    if (providerName !== 'gemini' && providerName !== 'anthropic') providerName = DEFAULT_PROVIDER;
-    const model = providerName === 'anthropic' ? anthropicModel : geminiModel;
-    return { providerName, model, maxTokens };
+    if (!['gemini', 'anthropic', 'openai'].includes(providerName)) providerName = DEFAULT_PROVIDER;
+    const model = providerName === 'anthropic' ? anthropicModel
+        : providerName === 'openai' ? openaiModel
+        : geminiModel;
+    // Optional bring-your-own key for the selected provider, stored in the
+    // browser and forwarded to the user's own proxy (see provider.js headers).
+    const keyField = providerName === 'anthropic' ? 'anthropicApiKey'
+        : providerName === 'openai' ? 'openaiApiKey'
+        : 'geminiApiKey';
+    const apiKey = (typeof ai[keyField] === 'string' && ai[keyField].trim()) ? ai[keyField].trim() : null;
+    const baseUrl = (providerName === 'openai' && typeof ai.openaiBaseUrl === 'string' && ai.openaiBaseUrl.trim())
+        ? ai.openaiBaseUrl.trim() : null;
+    return { providerName, model, maxTokens, apiKey, baseUrl };
 }
 
 // Tools that observe but don't mutate the document — used to distinguish a
@@ -129,7 +147,7 @@ export function summarizeTurn(toolResults) {
  */
 export async function runAgentTurn({ userMessage, history = [], onEvent = () => {}, signal, endpoint } = {}) {
     const emit = (ev) => { try { onEvent(ev); } catch { /* UI handler must not break the loop */ } };
-    const { providerName, model, maxTokens } = resolveModelConfig();
+    const { providerName, model, maxTokens, apiKey, baseUrl } = resolveModelConfig();
     const provider = getProvider(providerName);
     const tools = provider.toolsForProvider(AGENT_TOOLS);
 
@@ -171,7 +189,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
                 onStop: (r) => { result = r; },
                 onUsage: (usage) => emit({ type: 'usage', usage }),
             });
-            await streamChat(body, (payload) => handler(payload), { endpoint, signal });
+            await streamChat(body, (payload) => handler(payload), { endpoint, signal, apiKey, baseUrl });
             if (typeof handler.finalize === 'function') handler.finalize();
 
             // Record the assistant turn on the normalized history.

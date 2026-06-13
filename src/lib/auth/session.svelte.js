@@ -22,13 +22,63 @@
 
 import { supabase } from '../../../lib/supabase.js';
 import { isCloudEnabled } from '../../../lib/cloud.js';
-import { setAuthTokenProvider } from '../../../lib/auth_token.js';
+import { setAuthTokenProvider, getAuthToken } from '../../../lib/auth_token.js';
 
 export const session = $state({
   user: null,
   accessToken: null,
   loading: true,
+  plan: 'free',
+  usage: null,
 });
+
+/**
+ * Backend (engine) base URL — resolved exactly like the kernel / AI clients
+ * (see lib/document/kernel_client.js): Vite env var first, then a localhost
+ * sidecar when the page is on localhost, then the production window global.
+ */
+function _engineBase() {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENGINE_URL) {
+    return import.meta.env.VITE_ENGINE_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const host = (window.location && window.location.hostname) || '';
+    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:7823';
+    if (window.__PARAFORM_ENGINE_URL__) return window.__PARAFORM_ENGINE_URL__;
+  }
+  return '';
+}
+
+/**
+ * Fetch the signed-in user's plan + usage from the backend (`GET
+ * /billing/me`, Bearer auth) and apply it to the session store. Never
+ * throws: on any error (or when auth is unconfigured) it leaves
+ * plan='free' / usage=null and returns quietly.
+ */
+export async function refreshAccount() {
+  if (!isAuthConfigured()) {
+    session.plan = 'free';
+    session.usage = null;
+    return;
+  }
+  try {
+    const token = await getAuthToken();
+    if (!token) return;
+    const base = _engineBase();
+    if (!base) return;
+    const res = await fetch(`${base.replace(/\/$/, '')}/billing/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.ok) {
+      session.plan = data.plan === 'paid' ? 'paid' : 'free';
+      session.usage = data.usage ?? null;
+    }
+  } catch {
+    /* network / parse failure — keep whatever we had, never throw */
+  }
+}
 
 /** True when Supabase has real credentials (auth can actually work). */
 export function isAuthConfigured() {
@@ -71,13 +121,17 @@ export function initSession() {
   // then live updates for sign-in / sign-out / token refresh.
   supabase.auth
     .getSession()
-    .then(({ data }) => { _apply(data?.session ?? null); })
+    .then(({ data }) => {
+      _apply(data?.session ?? null);
+      if (session.user) refreshAccount();
+    })
     .catch(() => {})
     .finally(() => { session.loading = false; });
 
   supabase.auth.onAuthStateChange((_event, s) => {
     _apply(s);
     session.loading = false;
+    if (session.user) refreshAccount();
   });
 }
 
@@ -123,4 +177,6 @@ export async function signInWithGoogle() {
 export async function signOut() {
   try { await supabase.auth.signOut(); } catch { /* network failure — still clear locally */ }
   _apply(null);
+  session.plan = 'free';
+  session.usage = null;
 }

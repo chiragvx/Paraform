@@ -40,6 +40,7 @@ from standard_parts import cache as _library_cache
 from standard_parts import catalog as _library_catalog
 from ai_proxy import register_ai_routes
 from auth_gate import gate_request
+from billing import register_billing_routes
 
 app = Flask(__name__)
 CORS(app, origins="*")
@@ -48,6 +49,11 @@ CORS(app, origins="*")
 # ANTHROPIC_API_KEY off the browser; inherits the app-wide CORS policy above
 # so the localhost:1420 dev server can reach it.
 register_ai_routes(app)
+
+# Stripe billing (Phase 4) — GET /billing/me, POST /billing/{checkout,portal},
+# POST /billing/webhook. Plan/usage come from auth_gate; Stripe is the source
+# of truth for subscription state, mirrored into profiles via webhooks.
+register_billing_routes(app)
 
 # Kernel build serialization. The server runs `threaded=True` (so an idle
 # browser keep-alive connection or a slow build can't wedge the single worker

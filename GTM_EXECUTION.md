@@ -200,9 +200,25 @@ seeded box). Fixed — the studio now boots empty and frames the scene.
 
 ## Phase 4 — billing (GTM Day 2)
 
-- [ ] Pick merchant-of-record (Lemon Squeezy vs Polar; lean Polar)
-- [ ] Checkout + webhook (Supabase Edge Function) → `plan` flag → caps lift
-- [ ] Pricing wired: Free / Maker $19/mo / Lifetime $129 (100 seats)
+- [x] Processor = **Stripe** (decision changed from Polar / Lemon Squeezy at
+      user request).
+- [x] Two-tier pricing: Free / Pro $9.99/mo (collapsed free/maker/lifetime →
+      free/paid in `auth_gate.py` + `supabase_schema.sql`; legacy rows
+      migrated to 'paid'; plan CHECK is now ('free','paid')).
+- [x] Stripe Checkout + billing portal + webhook (`b123d_server/billing.py`,
+      registered in `server.py`): `/billing/checkout`, `/billing/portal`,
+      `/billing/me`, `/billing/webhook` (signature-verified, flips
+      `profiles.plan` via the service role key).
+- [x] Mandatory login: studio gate now auto-requires sign-in whenever Supabase
+      is configured (`App.svelte`); `VITE_REQUIRE_AUTH=0` escape hatch.
+- [x] Attractive restyled `AuthView`; Pricing page (`#/pricing`); nav plan
+      badge + Upgrade/Manage; plan/usage exposed via session + `/billing/me`.
+- [ ] ⚠ Manual remainder (user, deploy-time): apply the updated
+      `supabase_schema.sql` block to the live project; create the Stripe
+      product + $9.99 recurring price → set `STRIPE_PRICE_ID`; set
+      `STRIPE_SECRET_KEY` + service-role key; register the Stripe webhook
+      endpoint (→ `STRIPE_WEBHOOK_SECRET`); one real sign-in → upgrade →
+      webhook round-trip.
 
 ## Phase 5 — deploy + kernel sandbox (GTM Day 3)
 
@@ -275,3 +291,17 @@ seeded box). Fixed — the studio now boots empty and frames the scene.
   chat-open default, AI settings panel renders (was crashing), box create
   through kernel, landing copy. Deferred to post-launch: cosmetic P2 tail
   (§3D). Next: Phase 4 — billing.
+- 2026-06-13 — **Phase 4 (billing) implemented.** Processor decision changed
+  Polar/Lemon Squeezy → **Stripe** (user request). Pricing collapsed from
+  three tiers to two: Free / Pro $9.99/mo (plan='paid'); `auth_gate.py` and
+  `supabase_schema.sql` now use the ('free','paid') CHECK, legacy rows
+  migrated to 'paid'. New `b123d_server/billing.py` (registered in
+  `server.py`) adds `/billing/checkout`, `/billing/portal`, `/billing/me`,
+  and the signature-verified `/billing/webhook` that flips `profiles.plan`
+  via the service role key. Login is now mandatory whenever Supabase is
+  configured (`App.svelte`; `VITE_REQUIRE_AUTH=0` escape hatch). Frontend:
+  restyled `AuthView`, Pricing page (`#/pricing`), nav plan badge +
+  Upgrade/Manage, plan/usage in the session store from `/billing/me`. Docs +
+  `.env.example` (STRIPE_* / APP_URL) updated. Open: deploy-time manual
+  remainder — apply the schema, create the Stripe product/price, set keys +
+  webhook secret, one real upgrade round-trip.

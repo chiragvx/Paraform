@@ -9,10 +9,20 @@ selected provider's chat API.
 
 Provider routing: the client builds the provider-correct request body (in
 src/lib/ai/providers/*) and tags it with a `provider` field
-(`'gemini'` | `'anthropic'`, default `'gemini'`) plus `model` + `stream`. This
-proxy reads those, builds the right upstream URL + auth headers, and relays the
-response (SSE bytes streamed through unchanged). The proxy does NOT interpret
-tool calls or reshape the body beyond stripping its own routing fields.
+(`'openai'` | `'anthropic'` | `'gemini'`, default `'openai'`) plus `model` +
+`stream`. This proxy reads those, builds the right upstream URL + auth headers,
+and relays the response (SSE bytes streamed through unchanged). The proxy does
+NOT interpret tool calls or reshape the body beyond stripping its own routing
+fields.
+
+Bring-your-own key (v1): EVERY /ai/chat request MUST carry a user-supplied key
+in the `X-Provider-Api-Key` header (and, for OpenAI-compatible hosts, optionally
+`X-Provider-Base-Url`). The studio Settings panel collects these and stores them
+in sessionStorage on the user's browser. The proxy has NO env-key fallback for
+/ai/chat — so a key configured in the kernel's `.env` (e.g. for the developer's
+own testing) is structurally inaccessible to other users hitting this proxy.
+Without a client header the route returns 503 with a clear "add your key"
+message. The env helpers are retained only for /ai/health diagnostics.
 
 Routes registered by `register_ai_routes(app)`:
 
@@ -48,12 +58,17 @@ from auth_gate import gate_request
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+# OpenAI-compatible base for GPT-OSS. Overridable via OPENAI_BASE_URL so the
+# same code reaches Groq / OpenRouter / Together / Fireworks / vLLM / Ollama /
+# OpenAI — whichever host serves the open-weight model.
+OPENAI_DEFAULT_BASE = "https://openrouter.ai/api/v1"
 
-DEFAULT_PROVIDER = "gemini"
+DEFAULT_PROVIDER = "openai"
 # Defaults surfaced so a thin client can omit them. Keep in lockstep with
 # src/lib/ai/agent.js DEFAULT_*_MODEL.
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
+DEFAULT_OPENAI_MODEL = "openai/gpt-oss-120b"
 
 # Routing fields the proxy consumes and must NOT forward upstream as part of
 # the provider body.
@@ -84,6 +99,20 @@ _GEMINI_FIELDS = (
     "generationConfig",
     "safetySettings",
 )
+_OPENAI_FIELDS = (
+    "model",
+    "messages",
+    "tools",
+    "tool_choice",
+    "max_tokens",
+    "max_completion_tokens",
+    "temperature",
+    "top_p",
+    "stream",
+    "stream_options",
+    "stop",
+    "reasoning_effort",
+)
 
 
 def _anthropic_key():
@@ -94,6 +123,19 @@ def _anthropic_key():
 def _gemini_key():
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     return key.strip() if key else None
+
+
+def _openai_key():
+    # OPENAI_API_KEY is the standard name; many GPT-OSS hosts (Groq, OpenRouter,
+    # Together) also issue OpenAI-compatible keys. A single env var keeps the
+    # proxy host-agnostic.
+    key = os.environ.get("OPENAI_API_KEY")
+    return key.strip() if key else None
+
+
+def _openai_base():
+    base = os.environ.get("OPENAI_BASE_URL")
+    return (base.strip() if base else OPENAI_DEFAULT_BASE).rstrip("/")
 
 
 def _anthropic_headers(key):
@@ -107,6 +149,13 @@ def _anthropic_headers(key):
 def _gemini_headers(key):
     return {
         "x-goog-api-key": key,
+        "content-type": "application/json",
+    }
+
+
+def _openai_headers(key):
+    return {
+        "Authorization": f"Bearer {key}",
         "content-type": "application/json",
     }
 
@@ -135,6 +184,19 @@ def _build_gemini_body(payload):
     return body
 
 
+def _build_openai_body(payload):
+    """Project the client payload onto the OpenAI-compatible field set."""
+    body = {}
+    for field in _OPENAI_FIELDS:
+        if field in payload and payload[field] is not None:
+            body[field] = payload[field]
+    body["model"] = payload.get("model") or DEFAULT_OPENAI_MODEL
+    body.setdefault("max_tokens", 4096)
+    if "stream" in payload:
+        body["stream"] = bool(payload["stream"])
+    return body
+
+
 def _gemini_url(model, want_stream):
     model = model or DEFAULT_GEMINI_MODEL
     if want_stream:
@@ -152,11 +214,19 @@ def register_ai_routes(app) -> None:
 
     @app.route("/ai/health", methods=["GET"])
     def ai_health():
+        # v1: requests are served only with a user-supplied X-Provider-Api-Key,
+        # so reporting per-provider env presence here would be misleading. The
+        # studio decides readiness by checking whether the user has entered a
+        # key in Settings. We just confirm the proxy is reachable + the default.
         return jsonify({
             "ok": True,
-            "anthropic": {"configured": _anthropic_key() is not None},
-            "gemini": {"configured": _gemini_key() is not None},
             "default": DEFAULT_PROVIDER,
+            "requires_user_key": True,
+            # The per-provider "configured" fields are intentionally omitted —
+            # env-keys are no longer a code path for /ai/chat.
+            "anthropic": {"configured": False},
+            "gemini": {"configured": False},
+            "openai": {"configured": False},
         })
 
     @app.route("/ai/chat", methods=["POST"])
@@ -172,22 +242,36 @@ def register_ai_routes(app) -> None:
         provider = (payload.get("provider") or DEFAULT_PROVIDER).strip().lower()
         want_stream = bool(payload.get("stream"))
 
+        # v1: bring-your-own key is REQUIRED. The user enters their own key in
+        # Settings → AI (stored in sessionStorage on their browser, never at
+        # rest in localStorage) and the client forwards it per-request as the
+        # X-Provider-Api-Key header. There is no env-key fallback for /ai/chat
+        # — so an `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY` set
+        # on this kernel for the developer's own testing is structurally
+        # unreachable from other users' requests.
+        client_key = (request.headers.get("X-Provider-Api-Key") or "").strip() or None
+        client_base = (request.headers.get("X-Provider-Base-Url") or "").strip() or None
+
+        if not client_key:
+            return jsonify({
+                "error": "Add your API key in Settings → AI Assistant. v1 requires "
+                         "each user to bring their own key — the kernel's env keys "
+                         "are not used to serve requests."
+            }), 503
+
         if provider == "anthropic":
-            key = _anthropic_key()
-            if not key:
-                return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 503
             url = ANTHROPIC_URL
-            headers = _anthropic_headers(key)
+            headers = _anthropic_headers(client_key)
             body = _build_anthropic_body(payload)
         elif provider == "gemini":
-            key = _gemini_key()
-            if not key:
-                return jsonify(
-                    {"error": "GEMINI_API_KEY (or GOOGLE_API_KEY) not configured"}
-                ), 503
             url = _gemini_url(payload.get("model"), want_stream)
-            headers = _gemini_headers(key)
+            headers = _gemini_headers(client_key)
             body = _build_gemini_body(payload)
+        elif provider == "openai":
+            base = client_base or _openai_base()
+            url = f"{base.rstrip('/')}/chat/completions"
+            headers = _openai_headers(client_key)
+            body = _build_openai_body(payload)
         else:
             return jsonify({"error": f"unknown AI provider '{provider}'"}), 400
 
