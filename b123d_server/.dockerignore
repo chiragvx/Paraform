@@ -1,0 +1,11 @@
+# Keep the Docker build context (and the image) lean. The big one is build/ —
+# 631 MB of PyInstaller sidecar artifacts that have NOTHING to do with the
+# server runtime.
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+__tests__/
+.pytest_cache/
+.env

@@ -14,9 +14,23 @@
   <body>
     <div id="app"></div>
     <script>
-      // Kernel endpoint inherited from the legacy bootstrap. The HttpKernelClient
-      // in lib/document/kernel_client.js reads this global on first call.
-      window.__PARAFORM_ENGINE_URL__ = 'https://blackberry-gain-handling-nato.trycloudflare.com';
+      // ── Kernel / AI-proxy endpoint ────────────────────────────────────────
+      // The studio reaches the build123d kernel (b123d_server) at this base URL.
+      // Resolution order (lib/document/kernel_client.js, provider.js, billing.js):
+      //   1. VITE_ENGINE_URL   — build-time env. SET THIS in your Vercel project
+      //                          to your kernel's stable HTTPS URL (an HF Space —
+      //                          see b123d_server/DEPLOY_HUGGINGFACE.md).
+      //   2. localhost page    → http://localhost:7823  (local `npm run kernel`).
+      //   3. window global below — runtime override, if you can't set env.
+      //
+      // Prefer VITE_ENGINE_URL pointing at a STABLE kernel (HF Space — see
+      // b123d_server/DEPLOY_HUGGINGFACE.md).
+      //
+      // TEMPORARY (set 2026-06-14): cloudflared quick-tunnel to a LOCAL kernel.
+      // This URL DIES when the tunnel or the local kernel stops — it is not a
+      // permanent host. Swap it for the HF Space URL as soon as that's up. To
+      // refresh after a restart: start a new tunnel and replace the URL below.
+      window.__PARAFORM_ENGINE_URL__ = 'https://profiles-punch-traveler-petersburg.trycloudflare.com';
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -1,6 +1,8 @@
 flask>=3.0
 flask-cors>=4.0
-build123d>=0.7
+# Pinned to match VERSIONS.json's expected build123d (0.10.0) so the deployed
+# kernel doesn't drift from the wire/naming contract. Bump both together.
+build123d==0.10.0
 # AI proxy (b123d_server/ai_proxy.py) — forwards /ai/chat to the Anthropic
 # Messages API, streaming SSE through with stream=True.
 requests>=2.31

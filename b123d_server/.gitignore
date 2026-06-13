@@ -1,0 +1,11 @@
+# When this folder is pushed to a Hugging Face Space (its own git repo), these
+# must never be committed — build/ is 631 MB of PyInstaller output and would
+# blow the push (and HF's repo limits). Mirrors .dockerignore.
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+__tests__/
+.pytest_cache/
+.env

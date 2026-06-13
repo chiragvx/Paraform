@@ -366,8 +366,15 @@ function parseArgs(argv) {
 function extractTunnelFromIndex(file) {
     try {
         const html = fs.readFileSync(file, 'utf8');
-        const m = html.match(/__PARAFORM_ENGINE_URL__\s*=\s*['"]([^'"]+)['"]/);
-        return m ? m[1] : null;
+        // Only honor a LIVE assignment: skip commented-out examples and any
+        // `<placeholder>` template URL, so the doc comment in index.html can
+        // show the override line without hijacking the validate endpoint.
+        for (const line of html.split('\n')) {
+            if (line.trim().startsWith('//')) continue;
+            const m = line.match(/__PARAFORM_ENGINE_URL__\s*=\s*['"]([^'"]+)['"]/);
+            if (m && !m[1].includes('<')) return m[1];
+        }
+        return null;
     } catch {
         return null;
     }
