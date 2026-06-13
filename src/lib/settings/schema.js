@@ -229,7 +229,6 @@ const FULL_SETTINGS_SCHEMA = [
       provider: 'openai',
       openaiModel: 'openai/gpt-oss-120b',
       geminiModel: 'gemini-2.5-flash',
-      anthropicModel: 'claude-opus-4-8',
       maxTokens: 4096,
       // Bring-your-own keys. Stored locally in this browser and sent to YOUR
       // kernel proxy, which uses them in place of its server env keys. Leave
@@ -237,7 +236,6 @@ const FULL_SETTINGS_SCHEMA = [
       openaiApiKey: '',
       openaiBaseUrl: '',
       geminiApiKey: '',
-      anthropicApiKey: '',
     },
     fields: [
       {
@@ -246,9 +244,7 @@ const FULL_SETTINGS_SCHEMA = [
         kind: 'select',
         options: [
           { value: 'openai', label: 'OpenRouter / OpenAI-compatible (default)' },
-          { value: 'anthropic', label: 'Claude (Opus) — Anthropic direct' },
           { value: 'gemini', label: 'Google Gemini direct' },
-          { value: 'mock', label: 'Mock (offline repair rules)' },
         ],
       },
       {
@@ -258,25 +254,12 @@ const FULL_SETTINGS_SCHEMA = [
         options: [
           { value: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B (OpenRouter)' },
           { value: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B (OpenRouter)' },
-          { value: 'anthropic/claude-opus-4', label: 'Claude Opus 4 (OpenRouter → Anthropic)' },
-          { value: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4 (OpenRouter → Anthropic)' },
           { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (OpenRouter → Google)' },
           { value: 'gpt-oss-120b', label: 'gpt-oss-120b (bare id — for Groq/Together/Ollama)' },
         ],
       },
       { key: 'openaiApiKey', label: 'OpenRouter API key', kind: 'secret', placeholder: 'sk-or-v1-… (paste from openrouter.ai/keys)' },
       { key: 'openaiBaseUrl', label: 'Host base URL (advanced)', kind: 'text', placeholder: 'leave blank for OpenRouter — e.g. https://api.groq.com/openai/v1' },
-      {
-        key: 'anthropicModel',
-        label: 'Claude model',
-        kind: 'select',
-        options: [
-          { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
-          { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
-          { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-        ],
-      },
-      { key: 'anthropicApiKey', label: 'Claude API key', kind: 'secret', placeholder: 'sk-ant-… (stored in this browser)' },
       {
         key: 'geminiModel',
         label: 'Gemini model',

@@ -2,7 +2,7 @@
   /**
    * AI chat panel — the prompt-to-CAD surface (PLAN.md Phase 1).
    *
-   * The user types a request; runAgentTurn drives a tool-using Claude turn over
+   * The user types a request; runAgentTurn drives a tool-using model turn over
    * the typed document ops. Each completed turn mutates the document via those
    * ops (which commit to the store), so the viewport updates itself — we do NOT
    * refresh it here.
@@ -18,7 +18,6 @@
   import { checkAiHealth } from '$lib/ai/provider.js';
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
-  import ClaudeConnect from './ClaudeConnect.svelte';
 
   // Visible transcript — a flat list of rendered items (not the raw Anthropic
   // history, which we keep separately for multi-turn context).
@@ -34,34 +33,24 @@
 
   // The selected provider is ready when /ai/health reports its env key
   // configured, OR the user has pasted their own key in Settings (sent straight
-  // to the proxy). 'mock' has no key requirement (offline repair rules), so
-  // treat it as ready whenever the proxy is reachable.
+  // to the proxy).
   const configured = $derived(
-    provider === 'mock'
-      ? !!health
-      : localKey || !!(health && health[provider] && health[provider].configured === true)
+    localKey || !!(health && health[provider] && health[provider].configured === true)
   );
 
   // Friendly label + env var for the "not configured" banner.
-  const providerLabel = $derived(
-    provider === 'anthropic' ? 'Anthropic'
-      : provider === 'gemini' ? 'Gemini'
-      : 'GPT-OSS'
-  );
-  const providerEnvVar = $derived(
-    provider === 'anthropic' ? 'ANTHROPIC_API_KEY'
-      : provider === 'gemini' ? 'GEMINI_API_KEY'
-      : 'OPENAI_API_KEY'
-  );
+  const providerLabel = $derived(provider === 'gemini' ? 'Gemini' : 'GPT-OSS');
+  const providerEnvVar = $derived(provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY');
 
   onMount(async () => {
     try {
       const s = readSettings();
       const ai = (s && s.ai) || {};
       if (typeof ai.provider === 'string') provider = ai.provider;
-      const keyField = provider === 'anthropic' ? 'anthropicApiKey'
-        : provider === 'gemini' ? 'geminiApiKey'
-        : 'openaiApiKey';
+      // Claude (anthropic) + mock were removed as selectable providers; coerce
+      // any stale stored value to the default so the UI stays consistent.
+      if (provider !== 'gemini' && provider !== 'openai') provider = 'openai';
+      const keyField = provider === 'gemini' ? 'geminiApiKey' : 'openaiApiKey';
       localKey = !!(typeof ai[keyField] === 'string' && ai[keyField].trim());
     } catch { /* defaults to openai */ }
     health = await checkAiHealth();
@@ -186,7 +175,6 @@
   <div class="flex items-center justify-between border-b border-border px-3 py-2">
     <div class="text-xs font-medium uppercase tracking-wider text-muted-foreground">AI Assistant</div>
     <div class="flex items-center gap-1">
-      <ClaudeConnect />
       <button
         class="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent disabled:opacity-40"
         onclick={clearChat}
@@ -212,8 +200,7 @@
       {:else}
         Set <code>{providerEnvVar}</code> in the server environment and restart the kernel
         (<code>npm run kernel</code>) to enable the {providerLabel} assistant.
-        {#if health.gemini && health.gemini.configured}<br/>Gemini is ready.{/if}
-        {#if health.anthropic && health.anthropic.configured}<br/>Anthropic is ready — switch provider in Settings → AI Assistant.{/if}
+        {#if health.gemini && health.gemini.configured}<br/>Gemini is ready — switch provider in Settings → AI Assistant.{/if}
       {/if}
     </div>
   {:else}

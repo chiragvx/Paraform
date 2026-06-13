@@ -65,9 +65,10 @@ function resolveModelConfig() {
         }
         if (Number.isFinite(ai.maxTokens) && ai.maxTokens > 0) maxTokens = ai.maxTokens;
     } catch { /* settings unavailable — use defaults */ }
-    // 'mock' / unknown provider falls back to the default real provider here;
-    // the chat surface always wants a real backend.
-    if (!['gemini', 'anthropic', 'openai'].includes(providerName)) providerName = DEFAULT_PROVIDER;
+    // 'mock' / 'anthropic' / unknown provider falls back to the default real
+    // provider here; the chat surface always wants a real, supported backend.
+    // (Claude was removed as a selectable chat provider — see settings/schema.js.)
+    if (!['gemini', 'openai'].includes(providerName)) providerName = DEFAULT_PROVIDER;
     const model = providerName === 'anthropic' ? anthropicModel
         : providerName === 'openai' ? openaiModel
         : geminiModel;
