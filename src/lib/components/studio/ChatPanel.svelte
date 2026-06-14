@@ -1,61 +1,47 @@
 <script>
   /**
-   * AI chat panel — the prompt-to-CAD surface (PLAN.md Phase 1).
+   * AI chat panel — the prompt-to-CAD surface.
    *
-   * The user types a request; runAgentTurn drives a tool-using model turn over
-   * the typed document ops. Each completed turn mutates the document via those
-   * ops (which commit to the store), so the viewport updates itself — we do NOT
-   * refresh it here.
-   *
-   * Renders:
-   *   - a scrolling message list (user / assistant bubbles)
-   *   - tool-call chips ("🔧 placeLibraryPart {…}") and result chips
-   *   - a textarea + Send, with a Stop button (AbortController) while running
-   *   - a "not configured" state when /ai/health reports no key
+   * The conversation itself (transcript, provider history, run loop, saved
+   * sessions) lives in the persistent chat store (src/lib/ai/chat_store.svelte.js)
+   * so it SURVIVES this panel being closed/reopened and page reloads, and the
+   * user can revisit old chats. This component is just the view + composer.
    */
   import { onMount } from 'svelte';
-  import { runAgentTurn } from '$lib/ai/agent.js';
   import { checkAiHealth } from '$lib/ai/provider.js';
-  import { getAIContext } from '$lib/ai/context.js';
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
+  import {
+    chat, submit as submitChat, stop as stopChat,
+    newSession, loadSession, deleteSession, sessionList, ensureHydrated,
+  } from '$lib/ai/chat_store.svelte.js';
 
-  // Visible transcript — a flat list of rendered items (not the raw Anthropic
-  // history, which we keep separately for multi-turn context).
-  let items = $state([]);        // [{ role:'user'|'assistant'|'tool', ... }]
-  let history = $state([]);      // Anthropic messages array, passed turn-to-turn
   let input = $state('');
-  let running = $state(false);
   let health = $state(undefined); // undefined=loading, null=unreachable, obj=known
-  let provider = $state('openai'); // selected provider from settings
-  let localKey = $state(false);    // user entered their own key for this provider
-  let controller = null;
+  let provider = $state('openai');
+  let localKey = $state(false);
   let listEl = null;
-  // Mid-response re-steering: messages sent while a turn is running queue here
-  // and are drained one at a time; a send-while-running interrupts the current
-  // turn (committed work is kept) so the user can change direction mid-response.
-  let pending = $state([]);
-  let draining = false;
-  let reSteering = false;
+  let showHistory = $state(false);
 
-  // The selected provider is ready when /ai/health reports its env key
-  // configured, OR the user has pasted their own key in Settings (sent straight
-  // to the proxy).
+  // Images attached to the next message (references / sketches to trace).
+  let attachments = $state([]); // [{ mediaType, dataBase64, dataUrl, name }]
+  let fileInput = null;
+  const MAX_ATTACHMENTS = 4;
+
+  const sessions = $derived(sessionList());
+
   const configured = $derived(
     localKey || !!(health && health[provider] && health[provider].configured === true)
   );
-
-  // Friendly label + env var for the "not configured" banner.
   const providerLabel = $derived(provider === 'gemini' ? 'Gemini' : 'GPT-OSS');
   const providerEnvVar = $derived(provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY');
 
   onMount(async () => {
+    ensureHydrated();
     try {
       const s = readSettings();
       const ai = (s && s.ai) || {};
       if (typeof ai.provider === 'string') provider = ai.provider;
-      // Claude (anthropic) + mock were removed as selectable providers; coerce
-      // any stale stored value to the default so the UI stays consistent.
       if (provider !== 'gemini' && provider !== 'openai') provider = 'openai';
       const keyField = provider === 'gemini' ? 'geminiApiKey' : 'openaiApiKey';
       localKey = !!(typeof ai[keyField] === 'string' && ai[keyField].trim());
@@ -66,115 +52,60 @@
   function scrollToEnd() {
     queueMicrotask(() => { if (listEl) listEl.scrollTop = listEl.scrollHeight; });
   }
+  // Re-scroll whenever the transcript grows or a stream tick lands.
+  $effect(() => { void chat.items.length; void chat.running; scrollToEnd(); });
 
-  function pushItem(item) {
-    items = [...items, item];
-    scrollToEnd();
+  // ── Attachments ──────────────────────────────────────────────────────────
+  function fileToImage(file) {
+    return new Promise((resolve) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) { resolve(null); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = String(reader.result || '');
+        const m = /^data:([^;]+);base64,(.*)$/s.exec(url);
+        if (!m) { resolve(null); return; }
+        resolve({ mediaType: m[1], dataBase64: m[2], dataUrl: url, name: file.name || 'image' });
+      };
+      reader.onerror = () => resolve(null);
+      try { reader.readAsDataURL(file); } catch { resolve(null); }
+    });
   }
-
-  /** Append text to the current streaming assistant bubble (create if needed). */
-  function appendAssistantText(text) {
-    const last = items[items.length - 1];
-    if (last && last.role === 'assistant' && last.streaming) {
-      last.text += text;
-      items = [...items];
-    } else {
-      pushItem({ role: 'assistant', text, streaming: true });
-    }
-    scrollToEnd();
-  }
-
-  function finalizeAssistant() {
-    const last = items[items.length - 1];
-    if (last && last.role === 'assistant' && last.streaming) {
-      last.streaming = false;
-      items = [...items];
+  async function addFiles(fileList) {
+    for (const f of Array.from(fileList || [])) {
+      if (attachments.length >= MAX_ATTACHMENTS) break;
+      const img = await fileToImage(f);
+      if (img) attachments = [...attachments, img];
     }
   }
+  function onPickFiles(e) { addFiles(e.target.files); if (fileInput) fileInput.value = ''; }
+  function onPaste(e) { const f = (e.clipboardData && e.clipboardData.files) || []; if (f.length) addFiles(f); }
+  function onDrop(e) { if (e.dataTransfer?.files?.length) { e.preventDefault(); addFiles(e.dataTransfer.files); } }
+  function removeAttachment(idx) { attachments = attachments.filter((_, i) => i !== idx); }
 
-  const onEvent = (ev) => {
-    switch (ev.type) {
-      case 'text':
-        appendAssistantText(ev.text);
-        break;
-      case 'tool_call':
-        finalizeAssistant();
-        pushItem({ role: 'tool', kind: 'call', name: ev.name, input: ev.input });
-        break;
-      case 'tool_result':
-        pushItem({
-          role: 'tool', kind: 'result', name: ev.name,
-          ok: !(ev.result && ev.result.ok === false),
-          result: ev.result,
-        });
-        break;
-      case 'error':
-        finalizeAssistant();
-        // A cancel triggered by re-steering is intentional — don't show it as
-        // an error; the queued instruction is about to run.
-        if (ev.error === 'cancelled' && (reSteering || pending.length)) break;
-        pushItem({ role: 'assistant', error: true, text: ev.error });
-        break;
-      case 'done':
-        finalizeAssistant();
-        break;
-      // 'usage' — ignored in the UI for now.
-    }
-  };
-
-  /** Submit the composer. While a turn is running this re-steers it. */
+  // ── Composer ─────────────────────────────────────────────────────────────
   function submit() {
-    const text = input.trim();
-    if (!text) return;
+    const text = input;
+    const atts = attachments;
+    if (!text.trim() && atts.length === 0) return;
     input = '';
-    pushItem({ role: 'user', text });
-    pending.push(text);
-    if (running && controller) {
-      // Interrupt the in-flight turn so the new instruction takes over; work
-      // already committed to the document is kept.
-      reSteering = true;
-      try { controller.abort(); } catch { /* already settled */ }
-    }
-    drain();
+    attachments = [];
+    submitChat({ text, attachments: atts });
   }
-
-  /** Process the pending queue one turn at a time. */
-  async function drain() {
-    if (draining) return;
-    draining = true;
-    try {
-      while (pending.length) {
-        const text = pending.shift();
-        running = true;
-        reSteering = false;
-        controller = new AbortController();
-        try {
-          const res = await runAgentTurn({ userMessage: text, history, onEvent, signal: controller.signal });
-          history = res.history || history;
-        } catch (e) {
-          if (!(reSteering || pending.length)) pushItem({ role: 'assistant', error: true, text: (e && e.message) || String(e) });
-        } finally {
-          finalizeAssistant();
-          controller = null;
-        }
-      }
-    } finally {
-      draining = false;
-      running = false;
-    }
-  }
-
-  function stop() {
-    pending = [];        // drop any queued steers — Stop means stop
-    if (controller) { try { controller.abort(); } catch { /* settled */ } }
-  }
-
   function onKeydown(e) {
-    // Enter sends; Shift+Enter inserts a newline.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+  }
+
+  function startNewChat() { newSession(); showHistory = false; }
+  function openSession(id) { loadSession(id); showHistory = false; }
+
+  function ago(ts) {
+    const d = Date.now() - (ts || 0);
+    const m = Math.floor(d / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
   }
 
   function summarizeResult(r) {
@@ -187,34 +118,28 @@
     if (r.pass !== undefined) return r.pass ? 'invariants pass' : 'invariants failing';
     return 'ok';
   }
-
   function compactInput(obj) {
-    try {
-      const s = JSON.stringify(obj);
-      return s.length > 120 ? s.slice(0, 120) + '…' : s;
-    } catch { return ''; }
-  }
-
-  function clearChat() {
-    items = [];
-    history = [];
-    pending = [];
-    // Forget the design context (names, decisions, requirements, brief) too, so
-    // a cleared chat starts a genuinely fresh session.
-    try { getAIContext().reset(); } catch { /* context optional */ }
+    try { const s = JSON.stringify(obj); return s.length > 120 ? s.slice(0, 120) + '…' : s; }
+    catch { return ''; }
   }
 </script>
 
 <aside class="flex w-72 shrink-0 flex-col overflow-hidden border-l border-border bg-card">
-  <div class="flex items-center justify-between border-b border-border px-3 py-2">
+  <div class="relative flex items-center justify-between border-b border-border px-3 py-2">
     <div class="text-xs font-medium uppercase tracking-wider text-muted-foreground">AI Assistant</div>
     <div class="flex items-center gap-1">
       <button
         class="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent disabled:opacity-40"
-        onclick={clearChat}
-        disabled={running || items.length === 0}
-        title="Clear conversation"
-      >Clear</button>
+        onclick={startNewChat}
+        disabled={chat.running}
+        title="Start a new chat (your current chat is saved)"
+      >+ New</button>
+      <button
+        class="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+        onclick={() => (showHistory = !showHistory)}
+        title="Past chats"
+        aria-label="Past chats"
+      >🕘</button>
       <button
         class="rounded px-1.5 py-0.5 text-sm leading-none text-muted-foreground hover:bg-accent hover:text-foreground"
         onclick={() => togglePanel('chat')}
@@ -222,6 +147,27 @@
         aria-label="Collapse AI panel"
       >»</button>
     </div>
+
+    {#if showHistory}
+      <div class="absolute right-2 top-9 z-10 max-h-80 w-64 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
+        <div class="border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">Past chats</div>
+        {#each sessions as s (s.id)}
+          <div class="group flex items-center gap-1 px-2 py-1.5 hover:bg-accent {s.id === chat.currentId ? 'bg-accent/50' : ''}">
+            <button class="min-w-0 flex-1 text-left" onclick={() => openSession(s.id)}>
+              <div class="truncate text-xs text-foreground">{s.title}</div>
+              <div class="text-[10px] text-muted-foreground/70">{ago(s.updatedAt)} · {s.count} msg{s.count === 1 ? '' : 's'}</div>
+            </button>
+            <button
+              class="rounded px-1 text-xs text-muted-foreground/50 opacity-0 hover:text-destructive group-hover:opacity-100"
+              onclick={() => deleteSession(s.id)}
+              title="Delete chat" aria-label="Delete chat"
+            >×</button>
+          </div>
+        {:else}
+          <div class="px-3 py-2 text-xs text-muted-foreground/60">No past chats yet.</div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   {#if health === undefined}
@@ -240,9 +186,18 @@
   {:else}
     <!-- Message list -->
     <div bind:this={listEl} class="flex-1 space-y-2 overflow-y-auto px-3 py-3">
-      {#each items as item (item)}
+      {#each chat.items as item (item)}
         {#if item.role === 'user'}
-          <div class="ml-6 rounded-md bg-primary/15 px-3 py-2 text-sm text-foreground">{item.text}</div>
+          <div class="ml-6 rounded-md bg-primary/15 px-3 py-2 text-sm text-foreground">
+            {#if item.images && item.images.length}
+              <div class="mb-1 flex flex-wrap gap-1">
+                {#each item.images as src}
+                  <img {src} alt="attachment" class="h-12 w-12 rounded border border-border object-cover" />
+                {/each}
+              </div>
+            {/if}
+            {#if item.text}<div class="whitespace-pre-wrap">{item.text}</div>{/if}
+          </div>
         {:else if item.role === 'assistant'}
           <div class="mr-6 rounded-md bg-secondary/40 px-3 py-2 text-sm {item.error ? 'text-destructive' : 'text-foreground'} whitespace-pre-wrap">
             {item.text}{#if item.streaming}<span class="opacity-50">▋</span>{/if}
@@ -266,34 +221,61 @@
     </div>
 
     <!-- Composer -->
-    <div class="border-t border-border p-2">
+    <div class="border-t border-border p-2" ondrop={onDrop} ondragover={(e) => e.preventDefault()} role="group">
+      {#if attachments.length}
+        <div class="mb-2 flex flex-wrap gap-1.5">
+          {#each attachments as a, i}
+            <div class="relative">
+              <img src={a.dataUrl} alt={a.name} class="h-12 w-12 rounded border border-border object-cover" />
+              <button
+                class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] leading-none text-destructive-foreground"
+                onclick={() => removeAttachment(i)}
+                title="Remove" aria-label="Remove attachment"
+              >×</button>
+            </div>
+          {/each}
+        </div>
+      {/if}
       <textarea
         bind:value={input}
         onkeydown={onKeydown}
+        onpaste={onPaste}
         rows="3"
-        placeholder={running ? 'Working… type to steer mid-response, or Stop' : 'Describe a part or assembly…'}
+        placeholder={chat.running ? 'Working… type to steer mid-response, or Stop' : 'Describe a part, or attach/paste an image to trace…'}
         class="w-full resize-none rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus:border-ring"
       ></textarea>
-      <div class="mt-2 flex items-center justify-end gap-2">
-        {#if running}
-          <span class="mr-auto text-xs text-muted-foreground/70">{pending.length ? `${pending.length} queued · ` : ''}working…</span>
-          <button
-            class="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90"
-            onclick={stop}
-          >Stop</button>
-          <button
-            class="rounded-md border border-primary px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-40"
-            onclick={submit}
-            disabled={!input.trim()}
-            title="Send this now — interrupts the current response to follow your new instruction"
-          >Steer</button>
-        {:else}
-          <button
-            class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
-            onclick={submit}
-            disabled={!input.trim()}
-          >Send</button>
+      <input bind:this={fileInput} type="file" accept="image/*" multiple class="hidden" onchange={onPickFiles} />
+      <div class="mt-2 flex items-center gap-2">
+        <button
+          class="rounded-md border border-border px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
+          onclick={() => fileInput && fileInput.click()}
+          disabled={attachments.length >= MAX_ATTACHMENTS}
+          title="Attach an image (reference, or a sketch to trace)"
+          aria-label="Attach image"
+        >📎</button>
+        {#if chat.running}
+          <span class="text-xs text-muted-foreground/70">{chat.pendingCount ? `${chat.pendingCount} queued · ` : ''}working…</span>
         {/if}
+        <div class="ml-auto flex gap-2">
+          {#if chat.running}
+            <button
+              class="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90"
+              onclick={stopChat}
+            >Stop</button>
+            <button
+              class="rounded-md border border-primary px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-40"
+              onclick={submit}
+              disabled={!input.trim() && attachments.length === 0}
+              title="Send this now — interrupts the current response to follow your new instruction"
+            >Steer</button>
+          {:else}
+            <button
+              class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
+              onclick={submit}
+              disabled={!input.trim() && attachments.length === 0}
+            >Send</button>
+          {/if}
+        </div>
       </div>
     </div>
   {/if}

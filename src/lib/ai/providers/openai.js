@@ -59,6 +59,17 @@ function toWireMessages(entry) {
             content: typeof r.result === 'string' ? r.result : JSON.stringify(r.result),
         }));
     }
+    // Vision: a user turn carrying images → OpenAI multi-part content with
+    // image_url data URLs (uploaded references, or renders of the model).
+    if (entry.images && entry.images.length) {
+        const content = [];
+        if (entry.text) content.push({ type: 'text', text: String(entry.text) });
+        for (const img of entry.images) {
+            if (!img || !img.dataBase64) continue;
+            content.push({ type: 'image_url', image_url: { url: `data:${img.mediaType || 'image/png'};base64,${img.dataBase64}` } });
+        }
+        if (content.length) return [{ role: 'user', content }];
+    }
     return [{ role: 'user', content: entry.text != null ? String(entry.text) : '' }];
 }
 

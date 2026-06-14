@@ -48,6 +48,8 @@ import { CONTEXT_TOOLS } from './tools_context.js';
 import { VALIDATION_TOOLS } from './tools_validation.js';
 import { DFM_TOOLS } from './tools_dfm.js';
 import { ASSEMBLY_TOOLS } from './tools_assembly.js';
+import { VISION_TOOLS } from './tools_vision.js';
+import { WEB_TOOLS } from './tools_web.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -702,6 +704,7 @@ function _collectTools() {
     const groups = [
         TOOLS, GEOMETRY_EXT_TOOLS, SKETCH_TOOLS, SELECTION_TOOLS,
         CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
+        VISION_TOOLS, WEB_TOOLS,
     ];
     const out = [];
     const seen = new Set();

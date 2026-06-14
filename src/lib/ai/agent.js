@@ -42,10 +42,10 @@ export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 // Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
 export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_MAX_TOKENS = 4096;
-// Raised from 12: the self-repair safety net and verify-then-fix loops consume
-// iterations, so a genuine multi-step build needs more headroom before hitting
-// the cap. Still bounded so a runaway loop can't burn unlimited quota.
-export const MAX_ITERATIONS = 16;
+// Raised from 12: the self-repair safety net, verify-then-fix loops, and the
+// see→act→re-check vision loop (capture_views) all consume iterations, so a
+// genuine multi-step build needs headroom. Still bounded against runaways.
+export const MAX_ITERATIONS = 20;
 // How many times the loop will auto-feed the SAME compile error back for repair
 // before giving up and asking the user. Prevents thrashing on an unfixable build.
 const MAX_REPAIRS_PER_ERROR = 2;
@@ -118,6 +118,7 @@ const NON_MUTATING_TOOLS = new Set([
     'get_context', 'propose_brief', 'name_feature', 'record_decision', 'explain_decision',
     'add_requirement', 'verify_requirement', 'set_units',
     'export_for_print', 'declareConnector', 'add_mate',
+    'capture_views', 'web_search', 'web_fetch',
 ]);
 
 /** Pull { providerName, model, maxTokens, apiKey, baseUrl } from settings. */
@@ -224,7 +225,7 @@ export function summarizeTurn(toolResults) {
  * }} args
  * @returns {Promise<{ history: Array }>}
  */
-export async function runAgentTurn({ userMessage, history = [], onEvent = () => {}, signal, endpoint } = {}) {
+export async function runAgentTurn({ userMessage, images, history = [], onEvent = () => {}, signal, endpoint } = {}) {
     const emit = (ev) => { try { onEvent(ev); } catch { /* UI handler must not break the loop */ } };
     const { providerName, model, maxTokens, apiKey, baseUrl } = resolveModelConfig();
     const provider = getProvider(providerName);
@@ -232,8 +233,11 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
 
     // Copy so we don't mutate the caller's history.
     const messages = history.slice();
-    if (userMessage != null && String(userMessage).length > 0) {
-        messages.push({ role: 'user', text: String(userMessage) });
+    const hasImages = Array.isArray(images) && images.length > 0;
+    if ((userMessage != null && String(userMessage).length > 0) || hasImages) {
+        const entry = { role: 'user', text: userMessage != null ? String(userMessage) : '' };
+        if (hasImages) entry.images = images.filter((im) => im && im.dataBase64);
+        messages.push(entry);
         try { getAIContext().bumpTurn(); } catch { /* context optional */ }
     }
 
@@ -245,6 +249,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
     const turnToolResults = [];         // [{ name, result }] for the summary
     const repairAttempts = new Map();   // error signature → times auto-fed back
     const failingCalls = new Map();     // tool+input signature → consecutive fails
+    let visionInjections = 0;           // bound the capture→look loop per turn
 
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -291,11 +296,26 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
 
             // Execute each tool call and collect normalized results.
             const toolResults = [];
+            const capturedImages = [];        // vision frames to feed the model
             let mutatedGeometry = false;     // a geometry op succeeded this iteration
             let repeatedFailureNote = null;   // the model keeps repeating a failing call
             for (const tc of result.toolCalls) {
                 emit({ type: 'tool_call', name: tc.name, input: tc.input });
-                const r = await dispatchTool(tc.name, tc.input || {});
+                let r = await dispatchTool(tc.name, tc.input || {});
+
+                // A vision tool (capture_views) returns image bytes under
+                // `_images`. Pull them out for the model to SEE on the next step
+                // and strip them from the textual result so the base64 never
+                // bloats the tool-result channel.
+                if (r && Array.isArray(r._images) && r._images.length) {
+                    for (const im of r._images) {
+                        if (im && im.dataBase64) capturedImages.push({ mediaType: im.mediaType || 'image/jpeg', dataBase64: im.dataBase64, view: im.view });
+                    }
+                    const slim = { ...r };
+                    delete slim._images;
+                    r = slim;
+                }
+
                 emit({ type: 'tool_result', name: tc.name, result: r });
                 toolResults.push({ id: tc.id, name: tc.name, result: r });
                 turnToolResults.push({ name: tc.name, result: r });
@@ -317,6 +337,20 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
 
             // Feed the results back as the next user turn.
             provider.appendToolResults(messages, toolResults);
+
+            // ── Vision injection ─────────────────────────────────────────────
+            // If a tool produced renders of the model, attach them as a real
+            // image message so the model can actually look at what it built.
+            if (capturedImages.length && visionInjections < 4) {
+                visionInjections++;
+                const views = [...new Set(capturedImages.map((c) => c.view).filter(Boolean))];
+                messages.push({
+                    role: 'user',
+                    text: `Here ${capturedImages.length === 1 ? 'is a render' : `are ${capturedImages.length} renders`} of the current model${views.length ? ` (${views.join(', ')})` : ''}. Look at them to verify what was actually built — orientation, proportions, anything clipping or wrong — then continue.`,
+                    images: capturedImages.map((c) => ({ mediaType: c.mediaType, dataBase64: c.dataBase64 })),
+                });
+                continue; // next iteration: the model sees the images
+            }
 
             // ── Self-repair safety net ───────────────────────────────────────
             // If real geometry changed, verify it still compiles on the kernel.

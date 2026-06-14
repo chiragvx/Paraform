@@ -18,6 +18,8 @@ import {
   TESSELLATION_DEFLECTION_MM,
 } from '../../../app/settings/index.js';
 import { getDocumentExecutor } from '../../../lib/document/index.js';
+import { NAMED_VIEWS } from '../../../lib/viewport/view_animator.js';
+import { setSnapshotProvider, clearSnapshotProvider } from '../../../lib/viewport/snapshot.js';
 
 /**
  * Resolve a `background` schema value to a scene.background payload —
@@ -233,9 +235,96 @@ export function bootViewport(container) {
     }
   }
 
+  // ── AI vision: multi-axis snapshots of the current model ───────────────────
+  // The AI "cannot see" — capture_views renders the model from named angles and
+  // feeds the images to the vision model so it can verify what it built. We
+  // reuse the live renderer (preserveDrawingBuffer is on) with a throwaway
+  // camera, frame the model's bounds, render each view, and read a downscaled
+  // JPEG. Helpers (grid/axes/contact shadow) are excluded from the framing.
+  const _snapCam = new THREE.PerspectiveCamera(50, 1, 0.1, 10000);
+
+  function _modelBounds() {
+    const box = new THREE.Box3();
+    const tmp = new THREE.Box3();
+    const size = new THREE.Vector3();
+    let has = false;
+    scene.traverse((o) => {
+      if (!o || !o.isMesh || !o.geometry) return;
+      if (o === grid || o === axes) return;
+      if (contactShadow && o === contactShadow.plane) return;
+      if (o.userData && o.userData.snapshotIgnore) return;
+      try { tmp.setFromObject(o); } catch { return; }
+      if (tmp.isEmpty()) return;
+      tmp.getSize(size);
+      const span = size.length();
+      if (!Number.isFinite(span) || span > 5e5) return; // skip infinite grid / strays
+      box.union(tmp);
+      has = true;
+    });
+    return has ? box : null;
+  }
+
+  function _downscaleJpeg() {
+    const src = renderer.domElement;
+    const sw = src.width, sh = src.height;
+    if (!sw || !sh) return null;
+    const maxSide = 768;
+    const scale = Math.min(1, maxSide / Math.max(sw, sh));
+    const ow = Math.max(1, Math.round(sw * scale));
+    const oh = Math.max(1, Math.round(sh * scale));
+    try {
+      const off = document.createElement('canvas');
+      off.width = ow; off.height = oh;
+      const ctx = off.getContext('2d');
+      if (!ctx) return src.toDataURL('image/jpeg', 0.85);
+      ctx.drawImage(src, 0, 0, ow, oh);
+      return off.toDataURL('image/jpeg', 0.85);
+    } catch {
+      try { return src.toDataURL('image/jpeg', 0.85); } catch { return null; }
+    }
+  }
+
+  async function captureViews(requested) {
+    const box = _modelBounds();
+    if (!box) return [];
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 1);
+    const names = (Array.isArray(requested) && requested.length ? requested : ['front', 'right', 'top', 'iso'])
+      .filter((n) => NAMED_VIEWS[n]);
+    if (!names.length) return [];
+    const src = renderer.domElement;
+    const aspect = (src.width && src.height) ? src.width / src.height : 1;
+    const fov = ((camera.fov || 50) * Math.PI) / 180;
+    const dist = (radius / Math.sin(Math.min(fov, Math.PI / 2.2) / 2)) * 1.25;
+    _snapCam.fov = camera.fov || 50;
+    _snapCam.aspect = aspect;
+    _snapCam.near = Math.max(0.01, dist - radius * 3);
+    _snapCam.far = dist + radius * 4;
+    const shots = [];
+    const d = new THREE.Vector3();
+    for (const name of names) {
+      const v = NAMED_VIEWS[name];
+      d.set(v.dir[0], v.dir[1], v.dir[2]).normalize();
+      _snapCam.position.copy(center).addScaledVector(d, dist);
+      _snapCam.up.set(v.up[0], v.up[1], v.up[2]);
+      _snapCam.lookAt(center);
+      _snapCam.updateProjectionMatrix();
+      try {
+        renderer.render(scene, _snapCam);
+        const dataUrl = _downscaleJpeg();
+        if (dataUrl) shots.push({ view: name, dataUrl });
+      } catch { /* skip this view */ }
+    }
+    // Restore the live frame so the user never sees the last snapshot pose.
+    try { renderer.render(scene, camera); } catch { /* next RAF restores it */ }
+    return shots;
+  }
+  setSnapshotProvider(captureViews);
+
   function dispose() {
     if (disposed) return;
     disposed = true;
+    clearSnapshotProvider(captureViews);
     cancelAnimationFrame(rafId);
     resizeObs.disconnect();
     holder.controls?.dispose?.();

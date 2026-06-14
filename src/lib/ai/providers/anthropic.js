@@ -46,6 +46,16 @@ function toWireMessage(entry) {
         }));
         return { role: 'user', content };
     }
+    // Vision: a user turn carrying images → Anthropic image blocks (base64).
+    if (entry.images && entry.images.length) {
+        const content = [];
+        if (entry.text) content.push({ type: 'text', text: String(entry.text) });
+        for (const img of entry.images) {
+            if (!img || !img.dataBase64) continue;
+            content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType || 'image/png', data: img.dataBase64 } });
+        }
+        if (content.length) return { role: 'user', content };
+    }
     return { role: 'user', content: entry.text != null ? String(entry.text) : '' };
 }
 

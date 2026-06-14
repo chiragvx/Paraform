@@ -86,6 +86,16 @@ function toContent(entry) {
         });
         return { role: 'user', parts };
     }
+    // Vision: a user turn carrying images → Gemini inlineData parts.
+    if (entry.images && entry.images.length) {
+        const parts = [];
+        if (entry.text) parts.push({ text: String(entry.text) });
+        for (const img of entry.images) {
+            if (!img || !img.dataBase64) continue;
+            parts.push({ inlineData: { mimeType: img.mediaType || 'image/png', data: img.dataBase64 } });
+        }
+        if (parts.length) return { role: 'user', parts };
+    }
     return { role: 'user', parts: [{ text: entry.text != null ? String(entry.text) : '' }] };
 }
 

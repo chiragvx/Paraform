@@ -55,6 +55,16 @@ register_ai_routes(app)
 # of truth for subscription state, mirrored into profiles via webhooks.
 register_billing_routes(app)
 
+# Web research (AI tool) — POST /ai/web_search + POST /ai/web_fetch. Lets the
+# assistant search the web and read pages it finds (the browser can't, due to
+# CORS). Defensive import: if web_research fails to load for any reason, the
+# rest of the server (/execute, /ai/chat, ...) must still start.
+try:
+    from web_research import register_web_research_routes
+    register_web_research_routes(app)
+except Exception as _e:
+    print(f"[paraform] WARNING: web_research routes not registered: {_e}", file=sys.stderr)
+
 # Kernel build serialization. The server runs `threaded=True` (so an idle
 # browser keep-alive connection or a slow build can't wedge the single worker
 # and starve every other request — the old `threaded=False` deadlocked under
