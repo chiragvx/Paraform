@@ -40,8 +40,8 @@ export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 // OpenAI-compatible GPT-OSS — the core path. The `openai/` prefix matches the
 // model id most aggregators use (Groq / OpenRouter / Together / Fireworks).
 // Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
-export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b';
-export const DEFAULT_MAX_TOKENS = 4096;
+export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b:free';
+export const DEFAULT_MAX_TOKENS = 32768;
 // High ceiling for TESTING — lets long multi-step builds (with self-repair,
 // verify-then-fix, and the see→act→re-check vision loop, which each consume
 // iterations) run to completion without tripping the cap. Still bounded so a

@@ -93,7 +93,7 @@ export const DEFAULT_SETTINGS = deepFreeze({
     // in THIS browser and sent to the user's own kernel proxy (X-Provider-Api-Key
     // header), which uses them in place of its server env keys. Blank = fall back
     // to the server-configured key.
-    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 4096, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
+    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b:free', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 32768, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
     keybindings: { ...DEFAULT_KEYBINDINGS },
 });
 

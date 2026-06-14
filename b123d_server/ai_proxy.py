@@ -68,7 +68,7 @@ DEFAULT_PROVIDER = "openai"
 # src/lib/ai/agent.js DEFAULT_*_MODEL.
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
-DEFAULT_OPENAI_MODEL = "openai/gpt-oss-120b"
+DEFAULT_OPENAI_MODEL = "openai/gpt-oss-120b:free"
 
 # Routing fields the proxy consumes and must NOT forward upstream as part of
 # the provider body.

@@ -26,6 +26,15 @@
     VALID_PROVIDERS.includes(values.provider) ? values.provider : 'openai'
   );
 
+  // OpenRouter is now locked to a single supported model. Self-heal any stale
+  // value left in localStorage from the old multi-option dropdown (e.g. the
+  // paid `openai/gpt-oss-120b`) so the <select> and the value agent.js sends
+  // stay in sync with the one offered option.
+  const OPENAI_MODEL = 'openai/gpt-oss-120b:free';
+  $effect(() => {
+    if (values.openaiModel !== OPENAI_MODEL) update('openaiModel', OPENAI_MODEL);
+  });
+
   // Only show the model + key fields for the currently selected provider.
   const FIELD_PROVIDER = {
     openaiModel: 'openai', openaiApiKey: 'openai', openaiBaseUrl: 'openai',

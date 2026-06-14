@@ -227,9 +227,9 @@ const FULL_SETTINGS_SCHEMA = [
     icon: 'Sparkles',
     defaults: {
       provider: 'openai',
-      openaiModel: 'openai/gpt-oss-120b',
+      openaiModel: 'openai/gpt-oss-120b:free',
       geminiModel: 'gemini-2.5-flash',
-      maxTokens: 4096,
+      maxTokens: 32768,
       // Bring-your-own keys. Stored locally in this browser and sent to YOUR
       // kernel proxy, which uses them in place of its server env keys. Leave
       // blank to fall back to the server-configured key.
@@ -252,10 +252,7 @@ const FULL_SETTINGS_SCHEMA = [
         label: 'Model',
         kind: 'select',
         options: [
-          { value: 'openai/gpt-oss-120b', label: 'openai/gpt-oss-120b' },
-          { value: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B (OpenRouter)' },
-          { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (OpenRouter → Google)' },
-          { value: 'gpt-oss-120b', label: 'gpt-oss-120b (bare id — for Groq/Together/Ollama)' },
+          { value: 'openai/gpt-oss-120b:free', label: 'openai/gpt-oss-120b:free' },
         ],
       },
       { key: 'openaiApiKey', label: 'OpenRouter API key', kind: 'secret', placeholder: 'sk-or-v1-… (paste from openrouter.ai/keys)' },
@@ -271,7 +268,7 @@ const FULL_SETTINGS_SCHEMA = [
         ],
       },
       { key: 'geminiApiKey', label: 'Gemini API key', kind: 'secret', placeholder: 'AIza… (stored in this browser)' },
-      { key: 'maxTokens', label: 'Max output tokens', kind: 'number', min: 256, max: 32000, step: 256 },
+      { key: 'maxTokens', label: 'Max output tokens', kind: 'number', min: 256, max: 500000, step: 256 },
     ],
   },
   {
