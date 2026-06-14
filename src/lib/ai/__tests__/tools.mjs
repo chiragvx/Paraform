@@ -15,7 +15,7 @@
  */
 import assert from 'node:assert/strict';
 
-import { AGENT_TOOLS, dispatchTool, documentSummary } from '$lib/ai/tools.js';
+import { AGENT_TOOLS, dispatchTool, documentSummary, sceneDigest } from '$lib/ai/tools.js';
 import { resetDocumentStore, getDocumentStore } from '../../../../lib/document/index.js';
 
 let _pass = 0, _fail = 0;
@@ -143,6 +143,64 @@ await t('replace_component: unknown component returns ok:false without throwing'
     });
     assert.equal(res.ok, false);
     assert.ok(typeof res.error === 'string' && res.error.length, 'carries an error string');
+});
+
+// ── Sketch placement: face/offset anchoring (the boss/pocket fix) ────────────
+
+await t('addSketch with offset commits a sketch whose plane carries that offset', async () => {
+    resetDocumentStore();
+    const res = await dispatchTool('addSketch', {
+        plane: 'XY', offset: 20,
+        entities: [{ kind: 'circle', cx: 0, cy: 0, radius: 4 }],
+    });
+    assert.equal(res.ok, true, `expected ok, got ${JSON.stringify(res)}`);
+    assert.ok(res.sketchFeatureId, 'returns a sketchFeatureId for chaining into addExtrude');
+    const feat = getDocumentStore().doc.features[res.sketchFeatureId];
+    assert.ok(feat, 'sketch feature exists in the store');
+    assert.equal(feat.params.sketch.planeRef.kind, 'stock');
+    assert.equal(feat.params.sketch.planeRef.offset, 20, 'offset survives onto the planeRef');
+});
+
+await t('addSketch → addExtrude chains (profile becomes a solid)', async () => {
+    resetDocumentStore();
+    const sk = await dispatchTool('addSketch', {
+        plane: 'XY', offset: 20,
+        entities: [{ kind: 'rect', x1: -5, y1: -5, x2: 5, y2: 5 }],
+    });
+    assert.equal(sk.ok, true);
+    const ex = await dispatchTool('addExtrude', { sketchFeatureId: sk.sketchFeatureId, amount: 6 });
+    assert.equal(ex.ok, true, `extrude failed: ${JSON.stringify(ex)}`);
+    assert.equal(getDocumentStore().doc.features[ex.featureId].type, 'Extrude');
+});
+
+await t('face/pocket selection tools are exposed on the agent surface', () => {
+    const names = new Set(AGENT_TOOLS.map((x) => x.name));
+    assert.ok(names.has('sketch_on_selected_face'), 'sketch_on_selected_face is registered');
+    assert.ok(names.has('cut_pocket_on_selected_face'), 'cut_pocket_on_selected_face is registered');
+});
+
+await t('sketch_on_selected_face with nothing picked asks the user to click a face (no throw)', async () => {
+    const res = await dispatchTool('sketch_on_selected_face', {
+        entities: [{ kind: 'circle', cx: 0, cy: 0, radius: 3 }],
+    });
+    assert.equal(res.ok, false);
+    assert.match(res.error, /No face is selected/i);
+});
+
+await t('cut_pocket_on_selected_face with nothing picked asks the user to click a face (no throw)', async () => {
+    const res = await dispatchTool('cut_pocket_on_selected_face', {
+        entities: [{ kind: 'rect', x1: -2, y1: -2, x2: 2, y2: 2 }], depth: 3,
+    });
+    assert.equal(res.ok, false);
+    assert.match(res.error, /No face is selected/i);
+});
+
+await t('sceneDigest reports a body with its Z-extent so the model knows where it is', async () => {
+    resetDocumentStore();
+    await dispatchTool('addBox', { length: 40, width: 30, height: 20 });
+    const digest = sceneDigest();
+    assert.ok(digest.includes('Current bodies'), 'digest has a header');
+    assert.match(digest, /top face Z=20/, 'derives the top-face Z so the AI can offset a sketch onto it');
 });
 
 console.log(`\n${_pass} passed, ${_fail} failed`);

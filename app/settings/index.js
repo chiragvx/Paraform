@@ -93,7 +93,12 @@ export const DEFAULT_SETTINGS = deepFreeze({
     // in THIS browser and sent to the user's own kernel proxy (X-Provider-Api-Key
     // header), which uses them in place of its server env keys. Blank = fall back
     // to the server-configured key.
-    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b:free', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 32768, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
+    // `escalationModel` (opt-in, blank = off): a STRONGER model id the agent
+    // switches to only for hard steps (self-repair after a compile failure, or
+    // when it's stuck repeating a failing call). Leaves the cheap default model
+    // driving the easy majority of steps. Must be a model the active provider can
+    // serve (e.g. another OpenRouter id). See agent.js resolveModelConfig.
+    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b:free', escalationModel: '', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 32768, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
     keybindings: { ...DEFAULT_KEYBINDINGS },
 });
 

@@ -18,6 +18,8 @@
     "test": "node lib/document/__tests__/all.mjs",
     "test:smoke": "node tests/smoke/runner.mjs",
     "test:stability": "node tests/eval/stability/runner.mjs",
+    "test:eval-harness": "node src/lib/ai/eval/__tests__/eval.test.mjs",
+    "test:assembly-constraints": "node src/lib/library/__tests__/assembly_constraints.test.mjs",
     "eval": "node --import ./src/lib/commands/__tests__/_register.mjs tests/eval/runner.mjs",
     "eval:update-baseline": "node --import ./src/lib/commands/__tests__/_register.mjs tests/eval/runner.mjs --update-baseline",
     "validate": "node scripts/validate.mjs",

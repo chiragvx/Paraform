@@ -48,6 +48,8 @@ import { CONTEXT_TOOLS } from './tools_context.js';
 import { VALIDATION_TOOLS } from './tools_validation.js';
 import { DFM_TOOLS } from './tools_dfm.js';
 import { ASSEMBLY_TOOLS } from './tools_assembly.js';
+import { ASSEMBLY_CHECK_TOOLS } from './tools_assembly_check.js';
+import { PLANNER_TOOLS } from './tools_planner.js';
 import { VISION_TOOLS } from './tools_vision.js';
 import { WEB_TOOLS } from './tools_web.js';
 
@@ -664,6 +666,63 @@ export function documentSummary() {
     };
 }
 
+/**
+ * A compact, SYNCHRONOUS spatial digest of the current bodies, injected into
+ * the system prompt each turn (see agent.js buildSystem). It tells the model
+ * what exists and roughly WHERE in world space — so before it sketches a boss
+ * or a pocket it knows "box_1's top face is at Z=20" instead of dropping the
+ * profile at the origin. Extents are derived from feature params (primitives
+ * sit Align.MIN on Z per the Z-up convention); exact bounds for derived bodies
+ * still come from measure {type:"bbox"}.
+ */
+export function sceneDigest() {
+    let doc;
+    try { doc = getDocumentStore().doc; } catch { return ''; }
+    const order = doc.featureOrder || Object.keys(doc.features || {});
+    const bodies = order
+        .map((id) => doc.features[id])
+        .filter((f) => f && f.enabled !== false && BODY_EMITTING.has(f.type));
+    if (!bodies.length) return '';
+    const CAP = 24;
+    const lines = bodies.slice(0, CAP).map((f) => {
+        const label = f.name && f.name !== f.type ? `${f.type} "${f.name}"` : f.type;
+        return `- ${f.id} (${label}): ${_extentHint(f)}`;
+    });
+    if (bodies.length > CAP) lines.push(`- …and ${bodies.length - CAP} more`);
+    return `# Current bodies (Z-up, mm — exact bounds via measure {type:"bbox", featureId})\n${lines.join('\n')}`;
+}
+
+/** One-line spatial hint for a body-emitting feature, from its params. */
+function _extentHint(f) {
+    const p = f.params || {};
+    const n = (v, d) => (Number.isFinite(+v) ? +v : d);
+    switch (f.type) {
+        case 'Box': {
+            const L = n(p.length, 10), W = n(p.width, 10), H = n(p.height, 10);
+            const xy = p.centered === false ? `X 0..${L}, Y 0..${W}` : `X ±${L / 2}, Y ±${W / 2}`;
+            return `box ${L}×${W}×${H} — sits Z 0..${H} (top face Z=${H}), ${xy}`;
+        }
+        case 'Cylinder': {
+            const R = n(p.radius, 5), H = n(p.height, 10);
+            return `cylinder r=${R} h=${H} — axis +Z, sits Z 0..${H} (top face Z=${H})`;
+        }
+        case 'Sphere': {
+            const R = n(p.radius, 5);
+            return `sphere r=${R} — centred at origin (Z ${-R}..${R})`;
+        }
+        case 'Torus': {
+            const mr = n(p.minorRadius, 2);
+            return `torus — centred at origin (Z ${-mr}..${mr})`;
+        }
+        case 'Extrude': {
+            const a = Math.abs(n(p.amount, 10));
+            return `extruded profile, ${a}mm tall — measure bbox for exact placement`;
+        }
+        default:
+            return 'measure bbox for exact placement';
+    }
+}
+
 /** Keep params small — drop big base64/glb blobs the model can't use. */
 function _compactParams(params) {
     if (!params || typeof params !== 'object') return {};
@@ -704,6 +763,7 @@ function _collectTools() {
     const groups = [
         TOOLS, GEOMETRY_EXT_TOOLS, SKETCH_TOOLS, SELECTION_TOOLS,
         CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
+        ASSEMBLY_CHECK_TOOLS, PLANNER_TOOLS,
         VISION_TOOLS, WEB_TOOLS,
     ];
     const out = [];

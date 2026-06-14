@@ -27,7 +27,7 @@
  * next turn. Provider + model + max_tokens come from settings.
  */
 
-import { AGENT_TOOLS, dispatchTool, documentSummary } from './tools.js';
+import { AGENT_TOOLS, dispatchTool, documentSummary, sceneDigest } from './tools.js';
 import { SYSTEM_PROMPT } from './system_prompt.js';
 import { streamChat } from './provider.js';
 import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
@@ -59,6 +59,14 @@ const MAX_REPAIRS_PER_ERROR = 2;
 // accept it's finished). Bounded so it can't nudge forever in one turn.
 const MAX_AUTO_CONTINUES = 50;
 const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If anything is unfinished, unverified, or still needed to satisfy the goal, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
+
+// Visual-verify gate. The field's strongest accuracy lever (CAD Skills / Zoo
+// both MANDATE it; ablations show a large quality regression without it): never
+// let the agent finish having built geometry it never LOOKED at. If real
+// geometry changed this turn and no capture_views has run since, we force one
+// reminder before accepting "done". Bounded so it can't loop.
+const MAX_VISUAL_NUDGES = 1;
+const VISUAL_GATE_NUDGE = "[automatic check] You built or changed geometry this turn but have not visually verified it. Call capture_views now and LOOK at the renders (front/right/top/iso) — check orientation, proportions, symmetry, parts clipping or floating, oversized fillets. A render is DIAGNOSTIC, not proof: convert any visual concern into a measure call (e.g. holes look off-centre → measure the centres) before you claim it's correct. Then finish with your summary.";
 
 // ── Dynamic per-turn context ──────────────────────────────────────────────────
 //
@@ -103,8 +111,10 @@ function buildSystem() {
         } catch { knownIds = undefined; }
         block = ctx.contextBlock(knownIds) || '';
     } catch { block = ''; }
+    let scene = '';
+    try { scene = sceneDigest() || ''; } catch { scene = ''; }
     const sel = selectionSummary();
-    return [SYSTEM_PROMPT, block, sel].filter(Boolean).join('\n\n');
+    return [SYSTEM_PROMPT, block, scene, sel].filter(Boolean).join('\n\n');
 }
 
 /** Normalise a kernel error so repeated attempts on the SAME failure dedupe. */
@@ -127,9 +137,16 @@ const NON_MUTATING_TOOLS = new Set([
     'find_compatible_connectors', 'list_connectors', 'generate_bom',
     'get_context', 'propose_brief', 'name_feature', 'record_decision', 'explain_decision',
     'add_requirement', 'verify_requirement', 'set_units',
-    'export_for_print', 'declareConnector', 'add_mate',
+    'export_for_print',
     'capture_views', 'web_search', 'web_fetch',
+    'plan_assembly', 'check_assembly_constraints',
 ]);
+// NOTE: add_mate and declareConnector are deliberately NOT in this set. They
+// mutate the assembly (placement / snap contract), so a build-breaking mate or
+// a connector that makes the model fail to compile must trip the self-repair
+// compile-check below — assembly failures self-heal exactly like geometry
+// failures. (plan_assembly / check_assembly_constraints are pure analysis and
+// stay observe-only.)
 
 /** Pull { providerName, model, maxTokens, apiKey, baseUrl } from settings. */
 function resolveModelConfig() {
@@ -138,6 +155,7 @@ function resolveModelConfig() {
     let anthropicModel = DEFAULT_ANTHROPIC_MODEL;
     let openaiModel = DEFAULT_OPENAI_MODEL;
     let maxTokens = DEFAULT_MAX_TOKENS;
+    let escalationModel = '';
     let ai = {};
     try {
         const s = readSettings();
@@ -146,6 +164,12 @@ function resolveModelConfig() {
         if (typeof ai.geminiModel === 'string' && ai.geminiModel.trim()) geminiModel = ai.geminiModel.trim();
         if (typeof ai.anthropicModel === 'string' && ai.anthropicModel.trim()) anthropicModel = ai.anthropicModel.trim();
         if (typeof ai.openaiModel === 'string' && ai.openaiModel.trim()) openaiModel = ai.openaiModel.trim();
+        // Opt-in stronger model for HARD steps (self-repair / repeated-failure).
+        // Empty = disabled (default), so the deliberate free-model lock stands
+        // until the user sets one; it then drives only the difficulty-escalated
+        // iterations, not every turn — Zoo's "pick the best spatial reasoner for
+        // the hard part" discipline, scoped to where it pays.
+        if (typeof ai.escalationModel === 'string' && ai.escalationModel.trim()) escalationModel = ai.escalationModel.trim();
         // Back-compat: an older `model` key applies to whichever provider it names.
         if (typeof ai.model === 'string' && ai.model.trim()) {
             if (ai.model.startsWith('gemini')) geminiModel = ai.model.trim();
@@ -169,7 +193,10 @@ function resolveModelConfig() {
     const apiKey = (typeof ai[keyField] === 'string' && ai[keyField].trim()) ? ai[keyField].trim() : null;
     const baseUrl = (providerName === 'openai' && typeof ai.openaiBaseUrl === 'string' && ai.openaiBaseUrl.trim())
         ? ai.openaiBaseUrl.trim() : null;
-    return { providerName, model, maxTokens, apiKey, baseUrl };
+    // Never escalate to the same model we're already on (no-op) — treat that as
+    // disabled so the loop doesn't think it has an escalation lever it lacks.
+    if (escalationModel && escalationModel === model) escalationModel = '';
+    return { providerName, model, maxTokens, apiKey, baseUrl, escalationModel };
 }
 
 // Tools that observe but don't mutate the document — used to distinguish a
@@ -237,7 +264,7 @@ export function summarizeTurn(toolResults) {
  */
 export async function runAgentTurn({ userMessage, images, history = [], onEvent = () => {}, signal, endpoint, autoMode = false } = {}) {
     const emit = (ev) => { try { onEvent(ev); } catch { /* UI handler must not break the loop */ } };
-    const { providerName, model, maxTokens, apiKey, baseUrl } = resolveModelConfig();
+    const { providerName, model, maxTokens, apiKey, baseUrl, escalationModel } = resolveModelConfig();
     const provider = getProvider(providerName);
     const tools = provider.toolsForProvider(AGENT_TOOLS);
 
@@ -262,6 +289,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     let visionInjections = 0;           // bound the capture→look loop per turn
     let autoContinues = 0;              // auto-mode "keep going" nudges used this turn
     let nudgedLastStop = false;         // we nudged on a stop and no work has happened since
+    let builtGeometryThisTurn = false;  // any real geometry/assembly mutation this turn
+    let capturedAfterBuild = false;     // capture_views ran since the last mutation (visual gate)
+    let visualGateNudges = 0;           // bound the "look before you finish" gate per turn
+    let escalated = false;              // a hard step escalated us to the stronger model this turn
 
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -270,11 +301,17 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 return { history: messages };
             }
 
+            // Difficulty escalation: once a hard step (self-repair / repeated
+            // failure) has tripped, drive the rest of the turn with the stronger
+            // model if one is configured. The base model still handles the easy
+            // majority of steps; the strong model is spent only where it pays.
+            const activeModel = (escalated && escalationModel) ? escalationModel : model;
+
             const { body } = provider.buildBody({
                 system: buildSystem(),
                 history: messages,
                 tools,
-                model,
+                model: activeModel,
                 maxTokens,
                 stream: true,
             });
@@ -295,6 +332,14 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             provider.appendAssistantTurn(messages, { text: result.text, toolCalls: result.toolCalls });
 
             if (result.stop || !result.toolCalls || result.toolCalls.length === 0) {
+                // Visual-verify gate (independent of auto mode): don't accept
+                // "done" when geometry was built this turn but never looked at.
+                // One forced reminder per turn; bounded so it can't loop.
+                if (builtGeometryThisTurn && !capturedAfterBuild && visualGateNudges < MAX_VISUAL_NUDGES && !(signal && signal.aborted)) {
+                    visualGateNudges++;
+                    messages.push({ role: 'user', text: VISUAL_GATE_NUDGE });
+                    continue;
+                }
                 // Auto / focus mode: don't accept the first "I'm done". Nudge the
                 // model to keep going until the goal is genuinely complete. One
                 // nudge per stop — if it stops AGAIN right after (nudgedLastStop
@@ -348,7 +393,15 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 turnToolResults.push({ name: tc.name, result: r });
 
                 const failed = r && r.ok === false;
-                if (!failed && !NON_MUTATING_TOOLS.has(tc.name)) mutatedGeometry = true;
+                // Visual-gate bookkeeping: a successful capture satisfies the
+                // gate; any successful mutation re-arms it (new geometry needs a
+                // fresh look).
+                if (!failed && tc.name === 'capture_views') capturedAfterBuild = true;
+                if (!failed && !NON_MUTATING_TOOLS.has(tc.name)) {
+                    mutatedGeometry = true;
+                    builtGeometryThisTurn = true;
+                    capturedAfterBuild = false;
+                }
                 if (failed) {
                     // Detect the model hammering the SAME failing call. After a
                     // few identical failures, nudge it to change approach.
@@ -392,6 +445,9 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                     const sig = errorSignature(status.error);
                     const n = (repairAttempts.get(sig) || 0) + 1;
                     repairAttempts.set(sig, n);
+                    // A failing compile is a hard step — escalate to the stronger
+                    // model (if configured) for the repair and the rest of the turn.
+                    if (escalationModel) escalated = true;
                     if (n <= MAX_REPAIRS_PER_ERROR) {
                         messages.push({ role: 'user', text:
                             `[automatic check] The kernel could NOT compile the model after your last operation:\n${truncate(status.error, 600)}\n` +
@@ -406,6 +462,8 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             }
 
             if (repeatedFailureNote) {
+                // The model is stuck repeating a failing call — a hard step.
+                if (escalationModel) escalated = true;
                 messages.push({ role: 'user', text: repeatedFailureNote });
             }
         }

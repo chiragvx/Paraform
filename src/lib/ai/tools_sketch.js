@@ -15,12 +15,13 @@
  */
 
 import { newSketch } from '../../../lib/document/index.js';
+import { stockPlane } from '../../../lib/sketch/sketch_data.js';
 import { N, S, feat, fail, num } from './tools_util.js';
 
 const PLANES = ['XY', 'XZ', 'YZ'];
 
 /** Apply one declarative entity to a SketchBuilder. Returns null on success or an error string. */
-function applyEntity(b, e) {
+export function applyEntity(b, e) {
     if (!e || typeof e !== 'object' || typeof e.kind !== 'string') return 'entity missing kind';
     const k = e.kind.toLowerCase();
     try {
@@ -83,12 +84,40 @@ function applyEntity(b, e) {
     }
 }
 
+/**
+ * Build + commit a sketch from declarative entities on an already-resolved
+ * plane argument (a stock-plane string, a stockPlane/facePlane planeRef, etc.
+ * — anything newSketch accepts). Shared by addSketch and the face-anchored
+ * selection tools so the entity grammar and validation live in one place.
+ *
+ * Returns { ok:true, feature, added, warnings } or { ok:false, error }.
+ */
+export function buildSketch(planeArg, entities, name = 'Sketch') {
+    const list = Array.isArray(entities) ? entities : [];
+    if (!list.length) return { ok: false, error: 'sketch needs a non-empty entities array' };
+    if (list.length > 80) return { ok: false, error: 'sketch: too many entities (max 80) — simplify the profile' };
+    let b;
+    try { b = newSketch(planeArg, { name }); }
+    catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+    const warnings = [];
+    let added = 0;
+    for (const e of list) {
+        const err = applyEntity(b, e);
+        if (err) warnings.push(err);
+        else added++;
+    }
+    if (added === 0) return { ok: false, error: `sketch: no valid entities (${warnings.join('; ')})` };
+    try { return { ok: true, feature: b.commit(), added, warnings }; }
+    catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+}
+
 export const SKETCH_TOOLS = [
     {
         name: 'addSketch',
         description: [
             'Create a 2D sketch profile on a principal plane, then commit it as a sketch feature. Returns sketchFeatureId — pass that to addExtrude / addRevolve / addSweep / addLoft to make a solid.',
             'This is how you build any profile-driven part (brackets, gaskets, custom outlines) that primitives + booleans cannot express.',
+            'PLACEMENT: a bare sketch sits at the WORLD ORIGIN on the chosen plane. To put a profile ON or RELATIVE TO an existing body, set `offset` (mm along the plane normal) to that body\'s face — e.g. to add a boss on top of a 20mm-tall box, sketch on XY with offset:20. Measure the body\'s bbox first (measure {type:"bbox", featureId}) so the offset is right. When the user has CLICKED a face, use sketch_on_selected_face instead to anchor to that exact face.',
             'entities is a list of 2D shapes in millimetres on the chosen plane. Supported kinds:',
             '  {kind:"circle", cx, cy, radius}',
             '  {kind:"rect", x1,y1, x2,y2}  (two opposite corners)',
@@ -102,6 +131,7 @@ export const SKETCH_TOOLS = [
             type: 'object',
             properties: {
                 plane: S('Sketch plane', { enum: PLANES }),
+                offset: N('Shift the plane along its normal by this many mm so the profile lands on/relative to an existing body (e.g. XY + offset 20 sits at Z=20, on top of a 20mm box). Default 0 = world origin.'),
                 entities: {
                     type: 'array',
                     description: 'The 2D entities making up the profile (see description for kinds). mm, sketch-local.',
@@ -112,28 +142,15 @@ export const SKETCH_TOOLS = [
             required: ['entities'],
         },
         handler: (i) => {
-            const plane = PLANES.includes(i.plane) ? i.plane : 'XY';
-            const entities = Array.isArray(i.entities) ? i.entities : [];
-            if (!entities.length) return fail('addSketch needs a non-empty entities array');
-            if (entities.length > 80) return fail('addSketch: too many entities (max 80) — simplify the profile');
-            let b;
-            try { b = newSketch(plane, { name: i.name || 'Sketch' }); }
-            catch (e) { return fail(e); }
-            const warnings = [];
-            let added = 0;
-            for (const e of entities) {
-                const err = applyEntity(b, e);
-                if (err) warnings.push(err);
-                else added++;
-            }
-            if (added === 0) return { ok: false, error: `addSketch: no valid entities (${warnings.join('; ')})` };
-            try {
-                const f = b.commit();
-                const r = feat(f, `Sketch on ${plane} with ${added} entit${added === 1 ? 'y' : 'ies'}`);
-                if (warnings.length) r.warnings = warnings;
-                r.sketchFeatureId = f.id; // explicit alias so the model can chain into addExtrude
-                return r;
-            } catch (e) { return fail(e); }
+            const planeName = PLANES.includes(i.plane) ? i.plane : 'XY';
+            const offset = num(i.offset, 0);
+            const res = buildSketch(stockPlane(planeName, offset), i.entities, i.name || 'Sketch');
+            if (!res.ok) return fail(res.error);
+            const where = offset ? `${planeName} (offset ${offset}mm)` : planeName;
+            const r = feat(res.feature, `Sketch on ${where} with ${res.added} entit${res.added === 1 ? 'y' : 'ies'}`);
+            if (res.warnings.length) r.warnings = res.warnings;
+            r.sketchFeatureId = res.feature.id; // explicit alias so the model can chain into addExtrude
+            return r;
         },
     },
 ];

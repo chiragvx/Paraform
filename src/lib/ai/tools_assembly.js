@@ -166,6 +166,18 @@ const TOOLS = [
                     return { ok: false, error: `inducedJoint must be one of ${[...INDUCED_JOINTS].join(', ')} (got ${JSON.stringify(input.inducedJoint)}).` };
                 }
 
+                // Rule 4 — Compatibility must be EXPLICIT. A 'neutral' gender with
+                // an 'unspecified' size and no profile/interfaceId mates with
+                // ANYTHING — exactly how parts clip through each other. Reject a
+                // connector with no real discriminator so an AI author can't stamp
+                // a promiscuous (immutable) snap point.
+                const hasProfile   = typeof input.profile === 'string' && input.profile.length > 0;
+                const hasInterface = typeof input.interfaceId === 'string' && input.interfaceId.length > 0;
+                const sizeKnown    = Number.isFinite(Number(safeSize.nominal));
+                if (input.gender === 'neutral' && !sizeKnown && !hasProfile && !hasInterface) {
+                    return { ok: false, error: 'This connector is too permissive to mate safely: gender "neutral" + size "unspecified" with no profile or interfaceId matches anything and will let parts clip through (Rule 4 — compatibility must be explicit). Give it a real discriminator: a numeric size (mm), an explicit male/female gender, a profile (e.g. "tslot-2020"), or an interfaceId.' };
+                }
+
                 // Rule 9 — Channels: line/slot/rail ports need a perpendicular
                 // seating normal. axis is the slide direction; normal is the
                 // seating face outward. Optional but validated when present.

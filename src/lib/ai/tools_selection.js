@@ -14,8 +14,10 @@
  * actionable message ("click the edge and I'll chamfer it") instead of failing.
  */
 
-import { addFillet, addChamfer, addHole, addPushPullFace, addOffsetFace, addDeleteFace, qDescriptor } from '../../../lib/document/index.js';
-import { N, S, B, feat, fail } from './tools_util.js';
+import { addFillet, addChamfer, addHole, addPushPullFace, addOffsetFace, addDeleteFace, addExtrude, addCut, qDescriptor } from '../../../lib/document/index.js';
+import { facePlane } from '../../../lib/sketch/sketch_data.js';
+import { buildSketch } from './tools_sketch.js';
+import { N, S, B, feat, fail, num } from './tools_util.js';
 
 /** Read the live viewport selection defensively. Returns [] if unavailable. */
 function liveSelection() {
@@ -134,6 +136,82 @@ export const SELECTION_TOOLS = [
                     type: i.type || 'simple', counterDia: i.counterDia ?? null, counterDepth: i.counterDepth ?? null,
                     face: { query: face.ref.query },
                 }), `Hole Ø${i.diameter}mm on picked face`);
+            } catch (e) { return fail(e); }
+        },
+    },
+    {
+        name: 'sketch_on_selected_face',
+        description: 'Start a 2D sketch ON the face the user picked in the viewport — the "sketch on THIS face" verb. The sketch is anchored to that face (its centre + outward normal), so coordinates are millimetres in the face\'s local 2D frame. Returns sketchFeatureId — pass it to addExtrude to grow a boss/rib out of the face, or to build a tool body for addCut. Entity kinds are the same as addSketch (circle / rect / polygon / slot / polyline / line / arc / spline). Use this instead of addSketch whenever the new geometry must sit on existing geometry the user is pointing at.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                entities: {
+                    type: 'array',
+                    description: 'The 2D entities making up the profile (same kinds as addSketch). mm, in the face-local frame.',
+                    items: { type: 'object', additionalProperties: true },
+                },
+                name: S('Optional sketch name'),
+            },
+            required: ['entities'],
+        },
+        handler: (i) => {
+            const faces = pickedOfKind('face');
+            if (!faces.length) return { ok: false, error: 'No face is selected in the viewport. Ask the user to click the face to sketch on, then try again.' };
+            const face = faces[0];
+            if (!Array.isArray(face.center) || !Array.isArray(face.normal)) {
+                return { ok: false, error: 'The picked face has no cached centre/normal, so I cannot anchor a sketch to it. Re-pick the face and try again.' };
+            }
+            let planeRef;
+            try { planeRef = facePlane(face.descriptor, face.center, face.normal); }
+            catch (e) { return fail(e); }
+            const res = buildSketch(planeRef, i.entities, i.name || 'Sketch on face');
+            if (!res.ok) return fail(res.error);
+            const r = feat(res.feature, `Sketch on picked face with ${res.added} entit${res.added === 1 ? 'y' : 'ies'}`);
+            if (res.warnings.length) r.warnings = res.warnings;
+            r.sketchFeatureId = res.feature.id;
+            return r;
+        },
+    },
+    {
+        name: 'cut_pocket_on_selected_face',
+        description: 'Carve a profile-shaped pocket INTO the body at the face the user picked — the "cut THIS shape into this face" verb. It sketches the profile on the picked face, extrudes it INTO the body by `depth` mm along the face normal, and boolean-subtracts it, all in one step. Entity kinds match addSketch; coordinates are mm in the face-local 2D frame. For a plain round hole prefer hole_on_selected_face; use this for slots, rectangular pockets, and custom recesses.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                entities: {
+                    type: 'array',
+                    description: 'The 2D profile entities (same kinds as addSketch). mm, in the face-local frame.',
+                    items: { type: 'object', additionalProperties: true },
+                },
+                depth: N('How deep to cut into the body along the face normal (mm)'),
+                name: S('Optional name'),
+            },
+            required: ['entities', 'depth'],
+        },
+        handler: (i) => {
+            const faces = pickedOfKind('face');
+            if (!faces.length) return { ok: false, error: 'No face is selected in the viewport. Ask the user to click the face to cut into, then try again.' };
+            const face = faces[0];
+            const targetId = face.featureId;
+            if (!targetId) return { ok: false, error: 'The picked face is not tied to a body I can cut. Re-pick a face on a solid body.' };
+            if (!Array.isArray(face.center) || !Array.isArray(face.normal)) {
+                return { ok: false, error: 'The picked face has no cached centre/normal, so I cannot anchor the pocket. Re-pick the face and try again.' };
+            }
+            const depth = num(i.depth, 0);
+            if (!(depth > 0)) return fail('cut_pocket_on_selected_face needs depth > 0 (mm into the body)');
+            let planeRef;
+            try { planeRef = facePlane(face.descriptor, face.center, face.normal); }
+            catch (e) { return fail(e); }
+            const sk = buildSketch(planeRef, i.entities, i.name || 'Pocket profile');
+            if (!sk.ok) return fail(sk.error);
+            try {
+                // The sketch plane's normal = the face's OUTWARD normal, so a
+                // negative extrude drives the tool body INWARD to carve the pocket.
+                const tool = addExtrude(sk.feature.id, { amount: -depth });
+                const cut = addCut(targetId, [tool.id]);
+                const r = feat(cut, `Cut a ${depth}mm pocket into the picked face of ${targetId}`);
+                if (sk.warnings.length) r.warnings = sk.warnings;
+                return r;
             } catch (e) { return fail(e); }
         },
     },
