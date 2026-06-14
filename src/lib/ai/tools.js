@@ -35,6 +35,19 @@ import { placeLibraryPart } from '../library/place.js';
 import { findPart, loadLibrary, replaceComponent, isVerifiedPart } from '../library/index.js';
 import { measure as measureKernel } from '../measure/api.js';
 import { runAllInvariants } from '../invariants/runner.js';
+import { getAIContext } from './context.js';
+
+// Extended capability modules. Each exports an array of { name, description,
+// input_schema, handler } in the same shape as the core TOOLS below. They are
+// kept in separate files so each capability group is independently sound and a
+// broken module can be left un-wired without taking down the whole surface.
+import { GEOMETRY_EXT_TOOLS } from './tools_geometry_ext.js';
+import { SKETCH_TOOLS } from './tools_sketch.js';
+import { SELECTION_TOOLS } from './tools_selection.js';
+import { CONTEXT_TOOLS } from './tools_context.js';
+import { VALIDATION_TOOLS } from './tools_validation.js';
+import { DFM_TOOLS } from './tools_dfm.js';
+import { ASSEMBLY_TOOLS } from './tools_assembly.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -678,14 +691,70 @@ function listComponentsResult() {
     };
 }
 
+// ── Aggregate every module's tools into one surface ──────────────────────────
+//
+// Combine the core TOOLS with the extended-capability modules, then defensively
+// filter malformed entries and dedupe by name (first definition wins). A module
+// that exported garbage can't poison the surface — its bad entries are dropped
+// and the rest of the assistant keeps working.
+
+function _collectTools() {
+    const groups = [
+        TOOLS, GEOMETRY_EXT_TOOLS, SKETCH_TOOLS, SELECTION_TOOLS,
+        CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
+    ];
+    const out = [];
+    const seen = new Set();
+    for (const g of groups) {
+        if (!Array.isArray(g)) continue;
+        for (const t of g) {
+            if (!t || typeof t.name !== 'string' || !t.name) continue;
+            if (typeof t.handler !== 'function') continue;
+            if (!t.input_schema || typeof t.input_schema !== 'object') continue;
+            if (seen.has(t.name)) continue;
+            seen.add(t.name);
+            out.push(t);
+        }
+    }
+    return out;
+}
+
+const ALL_TOOLS = _collectTools();
+
 // ── Public surface ───────────────────────────────────────────────────────────
 
-/** Anthropic tool definitions (no handlers). */
-export const AGENT_TOOLS = TOOLS.map(({ name, description, input_schema }) => ({
+/** Tool definitions sent to the model (no handlers). */
+export const AGENT_TOOLS = ALL_TOOLS.map(({ name, description, input_schema }) => ({
     name, description, input_schema,
 }));
 
-const _byName = new Map(TOOLS.map((t) => [t.name, t]));
+const _byName = new Map(ALL_TOOLS.map((t) => [t.name, t]));
+
+// Id-bearing fields whose string value may be a human alias ("the bracket")
+// rather than a literal id; resolved through the design context before
+// dispatch. Array fields hold lists of ids.
+const _ID_FIELDS = new Set([
+    'featureId', 'targetFeatureId', 'targetBodyId', 'targetId', 'sketchFeatureId',
+    'profileSketchId', 'pathFeatureId', 'sourceId', 'oldComponentId',
+    'parentComponentId', 'componentId',
+]);
+const _ID_ARRAY_FIELDS = new Set(['featureIds', 'toolIds', 'sketchIds']);
+
+/** Map alias names → ids on id-bearing fields. Never throws; echoes on failure. */
+function resolveAliases(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return input;
+    let ctx;
+    try { ctx = getAIContext(); } catch { return input; }
+    const out = { ...input };
+    for (const [k, v] of Object.entries(out)) {
+        if (_ID_FIELDS.has(k) && typeof v === 'string') {
+            out[k] = ctx.resolveRef(v);
+        } else if (_ID_ARRAY_FIELDS.has(k) && Array.isArray(v)) {
+            out[k] = v.map((x) => (typeof x === 'string' ? ctx.resolveRef(x) : x));
+        }
+    }
+    return out;
+}
 
 /**
  * Lightweight runtime validation of `input` against a tool's input_schema:
@@ -727,10 +796,13 @@ function validateInput(schema, input) {
 export async function dispatchTool(name, input) {
     const tool = _byName.get(name);
     if (!tool) return { ok: false, error: `unknown tool '${name}'` };
-    const validationError = validateInput(tool.input_schema, input);
+    // Resolve English aliases ("the bracket" → box_3) on id-bearing fields so
+    // the user can talk in names while tools still receive ids.
+    const resolved = resolveAliases(input);
+    const validationError = validateInput(tool.input_schema, resolved);
     if (validationError) return { ok: false, error: `invalid input for ${name}: ${validationError}` };
     try {
-        const r = await tool.handler(input || {});
+        const r = await tool.handler(resolved || {});
         // Normalise: handlers always return an object; guarantee `ok` is set.
         if (r && typeof r === 'object' && r.ok === undefined) return { ok: true, ...r };
         return r;

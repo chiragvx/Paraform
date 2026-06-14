@@ -27,11 +27,13 @@
  * next turn. Provider + model + max_tokens come from settings.
  */
 
-import { AGENT_TOOLS, dispatchTool } from './tools.js';
+import { AGENT_TOOLS, dispatchTool, documentSummary } from './tools.js';
 import { SYSTEM_PROMPT } from './system_prompt.js';
 import { streamChat } from './provider.js';
 import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
 import { readSettings } from '../../../app/settings/index.js';
+import { getAIContext } from './context.js';
+import { compileCurrent } from './tools_validation.js';
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
@@ -40,7 +42,83 @@ export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 // Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
 export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_MAX_TOKENS = 4096;
-export const MAX_ITERATIONS = 12;
+// Raised from 12: the self-repair safety net and verify-then-fix loops consume
+// iterations, so a genuine multi-step build needs more headroom before hitting
+// the cap. Still bounded so a runaway loop can't burn unlimited quota.
+export const MAX_ITERATIONS = 16;
+// How many times the loop will auto-feed the SAME compile error back for repair
+// before giving up and asking the user. Prevents thrashing on an unfixable build.
+const MAX_REPAIRS_PER_ERROR = 2;
+
+// ── Dynamic per-turn context ──────────────────────────────────────────────────
+//
+// The viewport selection lives in a singleton the AI layer can read, but we keep
+// the dependency soft (a dynamic import) so a headless / kernel-only context
+// never trips on the picking module. Resolved once, read each turn.
+let _pickMod = null;
+import('../../../lib/picking/selection.js').then((m) => { _pickMod = m; }).catch(() => { _pickMod = null; });
+
+/** One-line description of what the user has picked in the viewport, or ''. */
+function selectionSummary() {
+    try {
+        if (!_pickMod || typeof _pickMod.getPickingSelection !== 'function') return '';
+        const sel = _pickMod.getPickingSelection();
+        const arr = (sel && typeof sel.toArray === 'function') ? sel.toArray() : [];
+        if (!arr.length) return '';
+        const items = arr.slice(0, 8).map((e) => {
+            const d = (e && e.descriptor) || {};
+            return `${d.kind || '?'} on ${d.feature || '?'}`;
+        });
+        return [
+            '# Live viewport selection',
+            `- The user has ${arr.length} item(s) PICKED right now: ${items.join('; ')}.`,
+            '- When they say "this", "that", "here", act on the selection with the *_selected_* tools (fillet_selected_edges / chamfer_selected_edges / hole_on_selected_face / push_pull_selected_face / offset_selected_face), or call get_selection for detail.',
+            '- Do NOT ask "which edge/face?" when something is already selected — resolve the deixis and confirm what you acted on.',
+        ].join('\n');
+    } catch { return ''; }
+}
+
+/** Build the system prompt for this turn = base + design context + selection. */
+function buildSystem() {
+    let block = '';
+    try {
+        const ctx = getAIContext();
+        let knownIds;
+        try {
+            const summ = documentSummary();
+            knownIds = new Set([
+                ...(summ.features || []).map((f) => f.id),
+                ...(summ.components || []).map((c) => c.id),
+            ]);
+        } catch { knownIds = undefined; }
+        block = ctx.contextBlock(knownIds) || '';
+    } catch { block = ''; }
+    const sel = selectionSummary();
+    return [SYSTEM_PROMPT, block, sel].filter(Boolean).join('\n\n');
+}
+
+/** Normalise a kernel error so repeated attempts on the SAME failure dedupe. */
+function errorSignature(error) {
+    return String(error || '').toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+function truncate(s, n) {
+    const str = String(s == null ? '' : s);
+    return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+// Tools that observe state or write only conversation/context/export — NONE of
+// these change the geometry, so the self-repair net skips the compile check
+// after them (it only fires when real geometry was mutated).
+const NON_MUTATING_TOOLS = new Set([
+    'get_document_summary', 'list_components', 'search_library', 'measure', 'run_invariants',
+    'get_selection', 'compile_status', 'mass_properties', 'self_critique',
+    'check_printability', 'recommend_material', 'compute_clearance', 'estimate_print',
+    'find_compatible_connectors', 'list_connectors', 'generate_bom',
+    'get_context', 'propose_brief', 'name_feature', 'record_decision', 'explain_decision',
+    'add_requirement', 'verify_requirement', 'set_units',
+    'export_for_print', 'declareConnector', 'add_mate',
+]);
 
 /** Pull { providerName, model, maxTokens, apiKey, baseUrl } from settings. */
 function resolveModelConfig() {
@@ -156,6 +234,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
     const messages = history.slice();
     if (userMessage != null && String(userMessage).length > 0) {
         messages.push({ role: 'user', text: String(userMessage) });
+        try { getAIContext().bumpTurn(); } catch { /* context optional */ }
     }
 
     // Track turn-level activity so we can synthesize a completion message when
@@ -164,6 +243,8 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
     // this the chat shows a dead turn with no assistant bubble.
     let sawAssistantText = false;       // any non-blank text emitted this turn
     const turnToolResults = [];         // [{ name, result }] for the summary
+    const repairAttempts = new Map();   // error signature → times auto-fed back
+    const failingCalls = new Map();     // tool+input signature → consecutive fails
 
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -173,7 +254,7 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
             }
 
             const { body } = provider.buildBody({
-                system: SYSTEM_PROMPT,
+                system: buildSystem(),
                 history: messages,
                 tools,
                 model,
@@ -210,16 +291,62 @@ export async function runAgentTurn({ userMessage, history = [], onEvent = () => 
 
             // Execute each tool call and collect normalized results.
             const toolResults = [];
+            let mutatedGeometry = false;     // a geometry op succeeded this iteration
+            let repeatedFailureNote = null;   // the model keeps repeating a failing call
             for (const tc of result.toolCalls) {
                 emit({ type: 'tool_call', name: tc.name, input: tc.input });
                 const r = await dispatchTool(tc.name, tc.input || {});
                 emit({ type: 'tool_result', name: tc.name, result: r });
                 toolResults.push({ id: tc.id, name: tc.name, result: r });
                 turnToolResults.push({ name: tc.name, result: r });
+
+                const failed = r && r.ok === false;
+                if (!failed && !NON_MUTATING_TOOLS.has(tc.name)) mutatedGeometry = true;
+                if (failed) {
+                    // Detect the model hammering the SAME failing call. After a
+                    // few identical failures, nudge it to change approach.
+                    let sig = tc.name;
+                    try { sig += ':' + JSON.stringify(tc.input || {}); } catch { /* unserialisable */ }
+                    const c = (failingCalls.get(sig) || 0) + 1;
+                    failingCalls.set(sig, c);
+                    if (c >= 3 && !repeatedFailureNote) {
+                        repeatedFailureNote = `[automatic check] You have called "${tc.name}" with the same arguments and gotten the same error ${c} times. Stop repeating it — try a different approach, fix the inputs, or tell me plainly what is blocking you.`;
+                    }
+                }
             }
 
-            // Feed the results back as the next user turn and loop.
+            // Feed the results back as the next user turn.
             provider.appendToolResults(messages, toolResults);
+
+            // ── Self-repair safety net ───────────────────────────────────────
+            // If real geometry changed, verify it still compiles on the kernel.
+            // On failure, feed the kernel error straight back so the model fixes
+            // its OWN mistake instead of leaving a broken model — bounded per
+            // error so it can't thrash forever.
+            if (mutatedGeometry && !(signal && signal.aborted)) {
+                let status;
+                try { status = await compileCurrent(); } catch { status = { ok: true }; }
+                if (status && status.ok === false && status.error) {
+                    emit({ type: 'tool_result', name: 'compile_check', result: { ok: false, error: status.error } });
+                    const sig = errorSignature(status.error);
+                    const n = (repairAttempts.get(sig) || 0) + 1;
+                    repairAttempts.set(sig, n);
+                    if (n <= MAX_REPAIRS_PER_ERROR) {
+                        messages.push({ role: 'user', text:
+                            `[automatic check] The kernel could NOT compile the model after your last operation:\n${truncate(status.error, 600)}\n` +
+                            `This was almost certainly caused by what you just did. Repair it now: adjust the offending feature's parameters (setFeatureParams) or remove it (deleteFeature / suppressFeature) and rebuild a working version. Do not ask me — fix it, then verify with compile_status or measure. If it truly cannot be done, say so plainly.` });
+                    } else {
+                        messages.push({ role: 'user', text:
+                            `[automatic check] The model STILL fails to compile after ${n - 1} automatic repair attempts on the same error:\n${truncate(status.error, 400)}\n` +
+                            `Stop trying to auto-fix it. In one short message, tell me what is broken and what you would change to resolve it.` });
+                    }
+                    continue; // loop so the model sees the failure and repairs
+                }
+            }
+
+            if (repeatedFailureNote) {
+                messages.push({ role: 'user', text: repeatedFailureNote });
+            }
         }
 
         emit({ type: 'error', error: `reached the ${MAX_ITERATIONS}-step tool limit without finishing` });

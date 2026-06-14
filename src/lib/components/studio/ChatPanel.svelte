@@ -16,6 +16,7 @@
   import { onMount } from 'svelte';
   import { runAgentTurn } from '$lib/ai/agent.js';
   import { checkAiHealth } from '$lib/ai/provider.js';
+  import { getAIContext } from '$lib/ai/context.js';
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
 
@@ -30,6 +31,12 @@
   let localKey = $state(false);    // user entered their own key for this provider
   let controller = null;
   let listEl = null;
+  // Mid-response re-steering: messages sent while a turn is running queue here
+  // and are drained one at a time; a send-while-running interrupts the current
+  // turn (committed work is kept) so the user can change direction mid-response.
+  let pending = $state([]);
+  let draining = false;
+  let reSteering = false;
 
   // The selected provider is ready when /ai/health reports its env key
   // configured, OR the user has pasted their own key in Settings (sent straight
@@ -85,65 +92,88 @@
     }
   }
 
-  async function send() {
+  const onEvent = (ev) => {
+    switch (ev.type) {
+      case 'text':
+        appendAssistantText(ev.text);
+        break;
+      case 'tool_call':
+        finalizeAssistant();
+        pushItem({ role: 'tool', kind: 'call', name: ev.name, input: ev.input });
+        break;
+      case 'tool_result':
+        pushItem({
+          role: 'tool', kind: 'result', name: ev.name,
+          ok: !(ev.result && ev.result.ok === false),
+          result: ev.result,
+        });
+        break;
+      case 'error':
+        finalizeAssistant();
+        // A cancel triggered by re-steering is intentional — don't show it as
+        // an error; the queued instruction is about to run.
+        if (ev.error === 'cancelled' && (reSteering || pending.length)) break;
+        pushItem({ role: 'assistant', error: true, text: ev.error });
+        break;
+      case 'done':
+        finalizeAssistant();
+        break;
+      // 'usage' — ignored in the UI for now.
+    }
+  };
+
+  /** Submit the composer. While a turn is running this re-steers it. */
+  function submit() {
     const text = input.trim();
-    if (!text || running) return;
+    if (!text) return;
     input = '';
     pushItem({ role: 'user', text });
-    running = true;
-    controller = new AbortController();
+    pending.push(text);
+    if (running && controller) {
+      // Interrupt the in-flight turn so the new instruction takes over; work
+      // already committed to the document is kept.
+      reSteering = true;
+      try { controller.abort(); } catch { /* already settled */ }
+    }
+    drain();
+  }
 
-    const onEvent = (ev) => {
-      switch (ev.type) {
-        case 'text':
-          appendAssistantText(ev.text);
-          break;
-        case 'tool_call':
-          finalizeAssistant();
-          pushItem({ role: 'tool', kind: 'call', name: ev.name, input: ev.input });
-          break;
-        case 'tool_result':
-          pushItem({
-            role: 'tool', kind: 'result', name: ev.name,
-            ok: !(ev.result && ev.result.ok === false),
-            result: ev.result,
-          });
-          break;
-        case 'error':
-          finalizeAssistant();
-          pushItem({ role: 'assistant', error: true, text: ev.error });
-          break;
-        case 'done':
-          finalizeAssistant();
-          break;
-        // 'usage' — ignored in the UI for now.
-      }
-    };
-
+  /** Process the pending queue one turn at a time. */
+  async function drain() {
+    if (draining) return;
+    draining = true;
     try {
-      const res = await runAgentTurn({
-        userMessage: text,
-        history,
-        onEvent,
-        signal: controller.signal,
-      });
-      history = res.history || history;
+      while (pending.length) {
+        const text = pending.shift();
+        running = true;
+        reSteering = false;
+        controller = new AbortController();
+        try {
+          const res = await runAgentTurn({ userMessage: text, history, onEvent, signal: controller.signal });
+          history = res.history || history;
+        } catch (e) {
+          if (!(reSteering || pending.length)) pushItem({ role: 'assistant', error: true, text: (e && e.message) || String(e) });
+        } finally {
+          finalizeAssistant();
+          controller = null;
+        }
+      }
     } finally {
-      finalizeAssistant();
+      draining = false;
       running = false;
-      controller = null;
     }
   }
 
   function stop() {
-    if (controller) controller.abort();
+    pending = [];        // drop any queued steers — Stop means stop
+    if (controller) { try { controller.abort(); } catch { /* settled */ } }
   }
 
   function onKeydown(e) {
     // Enter sends; Shift+Enter inserts a newline.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      send();
+      submit();
     }
   }
 
@@ -168,6 +198,10 @@
   function clearChat() {
     items = [];
     history = [];
+    pending = [];
+    // Forget the design context (names, decisions, requirements, brief) too, so
+    // a cleared chat starts a genuinely fresh session.
+    try { getAIContext().reset(); } catch { /* context optional */ }
   }
 </script>
 
@@ -237,20 +271,26 @@
         bind:value={input}
         onkeydown={onKeydown}
         rows="3"
-        placeholder="Describe a part or assembly…"
-        disabled={running}
-        class="w-full resize-none rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus:border-ring disabled:opacity-50"
+        placeholder={running ? 'Working… type to steer mid-response, or Stop' : 'Describe a part or assembly…'}
+        class="w-full resize-none rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus:border-ring"
       ></textarea>
-      <div class="mt-2 flex justify-end gap-2">
+      <div class="mt-2 flex items-center justify-end gap-2">
         {#if running}
+          <span class="mr-auto text-xs text-muted-foreground/70">{pending.length ? `${pending.length} queued · ` : ''}working…</span>
           <button
             class="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90"
             onclick={stop}
           >Stop</button>
+          <button
+            class="rounded-md border border-primary px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-40"
+            onclick={submit}
+            disabled={!input.trim()}
+            title="Send this now — interrupts the current response to follow your new instruction"
+          >Steer</button>
         {:else}
           <button
             class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
-            onclick={send}
+            onclick={submit}
             disabled={!input.trim()}
           >Send</button>
         {/if}
