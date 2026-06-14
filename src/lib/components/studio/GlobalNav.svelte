@@ -7,7 +7,7 @@
 
   const links = [
     { name: 'Home', route: 'landing' },
-    { name: 'Manage', route: 'manage' },
+    { name: 'Library', route: 'library' },
     { name: 'Pricing', route: 'pricing' },
   ];
 

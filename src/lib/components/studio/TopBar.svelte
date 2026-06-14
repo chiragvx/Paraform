@@ -13,6 +13,8 @@
   } from '$lib/document/persistence.svelte.js';
   import { getDocumentStore } from '../../../../lib/document/index.js';
   import { setMetadataChange, resetDocument } from '../../../../lib/document/index.js';
+  import { library, saveCurrent as saveToLibrary } from '$lib/document/library.svelte.js';
+  import { importCadFileAsFeature } from '$lib/import/cad.js';
   import { V1 } from '$lib/flags.js';
 
   // ── Lucide icons ────────────────────────────────────────────────────────
@@ -110,11 +112,41 @@
     });
   }
 
+  // Import a CAD file (STEP / STL / GLB) into the CURRENT document as geometry —
+  // distinct from "Open document", which replaces the whole document.
+  function importCad() {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.step,.stp,.stl,.glb,.gltf,.iges,.igs';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try { await importCadFileAsFeature(file); }
+      catch (e) { console.warn('[topbar] import failed:', e); }
+    };
+    input.click();
+  }
+
+  async function saveToLibraryAction() {
+    try {
+      // First save of a fresh doc → name it; later saves update the same entry.
+      let name;
+      if (!library.currentId) {
+        const n = window.prompt('Save to library as…', docName);
+        if (n == null) return;
+        name = n.trim() || docName;
+      }
+      await saveToLibrary(name ? { name } : {});
+    } catch (e) { console.warn('[topbar] save to library failed:', e); }
+  }
+
   function saveDoc()      { try { saveDocumentToFile(); }  catch (e) { console.warn('[topbar] save failed:',     e); } }
   function saveDocAs()    { try { saveDocumentAs(); }      catch (e) { console.warn('[topbar] save-as failed:',  e); } }
   function shareDoc()     { try { shareDocumentBundle(); } catch (e) { console.warn('[topbar] share failed:',    e); } }
 
   function goLanding() { navigate('landing'); }
+  function goLibrary() { navigate('library'); }
 
   // ── Style tokens ────────────────────────────────────────────────────────
   const ghostBtn =
@@ -145,11 +177,16 @@
       </summary>
       <div class="absolute left-0 top-full z-30 mt-1 w-44 rounded-md border border-border bg-popover p-1 shadow-md">
         <button type="button" class={menuItem} onclick={newDocument}>New Document</button>
-        <button type="button" class={menuItem} onclick={openDoc}>Open…</button>
-        <button type="button" class={menuItem} onclick={saveDoc}>Save</button>
-        <button type="button" class={menuItem} onclick={saveDocAs}>Save As…</button>
+        <button type="button" class={menuItem} onclick={openDoc}>Open document…</button>
+        <button type="button" class={menuItem} onclick={importCad}>Import CAD file…</button>
+        <div class="my-1 border-t border-border"></div>
+        <button type="button" class={menuItem} onclick={saveToLibraryAction}>Save to Library</button>
+        <button type="button" class={menuItem} onclick={saveDoc}>Save to file</button>
+        <button type="button" class={menuItem} onclick={saveDocAs}>Save to file as…</button>
         <button type="button" class={menuItem} onclick={shareDoc}>Share…</button>
         <button type="button" class={menuItem} onclick={() => dialogs.open('export')}>Export…</button>
+        <div class="my-1 border-t border-border"></div>
+        <button type="button" class={menuItem} onclick={goLibrary}>My Library</button>
         <button type="button" class={menuItem} onclick={() => dialogs.open('settings')}>Settings…</button>
       </div>
     </details>

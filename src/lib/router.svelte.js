@@ -17,6 +17,7 @@ function parseHash(hash) {
   const base = h.split('?')[0];
   if (base === '' || base === '#' || base === '#/') return 'landing';
   if (base === '#/manage') return 'manage';
+  if (base === '#/library' || base === '#/documents') return 'library';
   if (base === '#/auth') return 'auth';
   if (base === '#/pricing') return 'pricing';
   if (base === '#/studio' || base === '#/create') return 'studio';
@@ -55,6 +56,9 @@ export function navigate(name) {
       break;
     case 'manage':
       hash = '#/manage';
+      break;
+    case 'library':
+      hash = '#/library';
       break;
     case 'auth':
       hash = '#/auth';

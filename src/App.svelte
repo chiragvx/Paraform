@@ -23,6 +23,7 @@
   import GlobalNav from '$lib/components/studio/GlobalNav.svelte';
   import LandingView from '$lib/components/views/LandingView.svelte';
   import ManageView from '$lib/components/views/ManageView.svelte';
+  import LibraryView from '$lib/components/views/LibraryView.svelte';
   import AuthView from '$lib/components/views/AuthView.svelte';
   import PricingView from '$lib/components/views/PricingView.svelte';
   import { palette } from '$lib/commands/palette.svelte.js';
@@ -229,6 +230,8 @@
     <main class="flex-1 min-h-0">
       {#if router.route === 'manage'}
         <ManageView />
+      {:else if router.route === 'library'}
+        <LibraryView />
       {:else if router.route === 'pricing'}
         <PricingView />
       {:else if router.route === 'auth'}
