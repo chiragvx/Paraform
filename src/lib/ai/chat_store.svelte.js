@@ -40,7 +40,11 @@ export const chat = $state({
     currentId: null,
     running: false,
     pendingCount: 0,
+    autoMode: false,  // focus/auto mode: keep going until the goal is complete
 });
+
+/** Toggle auto/focus mode (persisted). */
+export function setAutoMode(v) { chat.autoMode = !!v; persist(); }
 
 // Non-reactive engine internals.
 let controller = null;
@@ -100,11 +104,12 @@ function persist() {
     if (typeof localStorage === 'undefined') return;
     try {
         let sessions = serialize();
-        let payload = JSON.stringify({ v: 1, currentId: chat.currentId, sessions });
+        const meta = { v: 1, currentId: chat.currentId, autoMode: chat.autoMode };
+        let payload = JSON.stringify({ ...meta, sessions });
         // Trim oldest sessions until under the size cap.
         while (payload.length > MAX_BYTES && sessions.length > 1) {
             sessions = sessions.slice(0, -1);
-            payload = JSON.stringify({ v: 1, currentId: chat.currentId, sessions });
+            payload = JSON.stringify({ ...meta, sessions });
         }
         localStorage.setItem(LS_KEY, payload);
     } catch { /* quota / disabled — keep working in-memory */ }
@@ -129,6 +134,7 @@ export function ensureHydrated() {
                 if (data && Array.isArray(data.sessions)) {
                     chat.sessions = data.sessions;
                     chat.currentId = data.currentId || null;
+                    chat.autoMode = !!data.autoMode;
                 }
             }
         }
@@ -279,7 +285,7 @@ async function drain() {
             controller = new AbortController();
             try {
                 if (job.images && job.images.length) setAttachedImages(job.images);
-                const res = await runAgentTurn({ userMessage: job.text, images: job.images, history: chat.history, onEvent, signal: controller.signal });
+                const res = await runAgentTurn({ userMessage: job.text, images: job.images, history: chat.history, onEvent, signal: controller.signal, autoMode: chat.autoMode });
                 chat.history = res.history || chat.history;
                 markDirty();
             } catch (e) {

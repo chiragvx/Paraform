@@ -53,6 +53,13 @@ export const MAX_ITERATIONS = 500;
 // before giving up and asking the user. Prevents thrashing on an unfixable build.
 const MAX_REPAIRS_PER_ERROR = 2;
 
+// Auto / focus mode: when on, the agent doesn't accept the model's first "I'm
+// done" — it nudges it to keep working until the whole request is genuinely
+// complete (one nudge per stop; if it stops again with no work in between, we
+// accept it's finished). Bounded so it can't nudge forever in one turn.
+const MAX_AUTO_CONTINUES = 50;
+const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If anything is unfinished, unverified, or still needed to satisfy the goal, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
+
 // ── Dynamic per-turn context ──────────────────────────────────────────────────
 //
 // The viewport selection lives in a singleton the AI layer can read, but we keep
@@ -228,7 +235,7 @@ export function summarizeTurn(toolResults) {
  * }} args
  * @returns {Promise<{ history: Array }>}
  */
-export async function runAgentTurn({ userMessage, images, history = [], onEvent = () => {}, signal, endpoint } = {}) {
+export async function runAgentTurn({ userMessage, images, history = [], onEvent = () => {}, signal, endpoint, autoMode = false } = {}) {
     const emit = (ev) => { try { onEvent(ev); } catch { /* UI handler must not break the loop */ } };
     const { providerName, model, maxTokens, apiKey, baseUrl } = resolveModelConfig();
     const provider = getProvider(providerName);
@@ -253,6 +260,8 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     const repairAttempts = new Map();   // error signature → times auto-fed back
     const failingCalls = new Map();     // tool+input signature → consecutive fails
     let visionInjections = 0;           // bound the capture→look loop per turn
+    let autoContinues = 0;              // auto-mode "keep going" nudges used this turn
+    let nudgedLastStop = false;         // we nudged on a stop and no work has happened since
 
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -286,6 +295,17 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             provider.appendAssistantTurn(messages, { text: result.text, toolCalls: result.toolCalls });
 
             if (result.stop || !result.toolCalls || result.toolCalls.length === 0) {
+                // Auto / focus mode: don't accept the first "I'm done". Nudge the
+                // model to keep going until the goal is genuinely complete. One
+                // nudge per stop — if it stops AGAIN right after (nudgedLastStop
+                // still set, i.e. it did no work in response), we accept it's
+                // finished. Reset whenever it makes progress (issues tool calls).
+                if (autoMode && !nudgedLastStop && autoContinues < MAX_AUTO_CONTINUES && !(signal && signal.aborted)) {
+                    nudgedLastStop = true;
+                    autoContinues++;
+                    messages.push({ role: 'user', text: AUTO_NUDGE });
+                    continue;
+                }
                 // Some models end a turn with tool chips but no closing prose
                 // (e.g. a turn that only read state). Never leave the turn mute:
                 // synthesize a one-line completion from what actually happened.
@@ -296,6 +316,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 emit({ type: 'done' });
                 return { history: messages };
             }
+
+            // The model issued tool calls → it's doing work, so a later "done"
+            // deserves a fresh auto-mode nudge.
+            nudgedLastStop = false;
 
             // Execute each tool call and collect normalized results.
             const toolResults = [];

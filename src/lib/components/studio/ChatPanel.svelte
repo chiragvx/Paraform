@@ -12,7 +12,7 @@
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
   import {
-    chat, submit as submitChat, stop as stopChat,
+    chat, submit as submitChat, stop as stopChat, setAutoMode,
     newSession, loadSession, deleteSession, sessionList, ensureHydrated,
   } from '$lib/ai/chat_store.svelte.js';
 
@@ -253,6 +253,12 @@
           title="Attach an image (reference, or a sketch to trace)"
           aria-label="Attach image"
         >📎</button>
+        <button
+          class="rounded-md border px-2 py-1.5 text-xs font-medium {chat.autoMode ? 'border-primary bg-primary/15 text-primary' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'}"
+          onclick={() => setAutoMode(!chat.autoMode)}
+          title="Auto mode: keep working until the whole request is complete instead of stopping early"
+          aria-pressed={chat.autoMode}
+        >{chat.autoMode ? '⚡ Auto' : 'Auto'}</button>
         {#if chat.running}
           <span class="text-xs text-muted-foreground/70">{chat.pendingCount ? `${chat.pendingCount} queued · ` : ''}working…</span>
         {/if}
