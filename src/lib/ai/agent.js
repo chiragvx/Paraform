@@ -42,10 +42,13 @@ export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 // Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
 export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_MAX_TOKENS = 4096;
-// Raised from 12: the self-repair safety net, verify-then-fix loops, and the
-// see→act→re-check vision loop (capture_views) all consume iterations, so a
-// genuine multi-step build needs headroom. Still bounded against runaways.
-export const MAX_ITERATIONS = 20;
+// High ceiling for TESTING — lets long multi-step builds (with self-repair,
+// verify-then-fix, and the see→act→re-check vision loop, which each consume
+// iterations) run to completion without tripping the cap. Still bounded so a
+// genuine runaway can't loop forever; the per-error repair cap and the
+// duplicate-failing-call guard are the tighter, smarter brakes. Lower this for
+// production once cost/quota tuning matters.
+export const MAX_ITERATIONS = 500;
 // How many times the loop will auto-feed the SAME compile error back for repair
 // before giving up and asking the user. Prevents thrashing on an unfixable build.
 const MAX_REPAIRS_PER_ERROR = 2;
