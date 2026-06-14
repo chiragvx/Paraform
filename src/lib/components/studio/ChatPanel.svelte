@@ -13,7 +13,7 @@
   import { togglePanel } from '$lib/studio/panels.svelte.js';
   import {
     chat, submit as submitChat, stop as stopChat, setAutoMode,
-    newSession, loadSession, deleteSession, sessionList, ensureHydrated,
+    newSession, loadSession, deleteSession, sessionList, ensureHydrated, syncCloud,
   } from '$lib/ai/chat_store.svelte.js';
 
   let input = $state('');
@@ -38,6 +38,7 @@
 
   onMount(async () => {
     ensureHydrated();
+    syncCloud();
     try {
       const s = readSettings();
       const ai = (s && s.ai) || {};

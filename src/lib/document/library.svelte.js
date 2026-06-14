@@ -24,6 +24,12 @@
 import { getDocumentStore, resetDocument } from '../../../lib/document/index.js';
 import { buildDocumentJSON, loadDocumentFromJSON } from './persistence.svelte.js';
 import { captureSnapshots, hasSnapshotProvider } from '../../../lib/viewport/snapshot.js';
+import { isCloudEnabled } from '../../../lib/cloud.js';
+import { session } from '../auth/session.svelte.js';
+import {
+    cloudListFolders, cloudUpsertFolder, cloudDeleteFolder,
+    cloudListDocuments, cloudUpsertDocument, cloudDeleteDocument,
+} from '../../../lib/cloud_projects.js';
 
 const LS_KEY = 'paraform.library.v1';
 const MAX_BYTES = 4_700_000;
@@ -38,6 +44,12 @@ let _hydrated = false;
 let _saveTimer = null;
 
 function uid(p) { return `${p}_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`; }
+
+// ── Cloud mirror (local-first; fire-and-forget when signed in) ───────────────
+function _uid() { try { return session.user?.id || null; } catch { return null; } }
+function _cloudReady() { return isCloudEnabled() && !!_uid(); }
+function _pushFolder(f) { if (_cloudReady() && f) cloudUpsertFolder(_uid(), f); }
+function _pushDoc(d) { if (_cloudReady() && d) cloudUpsertDocument(_uid(), d); }
 
 function deriveName() {
     try {
@@ -94,25 +106,30 @@ function markDirty() {
 
 // ── Folders ────────────────────────────────────────────────────────────────
 export function createFolder(name) {
-    const f = { id: uid('fld'), name: (name || 'New folder').trim() || 'New folder', createdAt: Date.now() };
+    const f = { id: uid('fld'), name: (name || 'New folder').trim() || 'New folder', createdAt: Date.now(), updatedAt: Date.now() };
     library.folders = [f, ...library.folders];
     persist();
+    _pushFolder(f);
     return f;
 }
 export function renameFolder(id, name) {
     const f = library.folders.find((x) => x.id === id);
     if (!f) return false;
     f.name = (name || '').trim() || f.name;
+    f.updatedAt = Date.now();
     library.folders = [...library.folders];
     persist();
+    _pushFolder(f);
     return true;
 }
 export function deleteFolder(id) {
     library.folders = library.folders.filter((f) => f.id !== id);
     // Orphan its docs back to "uncategorised" rather than deleting them.
-    for (const d of library.docs) if (d.folderId === id) d.folderId = null;
+    const orphaned = [];
+    for (const d of library.docs) if (d.folderId === id) { d.folderId = null; d.updatedAt = Date.now(); orphaned.push(d); }
     library.docs = [...library.docs];
     persist();
+    if (_cloudReady()) { cloudDeleteFolder(_uid(), id); for (const d of orphaned) _pushDoc(d); }
 }
 
 // ── Documents ──────────────────────────────────────────────────────────────
@@ -152,6 +169,7 @@ export async function saveCurrent({ name, folderId } = {}) {
         existing.updatedAt = Date.now();
         library.docs = [...library.docs];
         persist();
+        _pushDoc(existing);
         return existing;
     }
     return saveAsNew({ name: name || deriveName(), folderId: folderId ?? null, json, thumb });
@@ -171,6 +189,7 @@ export function saveAsNew({ name, folderId = null, json, thumb = null } = {}) {
     library.docs = [doc, ...library.docs];
     library.currentId = doc.id;
     persist();
+    _pushDoc(doc);
     return doc;
 }
 
@@ -203,6 +222,7 @@ export function renameDoc(id, name) {
     d.updatedAt = Date.now();
     library.docs = [...library.docs];
     persist();
+    _pushDoc(d);
     return true;
 }
 export function moveDoc(id, folderId) {
@@ -212,12 +232,14 @@ export function moveDoc(id, folderId) {
     d.updatedAt = Date.now();
     library.docs = [...library.docs];
     persist();
+    _pushDoc(d);
     return true;
 }
 export function deleteDoc(id) {
     library.docs = library.docs.filter((d) => d.id !== id);
     if (library.currentId === id) library.currentId = null;
     persist();
+    if (_cloudReady()) cloudDeleteDocument(_uid(), id);
 }
 export function duplicateDoc(id) {
     const d = getDoc(id);
@@ -225,5 +247,37 @@ export function duplicateDoc(id) {
     const copy = { ...d, id: uid('doc'), name: `${d.name} copy`, createdAt: Date.now(), updatedAt: Date.now() };
     library.docs = [copy, ...library.docs];
     persist();
+    _pushDoc(copy);
     return copy;
+}
+
+// ── Cloud pull + merge (call when the library page mounts) ────────────────────
+let _synced = false;
+export async function syncCloud(force = false) {
+    if (!_cloudReady()) return;
+    if (_synced && !force) return;
+    _synced = true;
+    ensureHydrated();
+    const uid2 = _uid();
+    let cf = [], cd = [];
+    try { [cf, cd] = await Promise.all([cloudListFolders(uid2), cloudListDocuments(uid2)]); }
+    catch { return; }
+
+    // Folders: cloud wins on tie/newer; local-only get pushed up.
+    const fmap = new Map(library.folders.map((f) => [f.id, f]));
+    for (const c of cf) { const l = fmap.get(c.id); if (!l || (c.updatedAt || 0) >= (l.updatedAt || 0)) fmap.set(c.id, c); }
+    const cfIds = new Set(cf.map((f) => f.id));
+    const upFolders = library.folders.filter((l) => !cfIds.has(l.id));
+    library.folders = [...fmap.values()].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    // Documents: same merge rule.
+    const dmap = new Map(library.docs.map((d) => [d.id, d]));
+    for (const c of cd) { const l = dmap.get(c.id); if (!l || (c.updatedAt || 0) >= (l.updatedAt || 0)) dmap.set(c.id, c); }
+    const cdIds = new Set(cd.map((d) => d.id));
+    const upDocs = library.docs.filter((l) => !cdIds.has(l.id));
+    library.docs = [...dmap.values()];
+
+    persist();
+    for (const f of upFolders) _pushFolder(f);   // migrate local-only up
+    for (const d of upDocs) _pushDoc(d);
 }

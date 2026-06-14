@@ -28,6 +28,9 @@
 import { runAgentTurn } from './agent.js';
 import { setAttachedImages, clearAttachedImages } from './attachments.js';
 import { getAIContext } from './context.js';
+import { isCloudEnabled } from '../../../lib/cloud.js';
+import { session } from '../auth/session.svelte.js';
+import { cloudListChats, cloudUpsertChat, cloudDeleteChat } from '../../../lib/cloud_projects.js';
 
 const LS_KEY = 'paraform.ai.chats.v1';
 const MAX_SESSIONS = 40;
@@ -62,6 +65,20 @@ function titleFor(items) {
     const u = (items || []).find((it) => it && it.role === 'user' && it.text && it.text.trim());
     if (u) { const t = u.text.trim().replace(/\s+/g, ' '); return t.length > 48 ? t.slice(0, 48) + '…' : t; }
     return 'New chat';
+}
+
+// ── Cloud mirror (local-first; signed-in only) ───────────────────────────────
+function _uid() { try { return session.user?.id || null; } catch { return null; } }
+function _cloudReady() { return isCloudEnabled() && !!_uid(); }
+function _stripItems(items) { return (items || []).map((it) => (it && it.images && it.images.length ? (({ images, ...r }) => r)(it) : it)); }
+function _stripHistory(history) { return (history || []).map((h) => (h && h.images ? (({ images, ...r }) => r)(h) : h)); }
+function _pushSession(s) {
+    if (!_cloudReady() || !s || !s.items || s.items.length === 0) return; // skip empty chats
+    cloudUpsertChat(_uid(), {
+        id: s.id, title: s.title || titleFor(s.items),
+        items: _stripItems(s.items), history: _stripHistory(s.history),
+        autoMode: chat.autoMode, documentId: null,
+    });
 }
 
 /** Write the live items/history into the current session record. */
@@ -101,18 +118,21 @@ function serialize() {
 }
 
 function persist() {
-    if (typeof localStorage === 'undefined') return;
     try {
-        let sessions = serialize();
-        const meta = { v: 1, currentId: chat.currentId, autoMode: chat.autoMode };
-        let payload = JSON.stringify({ ...meta, sessions });
-        // Trim oldest sessions until under the size cap.
-        while (payload.length > MAX_BYTES && sessions.length > 1) {
-            sessions = sessions.slice(0, -1);
-            payload = JSON.stringify({ ...meta, sessions });
+        if (typeof localStorage !== 'undefined') {
+            let sessions = serialize();
+            const meta = { v: 1, currentId: chat.currentId, autoMode: chat.autoMode };
+            let payload = JSON.stringify({ ...meta, sessions });
+            // Trim oldest sessions until under the size cap.
+            while (payload.length > MAX_BYTES && sessions.length > 1) {
+                sessions = sessions.slice(0, -1);
+                payload = JSON.stringify({ ...meta, sessions });
+            }
+            localStorage.setItem(LS_KEY, payload);
         }
-        localStorage.setItem(LS_KEY, payload);
     } catch { /* quota / disabled — keep working in-memory */ }
+    // Mirror the active chat to the cloud (fire-and-forget; signed-in only).
+    try { const cur = chat.sessions.find((s) => s.id === chat.currentId); if (cur) _pushSession(cur); } catch { /* */ }
 }
 
 /** Sync the live session and schedule a debounced persist. */
@@ -181,6 +201,7 @@ export function loadSession(id) {
 
 export function deleteSession(id) {
     chat.sessions = chat.sessions.filter((s) => s.id !== id);
+    if (_cloudReady()) cloudDeleteChat(_uid(), id);
     if (id === chat.currentId) {
         if (chat.sessions.length) {
             const s = chat.sessions[0];
@@ -207,6 +228,32 @@ export function sessionList() {
     return chat.sessions
         .map((s) => ({ id: s.id, title: s.title || 'New chat', updatedAt: s.updatedAt || 0, count: (s.items || []).length }))
         .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+// ── Cloud pull + merge (call when the chat panel mounts) ─────────────────────
+let _cloudSynced = false;
+export async function syncCloud(force = false) {
+    if (!_cloudReady()) return;
+    if (_cloudSynced && !force) return;
+    _cloudSynced = true;
+    ensureHydrated();
+    let cc = [];
+    try { cc = await cloudListChats(_uid()); } catch { return; }
+    const map = new Map(chat.sessions.map((s) => [s.id, s]));
+    for (const c of cc) {
+        const l = map.get(c.id);
+        if (!l || (c.updatedAt || 0) >= (l.updatedAt || 0)) {
+            map.set(c.id, { id: c.id, title: c.title, items: c.items || [], history: c.history || [], createdAt: c.createdAt, updatedAt: c.updatedAt });
+        }
+    }
+    const ccIds = new Set(cc.map((c) => c.id));
+    const upLocal = chat.sessions.filter((s) => s.items && s.items.length && !ccIds.has(s.id));
+    chat.sessions = [...map.values()];
+    // Re-point the working arrays at the (possibly updated) current session.
+    const cur = chat.sessions.find((s) => s.id === chat.currentId);
+    if (cur) { chat.items = cur.items || []; chat.history = cur.history || []; }
+    persist();
+    for (const s of upLocal) _pushSession(s);   // migrate local-only chats up
 }
 
 // ── Run engine ────────────────────────────────────────────────────────────────

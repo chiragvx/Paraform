@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { navigate } from '$lib/router.svelte.js';
   import {
-    library, ensureHydrated, docsIn,
+    library, ensureHydrated, docsIn, syncCloud,
     createFolder, renameFolder, deleteFolder,
     openDoc, newDoc, renameDoc, moveDoc, deleteDoc, duplicateDoc,
   } from '$lib/document/library.svelte.js';
@@ -32,7 +32,7 @@
   let menuId = $state(null);            // card whose action menu is open
   let busy = $state('');                // transient status text
 
-  onMount(() => { ensureHydrated(); });
+  onMount(() => { ensureHydrated(); syncCloud(); });
 
   const visible = $derived(
     docsIn(selectedFolder).filter((d) => !query.trim() || d.name.toLowerCase().includes(query.trim().toLowerCase()))
