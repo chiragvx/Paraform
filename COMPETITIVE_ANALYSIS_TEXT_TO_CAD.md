@@ -163,7 +163,12 @@ data + reward substrate is, with an honest plan in `FLYWHEEL.md`.
   last mutation — one forced reminder (`VISUAL_GATE_NUDGE`), bounded so it can't
   loop. `system_prompt.js`: "Seeing your work" is now MANDATORY with the *"a
   render is diagnostic, not authoritative — convert every visual concern into a
-  measure call"* rule.
+  measure call"* rule. **Vision-gated:** the gate and the render-injection only
+  run when the active model can actually accept images (`modelSupportsVision`).
+  A text-only model (the default free `gpt-oss-120b` is text-only) skips the
+  gate and is told to verify numerically instead — otherwise injecting a render
+  it can't see makes the provider reject the request ("No endpoints found that
+  support image input").
 - **P0.2 Self-repair allowlist fix.** `agent.js`: removed `add_mate` and
   `declareConnector` from `NON_MUTATING_TOOLS`, so a build-breaking mate or a
   bad connector now trips the auto compile-check (assembly failures self-heal
@@ -234,10 +239,15 @@ syntax-check on all 7 hand-edited files.
 > running studio + a few `node` one-liners.
 
 ### Phase 0
-- [ ] **Visual gate:** in AI chat, ask it to build a part *without* asking for a
-  render. Confirm it is forced to `capture_views` and inspect before it claims
-  done (you'll see an `[automatic check]` visual nudge), and that it turns a
-  visual concern into a `measure` call rather than asserting from the picture.
+- [ ] **Visual gate (vision model):** with a **vision-capable** model selected
+  (Gemini, or set `ai.escalationModel`/`openaiModel` to a vision model), ask it
+  to build a part *without* asking for a render. Confirm it is forced to
+  `capture_views` and inspect before it claims done (`[automatic check]` visual
+  nudge), and that it turns a visual concern into a `measure` call.
+- [ ] **Text-only model (the gpt-oss default):** ask it to build a part and
+  confirm it does **NOT** error with "No endpoints found that support image
+  input" — the gate is skipped and it verifies via `measure`/`run_invariants`
+  instead. (This was the regression fixed after first run.)
 - [ ] **Visual gate doesn't loop:** confirm it nudges at most once — if the model
   ignores it, the turn still completes (no infinite loop).
 - [ ] **Self-repair on mates:** create a mate that breaks the compile; confirm the

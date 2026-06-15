@@ -97,7 +97,7 @@ function selectionSummary() {
 }
 
 /** Build the system prompt for this turn = base + design context + selection. */
-function buildSystem() {
+function buildSystem(visionCapable = true) {
     let block = '';
     try {
         const ctx = getAIContext();
@@ -114,7 +114,12 @@ function buildSystem() {
     let scene = '';
     try { scene = sceneDigest() || ''; } catch { scene = ''; }
     const sel = selectionSummary();
-    return [SYSTEM_PROMPT, block, scene, sel].filter(Boolean).join('\n\n');
+    // When the active model is text-only, OVERRIDE the "you can look now"
+    // mandate from SYSTEM_PROMPT: capturing renders it can't see only wastes a
+    // step (and would error if injected). Point it at numeric verification.
+    const noVision = visionCapable ? '' :
+        '# Heads-up: the CURRENT model cannot SEE images. Do NOT call capture_views to "look" or verify appearance — it cannot help you and the render can\'t be shown to you. Verify everything NUMERICALLY instead: measure (bbox / interference / manifold / centroid / distance / normal), mass_properties, run_invariants, self_critique, and check_assembly_constraints for assemblies. Reason about orientation and placement from those numbers and the "Current bodies" digest.';
+    return [SYSTEM_PROMPT, block, scene, sel, noVision].filter(Boolean).join('\n\n');
 }
 
 /** Normalise a kernel error so repeated attempts on the SAME failure dedupe. */
@@ -199,6 +204,24 @@ function resolveModelConfig() {
     return { providerName, model, maxTokens, apiKey, baseUrl, escalationModel };
 }
 
+/**
+ * Whether a provider+model can actually accept IMAGE input. The vision loop
+ * (capture_views → inject renders → "look") only makes sense for a model that
+ * can see; sending an image to a text-only model (e.g. open-weight gpt-oss)
+ * makes the provider reject the whole request ("No endpoints found that support
+ * image input"). Gemini / Anthropic chat models are multimodal. For an
+ * OpenAI-compatible id we whitelist the known-vision families and DEFAULT TO
+ * TEXT-ONLY for anything unrecognised — skipping a render degrades gracefully;
+ * a hard image-endpoint error does not.
+ */
+function modelSupportsVision(providerName, model) {
+    if (providerName === 'gemini' || providerName === 'anthropic') return true;
+    const m = String(model || '').toLowerCase();
+    if (!m) return false;
+    if (m.includes('gpt-oss')) return false;   // open-weight gpt-oss: text-only
+    return /vision|4o|gpt-4\.1|gpt-5|[^a-z]o3|[^a-z]o4|llava|pixtral|-vl|internvl|gemini|claude/.test(m);
+}
+
 // Tools that observe but don't mutate the document — used to distinguish a
 // turn that actually built something from one that only inspected state.
 const READ_ONLY_TOOLS = new Set([
@@ -267,6 +290,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     const { providerName, model, maxTokens, apiKey, baseUrl, escalationModel } = resolveModelConfig();
     const provider = getProvider(providerName);
     const tools = provider.toolsForProvider(AGENT_TOOLS);
+    // Does the active model accept image input? Gates the capture→look loop so
+    // a render is never sent to a text-only model (which errors the request).
+    const baseVision = modelSupportsVision(providerName, model);
+    const escVision = escalationModel ? modelSupportsVision(providerName, escalationModel) : false;
 
     // Copy so we don't mutate the caller's history.
     const messages = history.slice();
@@ -306,9 +333,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             // model if one is configured. The base model still handles the easy
             // majority of steps; the strong model is spent only where it pays.
             const activeModel = (escalated && escalationModel) ? escalationModel : model;
+            const activeVision = (escalated && escalationModel) ? escVision : baseVision;
 
             const { body } = provider.buildBody({
-                system: buildSystem(),
+                system: buildSystem(activeVision),
                 history: messages,
                 tools,
                 model: activeModel,
@@ -334,8 +362,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             if (result.stop || !result.toolCalls || result.toolCalls.length === 0) {
                 // Visual-verify gate (independent of auto mode): don't accept
                 // "done" when geometry was built this turn but never looked at.
-                // One forced reminder per turn; bounded so it can't loop.
-                if (builtGeometryThisTurn && !capturedAfterBuild && visualGateNudges < MAX_VISUAL_NUDGES && !(signal && signal.aborted)) {
+                // One forced reminder per turn; bounded so it can't loop. Only
+                // for a model that can actually SEE — forcing a text-only model
+                // to capture renders it can't view just wastes a step.
+                if (builtGeometryThisTurn && !capturedAfterBuild && activeVision && visualGateNudges < MAX_VISUAL_NUDGES && !(signal && signal.aborted)) {
                     visualGateNudges++;
                     messages.push({ role: 'user', text: VISUAL_GATE_NUDGE });
                     continue;
@@ -421,7 +451,12 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             // ── Vision injection ─────────────────────────────────────────────
             // If a tool produced renders of the model, attach them as a real
             // image message so the model can actually look at what it built.
-            if (capturedImages.length && visionInjections < 4) {
+            // ONLY for a vision-capable model — sending images to a text-only
+            // model (e.g. gpt-oss) makes the provider reject the whole request
+            // ("No endpoints found that support image input"). For a text-only
+            // model the renders are simply dropped (the slim text tool-result is
+            // still appended), and the turn proceeds with numeric verification.
+            if (capturedImages.length && activeVision && visionInjections < 4) {
                 visionInjections++;
                 const views = [...new Set(capturedImages.map((c) => c.view).filter(Boolean))];
                 messages.push({
