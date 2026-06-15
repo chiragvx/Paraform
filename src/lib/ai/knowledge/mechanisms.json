@@ -1,0 +1,215 @@
+[
+  {
+    "archetype": "quadruped",
+    "aliases": [
+      "robot dog", "dog robot", "quadruped robot", "four-legged robot",
+      "spot", "spotmicro", "spot micro", "walking robot", "legged robot",
+      "robodog", "mech dog", "boston dynamics spot", "four legged"
+    ],
+    "dof": "12 active (4 legs x 3: hip-abduct / hip-flex / knee-flex). +1 if a pan/tilt head is added.",
+    "jointLayout": "Per leg, three serial revolute joints from body outward: (1) HIP ABDUCT (roll) — axis parallel to body's fore-aft X, lets the leg swing sideways out from the body; its servo mounts to the body/shoulder block. (2) HIP FLEX (pitch) — axis horizontal & transverse (body Y), swings the whole leg fore/aft; servo mounts on the rotating shoulder bracket from joint 1. (3) KNEE FLEX (pitch) — axis parallel to the hip-flex axis, between thigh (femur) and shin (tibia); driven either by a servo at the knee or remotely via a 4-bar/pushrod from a body-mounted servo (pantograph). Feet are passive (rubber tip / compliant ball). Joints 2 & 3 are coplanar so the leg works in a sagittal plane once abducted.",
+    "proportions": {
+      "femurToTibiaRatio": "1.0 to 1.2 (thigh slightly longer than or equal to shin; SpotMicro uses near-equal links)",
+      "legLengthToBodyLength": "0.45 to 0.6 (standing leg reach roughly half the body length)",
+      "bodyLengthToBodyWidth": "1.6 to 2.2 (longer than wide for fore-aft stability)",
+      "hipSpacingFraction": "hips at ~0.8 of body length apart fore-aft, ~0.7 of body width laterally",
+      "standHeightToLegLength": "~0.6 (crouched knee gives clearance + torque margin; never stand fully extended)",
+      "typicalDimsMm": { "bodyL": 200, "bodyW": 110, "femur": 110, "tibia": 130, "servoHornR": 8 },
+      "footTipDiameterMm": "12 to 20 (compliant)"
+    },
+    "actuatorClass": "12 x standard-class servo (MG996R / DS3218 ~10-20 kg.cm) for a ~1-2 kg printed dog; 9g micro (SG90/MG90S) only for sub-300 g toy scale. Knee carries the highest moment — size the knee/hip-flex servos for full standing weight on a single diagonal pair (trot), not the static 4-leg average.",
+    "ventStrategy": "Louvered vents on the top/side body shell directly over the controller (Pi/ESP32) and the servo driver (PCA9685), and over the battery bay. Battery and the 6 A+ BEC/UBEC are the real heat sources — give the battery bay an open underside slot. Avoid sealing servos in pockets; leave a 2-3 mm air gap around each servo body.",
+    "assemblyNotes": "Build leg as a sub-assembly off the body: shoulder block (carries abduct servo) -> hip bracket (carries hip-flex servo, mates to abduct horn) -> femur (carries or transmits knee) -> tibia. Mirror left/right legs (don't reuse one chirality). Route servo cables through hollow links or along the inside face with clips; leave slack at each joint equal to the joint's full sweep arc. Mount the controller + driver + battery as a serviceable central tray that drops in from the top. Zero all servos at horn-centered before final horn install so the calibrated neutral matches CAD.",
+    "pitfalls": [
+      "Thigh (femur) collides the body at full hip-flex — clearance the body underside and chamfer the femur root; verify the joint's full declared range, not just neutral.",
+      "Standing with knees near-straight: torque demand spikes toward infinity and any side load buckles the leg. Design the neutral stance crouched (knee ~90-120 deg).",
+      "Under-sized knee servo — it sees the largest moment arm (whole body weight x tibia length on a diagonal pair during trot). A servo that holds at rest stalls in motion.",
+      "Forgetting leg chirality — mirrored legs need mirrored brackets; reusing one side puts the abduct servo on the wrong face.",
+      "Horn-screw backout under cyclic load — use a horn-capture feature or threadlock; printed splines strip.",
+      "Servo cable too short to span the joint's full sweep — it unplugs or tears at travel extremes.",
+      "Center of mass too high/forward — dog tips; keep battery low and centered between the hip pairs."
+    ],
+    "references": [
+      "SpotMicro / SpotMicroAI (Deok-yeon Kim original, KDY0523)",
+      "NovaSpotMicro (Nova SM3, novaspotmicro.com)",
+      "Boston Dynamics Spot (commercial reference for proportions/gait)",
+      "MIT Mini Cheetah (academic reference for leg kinematics + trot dynamics)",
+      "Stanford Pupper / Doggo (open-source quadruped, parallel-actuated legs)"
+    ]
+  },
+  {
+    "archetype": "robot_arm",
+    "aliases": [
+      "robotic arm", "manipulator", "arm robot", "articulated arm",
+      "5dof arm", "6dof arm", "serial manipulator", "pick and place arm",
+      "desktop arm", "scara", "robotic manipulator"
+    ],
+    "dof": "Typically 5-6 active for a serial articulated arm: base yaw + shoulder pitch + elbow pitch + wrist pitch + wrist roll (+ gripper as a separate actuator). A 4-DOF SCARA variant is yaw-yaw-Z-roll for planar pick-and-place.",
+    "jointLayout": "Serial open chain from a fixed base: (1) BASE YAW — vertical axis (Z), rotates the whole arm; large servo or stepper+gearing at the base, carries all downstream weight. (2) SHOULDER PITCH — horizontal axis, lifts the upper arm; highest-torque joint (full reach x payload moment). (3) ELBOW PITCH — parallel to shoulder, bends the forearm. (4) WRIST PITCH — tilts the end effector. (5) WRIST ROLL — spins the tool about the forearm axis. End effector (gripper) hangs off the wrist as its own DOF. Counterbalancing (spring or rubber band across the shoulder) is common to offload the shoulder servo.",
+    "proportions": {
+      "upperArmToForearmRatio": "1.0 to 1.3 (upper arm equal or slightly longer; near-equal maximizes folded compactness and dexterous workspace)",
+      "reachToBaseHeight": "total reach ~2.5 to 4x the base height",
+      "payloadToReachRule": "max payload x reach <= servo stall torque with >=2x safety; budget against the SHOULDER joint",
+      "typicalDimsMm": { "baseDia": 90, "upperArm": 120, "forearm": 120, "wristStack": 60 },
+      "linkWidthToServo": "link width ~ servo bodyW + 2x wall (straddle-mount the servo between two side plates)"
+    },
+    "actuatorClass": "Mixed ladder by joint: base + shoulder = high-torque standard (DS3218 ~20 kg.cm or geared stepper), elbow = MG996R-class (~10 kg.cm), wrist pitch/roll = MG90S/metal-micro, gripper = SG90/MG90S. Torque demand falls monotonically from base to tool — never put a micro servo at the shoulder.",
+    "ventStrategy": "Base houses the controller + driver + PSU — vent the base shell over them; the moving links run cool. If steppers are used, the driver heatsinks live in the (ideally ventilated) base, not on the arm.",
+    "assemblyNotes": "Build base-up, one joint sub-assembly at a time, dry-fitting horns before committing screws. Calibrate each servo to its neutral before installing the horn so CAD-zero matches firmware-zero. Use a counterweight or extension-spring across the shoulder to halve its holding torque. Straddle-mount (clevis) each pitch joint between two plates so the load isn't cantilevered on one horn. Route cables through the base and clip along link inner faces with sweep slack.",
+    "pitfalls": [
+      "Cantilevering a pitch joint on a single servo horn — the horn boss takes a bending moment it isn't designed for; use a double-shear clevis (horn one side, idle bearing pin the other).",
+      "Sizing servos for the static payload instead of payload-at-full-reach — torque is force x moment arm; the shoulder at full extension is the worst case.",
+      "No shoulder counterbalance — the shoulder servo overheats holding position and has no margin for dynamic moves.",
+      "Joint-range self-collision when folding — elbow drives the forearm into the upper arm or base; verify the full declared range.",
+      "Cumulative slop — backlash stacks across 5 serial joints; tool-tip wander = sum of every joint's lash. Preload bearings and capture horns.",
+      "Wrist mass creep — a heavy gripper at the tool end multiplies torque demand back through every upstream joint."
+    ],
+    "references": [
+      "AR4 / Annin Robotics AR2-AR4 (open-source desktop 6-DOF arm)",
+      "Thor open-source robot arm (AngelLM)",
+      "EEZYbotARM MK2 (printed servo arm, classic beginner reference)",
+      "UR / Universal Robots cobots (commercial proportion reference)",
+      "Denavit-Hartenberg convention (standard serial-chain kinematics)"
+    ]
+  },
+  {
+    "archetype": "gripper",
+    "aliases": [
+      "robot gripper", "end effector", "claw", "robotic hand", "pincer",
+      "parallel gripper", "two finger gripper", "grasper", "jaw", "clamp hand",
+      "robotic claw", "gripping mechanism"
+    ],
+    "dof": "1 active actuator drives 2 (or more) synchronized fingers. A parallel-jaw gripper is 1 DOF; an underactuated adaptive hand may have many passive joints driven by 1 motor through compliant/tendon coupling.",
+    "jointLayout": "Two dominant linkage families: (A) PARALLEL-JAW — a single servo drives a rack-and-pinion or a pair of mirrored linkages so both jaws translate symmetrically and stay parallel (flat faces meet flat objects). (B) PINCER / ANGULAR — one servo, two mirrored 4-bar linkages pivoting the fingertips together (simpler, jaws rotate so contact angle changes with opening). Gear-coupled designs mesh two pinion gears (one per finger) so a single servo on one gear drives both antisymmetrically. Add rubber/TPU pads on the contact faces for grip + compliance.",
+    "proportions": {
+      "fingerLengthToOpening": "finger length ~1.0 to 1.5x the max jaw opening (leverage vs. reach)",
+      "maxOpeningToObject": "design max opening >= largest target object + 20% margin",
+      "gripForceToServoTorque": "tip force ~ servo torque / finger moment arm; long fingers trade force for reach",
+      "typicalDimsMm": { "maxOpening": 60, "fingerLen": 70, "jawWidth": 25, "padThickness": 3 }
+    },
+    "actuatorClass": "1 x micro-to-standard servo: SG90/MG90S for light desktop grasping; MG996R-class if high pinch force or a large opening (long moment arm) is needed. Continuous-rotation is wrong here — use a positional servo and limit travel in firmware to avoid stalling at the closed hardstop.",
+    "ventStrategy": "Usually none — a gripper is small and the lone servo is exposed. If integrated into an enclosed end-effector body, leave a slot by the servo can.",
+    "assemblyNotes": "Mirror the two fingers (chirality). For gear-coupled designs, mesh the pinions at the correct center distance (module x (N1+N2)/2) and clock the teeth so jaws are symmetric at neutral. Set the servo neutral to the half-open position so equal travel reaches both hardstops. Glue or dovetail TPU pads onto the jaw faces. Add a mechanical hardstop slightly inside the servo's electrical limit so it can't drive past closed and stall.",
+    "pitfalls": [
+      "Driving a positional servo into a closed-on-object stall — it draws stall current, browns out the rail, and cooks the servo. Use a current-limited or compliant (series-elastic / spring-backed) jaw, or sense and back off.",
+      "Asymmetric fingers from a single-side drive without coupling — one jaw moves more than the other and the object squirts out.",
+      "Hard PLA jaw faces with no compliance — point contact, poor grip, marks/crushes the object. Always add a TPU/rubber pad.",
+      "Gear backlash leaving the jaws loose at the closed position — preload or use anti-backlash split gears.",
+      "Finger moment arm too long for the servo — plenty of opening, not enough pinch force.",
+      "Pivot pins printed as part of the body (no bearing surface) — they wear and seize; use a metal pin or bushing."
+    ],
+    "references": [
+      "FESTO / SMC parallel grippers (commercial parallel-jaw reference)",
+      "Yale OpenHand project (underactuated compliant hands)",
+      "InMoov hand (tendon-driven printed hand)",
+      "Thingiverse linear/rack parallel gripper (common printed reference)",
+      "Robotiq 2F-85 (commercial adaptive 2-finger gripper)"
+    ]
+  },
+  {
+    "archetype": "gimbal",
+    "aliases": [
+      "camera gimbal", "pan tilt", "pan-tilt", "stabilizer", "3 axis gimbal",
+      "2 axis gimbal", "camera stabilizer", "head mechanism", "pan tilt unit",
+      "ptz", "gimbal mount", "tilt pan"
+    ],
+    "dof": "2 (pan + tilt) for a basic camera head; 3 (pan/yaw + tilt/pitch + roll) for a full stabilizing gimbal. Each axis is one revolute joint.",
+    "jointLayout": "Nested orthogonal revolute axes, outer-to-inner: PAN (yaw) about vertical Z carries everything; TILT (pitch) about a horizontal axis mounted on the pan stage; ROLL (about the camera's optical/boresight axis) is innermost, on the tilt yoke, only on 3-axis. Axes must intersect at (or near) the payload's center of mass so the actuators see minimal gravity torque — that is the whole point of a gimbal. A 2-axis pan/tilt for a sensor head can relax the COM-intersection rule and just use two stacked servos (pan servo body fixed, tilt servo on the pan horn).",
+    "proportions": {
+      "axesThroughCoM": "all rotation axes should pass through the payload COM (offset = unbalanced gravity torque the motor must hold all day)",
+      "yokeClearance": "tilt yoke arms longer than payload half-height so it swings full range without hitting the arms",
+      "balanceCounterweight": "if axes can't pass through COM, add a counterweight to bring net torque to ~0 at neutral",
+      "typicalDimsMm": { "payloadCamera": 30, "yokeArm": 45, "panBaseDia": 60 }
+    },
+    "actuatorClass": "Sensor/camera-HEAD pan-tilt: 2 x MG90S/MG996R positional servos (cheap, fine for a non-stabilized head). True STABILIZED gimbal: 3 x brushless gimbal motors (BLDC) with an IMU + closed-loop controller (SimpleBGC/STorM32) — servos are too coarse/slow for video stabilization. Choose based on the verb: 'aim/point' = servos; 'stabilize/smooth video' = brushless.",
+    "ventStrategy": "Minimal — the BLDC controller in the base can warm up; vent the base. Servos are exposed. Keep the IMU thermally stable (away from motors) for drift.",
+    "assemblyNotes": "Balance each axis independently, inner-to-outer (roll, then tilt, then pan), with the power OFF and motors free — the payload should hold any position with no torque. Mount the IMU rigidly to the camera/payload (innermost) frame. Get axes to intersect the COM; if not, add trim counterweights. Use bearings (not bare servo horns) for the load on each axis so the motor only fights inertia, not the full cantilever moment.",
+    "pitfalls": [
+      "Axes not passing through the payload COM — the motor fights a constant gravity torque, overheats, drifts, and burns power even when 'holding still'. The #1 gimbal mistake.",
+      "Using positional hobby servos for video stabilization — too slow, too coarse, audible, and they jitter; brushless + IMU is required for smooth footage.",
+      "Cantilevering the payload on a servo horn with no support bearing — sag, slop, and motor stall under the bending moment.",
+      "Cable wrap on the continuous-pan axis — route through a slip ring or limit pan travel; otherwise the cable winds up and tears.",
+      "IMU mounted on the wrong (non-payload) frame — it can't sense what the camera actually does, so stabilization fails.",
+      "Tilt yoke too short — payload hits the arms before reaching full tilt range."
+    ],
+    "references": [
+      "STorM32 BGC (open-source brushless gimbal controller)",
+      "SimpleBGC / BaseCam (commercial brushless gimbal controller)",
+      "DJI Ronin / Zenmuse (commercial 3-axis reference)",
+      "Adafruit / common pan-tilt servo bracket kit (2-axis servo head reference)",
+      "OpenPnP / OpenMV pan-tilt heads (sensor-aiming reference)"
+    ]
+  },
+  {
+    "archetype": "differential_drive",
+    "aliases": [
+      "diff drive", "two wheel robot", "2 wheel robot", "differential drive robot",
+      "rover", "mobile robot base", "tank drive", "wheeled robot",
+      "skid steer", "robot car", "drive base", "two wheeled"
+    ],
+    "dof": "2 active (left wheel + right wheel, independently driven). Steering is emergent from the wheel-speed difference — there is no steering joint. A passive caster (or two) provides the third+ ground contact (0 active DOF, free swivel).",
+    "jointLayout": "Two coaxial drive wheels on a common transverse axis through (or near) the robot's center, each driven by its own motor (geared DC + encoder, or continuous-rotation servo, or stepper). One or two passive casters fore and/or aft for balance. Equal speeds = straight; opposite speeds = spin in place about the wheelbase center; unequal same-direction = arc. Place the drive axis at the COM fore-aft so the robot pivots cleanly and doesn't pitch.",
+    "proportions": {
+      "wheelTrackToWheelDia": "wheel track (axle length between wheels) ~2 to 4x wheel diameter for stability",
+      "casterToDrivePlacement": "caster(s) far enough fore/aft that the COM stays inside the support triangle/polygon",
+      "wheelDiaToObstacle": "wheel diameter >= ~2.5x the largest sill/obstacle you must climb",
+      "comOverDriveAxle": "keep COM near the drive axle (slightly biased toward the caster so it never lifts)",
+      "typicalDimsMm": { "wheelDia": 65, "wheelTrack": 150, "casterDia": 25, "baseThickness": 4 }
+    },
+    "actuatorClass": "2 x geared DC motor with encoders (TT/N20-class for desktop, larger gearmotors for payload) for true differential drive with odometry; OR 2 x continuous-rotation servos (FS90R/360-modified) for light/cheap builds (no encoder, open-loop). Match the two motors/gearboxes so equal command = equal speed, else it veers.",
+    "ventStrategy": "Vent the electronics deck over the motor driver (H-bridge / TB6612 / VNH) and the battery — those are the heat sources. Motors self-cool. Keep the driver off the battery.",
+    "assemblyNotes": "Mount both motors rigidly and coaxially (a bent axle = constant veer). Use the same wheel + tire on both sides. Caster must swivel freely with no stiction (it adds a turning bias if it sticks). Put the battery low and centered for a low, stable COM. If using encoders, get the counts/rev and wheel diameter into firmware for odometry. Add bump/edge sensors at the leading edge.",
+    "pitfalls": [
+      "Mismatched left/right motors or gearboxes — robot can't drive straight even with equal commands; needs closed-loop or trim.",
+      "COM outside the support polygon — robot tips during accel/decel or when the caster crosses a seam.",
+      "Sticky/high-stiction caster — adds an unpredictable turning bias and ruins dead-reckoning.",
+      "Drive axle not through the fore-aft COM — robot pitches (wheelies) on acceleration and pivot point wanders.",
+      "No encoders but expecting odometry — open-loop heading drifts fast; you cannot dead-reckon a straight line.",
+      "Wheels too small for the terrain — high-centers on the smallest sill; ground clearance is wheel-radius-limited."
+    ],
+    "references": [
+      "iRobot Create / Roomba (commercial differential-drive reference)",
+      "TurtleBot (ROS reference differential-drive platform)",
+      "Pololu Zumo / Romi (compact diff-drive kits)",
+      "Arlo / Parallax robot base (caster + 2 drive wheel reference)",
+      "Differential-drive kinematics (standard mobile-robotics model)"
+    ]
+  },
+  {
+    "archetype": "gearbox",
+    "aliases": [
+      "gear reduction", "reducer", "gear train", "speed reducer",
+      "planetary gearbox", "spur gearbox", "gear set", "transmission",
+      "gear reducer", "reduction gearbox", "planetary gear", "gear drive"
+    ],
+    "dof": "1 (input -> output, single rotational degree of freedom). The internal gears add no net DOF; ratio is fixed by tooth counts. A differential gearbox is a special 2-DOF case.",
+    "jointLayout": "Input shaft -> one or more meshing gear stages -> output shaft, on parallel (spur/helical) or coaxial (planetary) axes. SPUR train: each stage = small driver gear meshing a larger driven gear on the next parallel shaft; ratio per stage = N_driven / N_driver; stack stages to multiply. PLANETARY: a central SUN gear drives PLANET gears that roll inside a fixed RING (annulus); the planet CARRIER is the output. Coaxial, compact, high-ratio, load shared across planets. Each shaft rides in bearings; gears must mesh at the correct center distance.",
+    "proportions": {
+      "centerDistance": "C = module x (N1 + N2) / 2 — get this exact or gears bind (too close) or skip/whine (too far)",
+      "ratioPerSpurStage": "practical 2:1 to 5:1 per spur stage; chain stages for more (a 25:1 = two ~5:1 stages)",
+      "planetaryRatio": "single-stage planetary ratio = 1 + (N_ring / N_sun); typically 3:1 to 10:1",
+      "moduleVsTorque": "larger module (coarser teeth) = more torque capacity; printed gears usually module 1.0-2.0",
+      "faceWidthToModule": "gear face width ~ 6 to 12 x module for adequate tooth strength",
+      "typicalDimsMm": { "module": 1.5, "sunTeeth": 12, "planetTeeth": 18, "ringTeeth": 48, "faceWidth": 12 }
+    },
+    "actuatorClass": "N/A — a gearbox is the transmission, not the actuator. It is paired with a motor (DC/BLDC/stepper) to trade speed for torque; output torque = input torque x ratio x efficiency (printed spur ~0.9/stage, planetary ~0.8/stage).",
+    "ventStrategy": "Generally none for printed/hobby gearboxes. High-load metal boxes need a grease retention/seal strategy rather than venting; an oil-filled box needs a breather. For printed boxes, an inspection/grease port is more useful than a vent.",
+    "assemblyNotes": "Set the EXACT center distance (C = module x (N1+N2)/2) — this is the make-or-break dimension. Add backlash by slightly increasing center distance or using a tooth-thinned profile (printed teeth are oversized; a 0.1-0.3 mm backlash prevents binding). Ride every shaft in bearings or bushings, never bare printed bores. For planetary, the ring/sun/planet tooth counts must satisfy the assembly condition (N_ring + N_sun) divisible by the planet count for evenly-spaced planets. Grease the mesh. Check that the standard module/pressure-angle (commonly 20 deg) is consistent across all meshing gears.",
+    "pitfalls": [
+      "Wrong center distance — too tight binds and stalls; too loose skips teeth, whines, and wears. C = module x (N1+N2)/2 is non-negotiable.",
+      "Zero designed backlash on printed gears — thermal/print swell makes teeth bind. Always design in 0.1-0.3 mm backlash.",
+      "Mixing modules or pressure angles between meshing gears — they don't mesh at all.",
+      "Bare printed shaft bores — they wear oval fast under load; use bearings/bushings or metal shafts.",
+      "Planetary tooth counts that violate the assembly condition — planets won't fit at equal spacing; ring/sun/planet relation must close.",
+      "Ignoring efficiency loss per stage — a '50:1' printed multi-stage box delivers far less output torque than ratio x input due to compounding friction.",
+      "Under-sized face width / module for the torque — teeth shear off; thin printed teeth are the weak link."
+    ],
+    "references": [
+      "Nylon/POM printed planetary gearbox designs (Thingiverse/Printables common references)",
+      "KHK / Boston Gear technical handbooks (module, center distance, backlash standards)",
+      "Involute gear / 20-degree pressure angle standard (ISO/AGMA)",
+      "NEMA stepper planetary reducers (commercial ratio reference)",
+      "Cycloidal vs. planetary trade study (robotics joint reducer reference)"
+    ]
+  }
+]

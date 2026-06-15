@@ -32,6 +32,8 @@ _JSON_FILES = (
     "standoffs.json",
     "horns.json",
     "electronics.json",
+    # Functional-design brain — structural robotics parts.
+    "robot_brackets.json",
 )
 
 

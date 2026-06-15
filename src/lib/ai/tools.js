@@ -54,6 +54,8 @@ import { PLANNER_TOOLS } from './tools_planner.js';
 import { VISION_TOOLS } from './tools_vision.js';
 import { WEB_TOOLS } from './tools_web.js';
 import { CODE_TOOLS } from './tools_code.js';
+import { MECHANISM_TOOLS } from './tools_mechanism.js';
+import { RECIPE_TOOLS } from './tools_recipes.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -856,6 +858,7 @@ function _collectTools() {
         CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
         ASSEMBLY_CHECK_TOOLS, PLANNER_TOOLS,
         VISION_TOOLS, WEB_TOOLS, CODE_TOOLS,
+        MECHANISM_TOOLS, RECIPE_TOOLS,
     ];
     const out = [];
     const seen = new Set();

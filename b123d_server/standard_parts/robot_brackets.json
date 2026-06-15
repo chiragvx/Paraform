@@ -1,0 +1,182 @@
+[
+  {
+    "id": "bracket-servo-9g",
+    "standard": "generic",
+    "category": "Bracket",
+    "nominalSize": "9g",
+    "name": "9g servo U-bracket (SG90/SG92R/MG90S cradle)",
+    "dims": {
+      "kind": "u-cradle",
+      "outerL": 30.0, "outerW": 24.0, "outerH": 24.0,
+      "wall": 3.0,
+      "cradleL": 23.0, "cradleW": 12.6,
+      "mountHoleD": 3.2,
+      "baseHoles": [[-10, -8], [10, 8]]
+    },
+    "bbox": { "min": [-15, -12, 0], "max": [15, 12, 24] },
+    "metadata": {
+      "mountInterface": "servo-mount-9g",
+      "fitsServos": ["servo-sg90", "servo-sg92r", "servo-mg90s"]
+    },
+    "connectors": [
+      { "id": "servo-seat", "parent": "bracket-servo-9g", "kind": "planar", "gender": "neutral",
+        "role": "servo-mount", "interfaceId": "servo-mount-9g", "locked": true,
+        "size": { "nominal": "9g", "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 16.6],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Cradle plane that captures a 9g servo flange (servo-mount-9g)." } },
+      { "id": "base-bore-1", "parent": "bracket-servo-9g", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, -1], "origin": [-10, -8, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "M3 base mount hole, opens out the bottom face." } },
+      { "id": "base-bore-2", "parent": "bracket-servo-9g", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, -1], "origin": [10, 8, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "M3 base mount hole, opens out the bottom face." } }
+    ]
+  },
+  {
+    "id": "bracket-servo-standard",
+    "standard": "generic",
+    "category": "Bracket",
+    "nominalSize": "standard",
+    "name": "Standard servo pan/tilt bracket (MG996R/DS3218 cradle)",
+    "dims": {
+      "kind": "u-cradle",
+      "outerL": 56.0, "outerW": 40.0, "outerH": 40.0,
+      "wall": 4.0,
+      "cradleL": 41.0, "cradleW": 20.4,
+      "mountHoleD": 4.3,
+      "baseHoles": [[-20, -15], [20, 15]]
+    },
+    "bbox": { "min": [-28, -20, 0], "max": [28, 20, 40] },
+    "metadata": {
+      "mountInterface": "servo-mount-standard",
+      "fitsServos": ["servo-mg996r", "servo-ds3218"]
+    },
+    "connectors": [
+      { "id": "servo-seat", "parent": "bracket-servo-standard", "kind": "planar", "gender": "neutral",
+        "role": "servo-mount", "interfaceId": "servo-mount-standard", "locked": true,
+        "size": { "nominal": "standard", "unit": "mm" },
+        "axis": [0, 0, 1], "origin": [0, 0, 27.5],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Seat plane for a standard 40x20 servo flange (servo-mount-standard)." } },
+      { "id": "base-bore-1", "parent": "bracket-servo-standard", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, -1], "origin": [-20, -15, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "M4 base mount hole." } },
+      { "id": "base-bore-2", "parent": "bracket-servo-standard", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 4.3, "unit": "mm" }, "axis": [0, 0, -1], "origin": [20, 15, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "M4 base mount hole." } }
+    ]
+  },
+  {
+    "id": "bracket-l-30",
+    "standard": "generic",
+    "category": "Bracket",
+    "nominalSize": "30mm-M3",
+    "name": "L-bracket 30x30 (M3)",
+    "dims": {
+      "kind": "l-angle",
+      "legL": 30.0, "legW": 30.0, "legH": 30.0,
+      "wall": 3.0,
+      "mountHoleD": 3.2
+    },
+    "bbox": { "min": [-15, -15, 0], "max": [15, 15, 30] },
+    "metadata": { "fastener": "M3" },
+    "connectors": [
+      { "id": "bore-h-1", "parent": "bracket-l-30", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, -1], "origin": [-8, 5, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Horizontal-leg M3 bore, opens out bottom face." } },
+      { "id": "bore-h-2", "parent": "bracket-l-30", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, -1], "origin": [8, 5, 0],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Horizontal-leg M3 bore, opens out bottom face." } },
+      { "id": "bore-v-1", "parent": "bracket-l-30", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, -1, 0], "origin": [-8, -15, 12],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Vertical-leg M3 bore, opens out the -Y face." } },
+      { "id": "bore-v-2", "parent": "bracket-l-30", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, -1, 0], "origin": [8, -15, 12],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Vertical-leg M3 bore, opens out the -Y face." } }
+    ]
+  },
+  {
+    "id": "linkage-leg-50",
+    "standard": "generic",
+    "category": "Linkage",
+    "nominalSize": "50mm",
+    "name": "Leg-link bar, 50 mm (revolute both ends)",
+    "dims": {
+      "kind": "bar",
+      "length": 50.0, "width": 14.0, "thickness": 4.0,
+      "endR": 7.0,
+      "pivotD": 4.0,
+      "centerDistance": 36.0
+    },
+    "bbox": { "min": [-25, -7, 0], "max": [25, 7, 4] },
+    "metadata": { "linkType": "leg-segment", "fastener": "M4" },
+    "connectors": [
+      { "id": "pivot-a", "parent": "linkage-leg-50", "kind": "bore", "gender": "female",
+        "role": "pivot", "interfaceId": "bore-4mm", "locked": true,
+        "size": { "nominal": 4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [-18, 0, 0],
+        "mates_with": ["shaft", "thread"], "inducedJoint": "revolute",
+        "metadata": { "description": "Proximal pivot bore for a 4mm shoulder bolt/shaft." } },
+      { "id": "pivot-b", "parent": "linkage-leg-50", "kind": "bore", "gender": "female",
+        "role": "pivot", "interfaceId": "bore-4mm", "locked": true,
+        "size": { "nominal": 4, "unit": "mm" }, "axis": [0, 0, 1], "origin": [18, 0, 0],
+        "mates_with": ["shaft", "thread"], "inducedJoint": "revolute",
+        "metadata": { "description": "Distal pivot bore for a 4mm shoulder bolt/shaft." } }
+    ]
+  },
+  {
+    "id": "coupler-horn-25t",
+    "standard": "generic",
+    "category": "Linkage",
+    "nominalSize": "spline-25T",
+    "name": "25T servo-horn coupler (spline hub to M3 bolt circle)",
+    "dims": {
+      "kind": "coupler",
+      "hubR": 10.0, "thickness": 8.0,
+      "boreR": 2.87,
+      "boltCircleR": 7.0,
+      "boltD": 3.2,
+      "boltCount": 4
+    },
+    "bbox": { "min": [-10, -10, 0], "max": [10, 10, 8] },
+    "metadata": { "splineInterface": "spline-25T", "fastener": "M3" },
+    "connectors": [
+      { "id": "spline-socket", "parent": "coupler-horn-25t", "kind": "bore", "gender": "female",
+        "role": "horn-socket", "interfaceId": "spline-25T", "locked": true,
+        "size": { "nominal": 5.74, "unit": "mm" }, "axis": [0, 0, -1], "origin": [0, 0, 0],
+        "mates_with": ["shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "25T spline socket that presses onto an MG996R/DS3218 output shaft." } },
+      { "id": "deck", "parent": "coupler-horn-25t", "kind": "planar", "gender": "neutral",
+        "role": "link-mount", "locked": true,
+        "size": { "nominal": "M3-bc14", "unit": "mm" }, "axis": [0, 0, 1], "origin": [0, 0, 8],
+        "mates_with": ["planar"], "inducedJoint": "fixed",
+        "metadata": { "description": "Top deck with an M3 bolt circle (Ø14) to bolt a leg-link / arm to." } },
+      { "id": "deck-bore-1", "parent": "coupler-horn-25t", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, 1], "origin": [7, 0, 8],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Bolt-circle M3 hole." } },
+      { "id": "deck-bore-2", "parent": "coupler-horn-25t", "kind": "bore", "gender": "female",
+        "role": "mount-hole", "locked": true,
+        "size": { "nominal": 3.2, "unit": "mm" }, "axis": [0, 0, 1], "origin": [-7, 0, 8],
+        "mates_with": ["thread", "shaft"], "inducedJoint": "fixed",
+        "metadata": { "description": "Bolt-circle M3 hole." } }
+    ]
+  }
+]

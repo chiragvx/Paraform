@@ -197,6 +197,167 @@ def build_horn(entry: dict) -> Any:
     return p.part
 
 
+# ── Structural robotics brackets ────────────────────────────────────────────
+
+
+def build_bracket(entry: dict) -> Any:
+    """Structural mounting bracket — dispatches on `dims.kind`.
+
+    Two archetypes carry the robotics catalog:
+
+      * ``u-cradle`` — a 3-sided servo cradle: an outer block with a central
+        servo-shaped pocket cut out the +Z face (the seat the flange drops
+        into) plus a clear-through window so wiring/horn pass. The base floor
+        carries the M3/M4 mount holes the `base-bore-*` connectors point at.
+        `dims`: outerL, outerW, outerH, wall, cradleL, cradleW, mountHoleD,
+        baseHoles.
+      * ``l-angle`` — a right-angle bracket: a horizontal foot on z=0 plus a
+        vertical web rising from the -Y edge, both `wall` thick, with M3 bores
+        through each leg. `dims`: legL, legW, legH, wall, mountHoleD.
+
+    Bodies are XY-centred, MIN-aligned on Z (CLAUDE.md convention) so the
+    declared `bbox` matches the built bounding box within the eval tolerance.
+    """
+    from build123d import Align, BuildPart, Box, Cylinder, Locations, Mode
+
+    d = entry["dims"]
+    kind = d.get("kind", "u-cradle")
+
+    if kind == "l-angle":
+        leg_l = float(d["legL"])
+        leg_w = float(d["legW"])
+        leg_h = float(d["legH"])
+        wall = float(d.get("wall", 3.0))
+        hole_d = float(d.get("mountHoleD", 3.2))
+        with BuildPart() as p:
+            # Horizontal foot — full LxW footprint, `wall` thick on z=0.
+            Box(leg_l, leg_w, wall,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            # Vertical web — rises from the -Y edge, `wall` thick in Y.
+            with Locations((0, -leg_w / 2.0 + wall / 2.0, 0)):
+                Box(leg_l, wall, leg_h,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN))
+            # Two M3 bores in the foot (axis -Z) and two in the web (axis -Y).
+            if hole_d > 0.0:
+                hx = leg_l / 4.0
+                for sx in (-hx, hx):
+                    with Locations((sx, 5.0, -0.5)):
+                        Cylinder(hole_d / 2.0, wall + 1.0,
+                                 align=(Align.CENTER, Align.CENTER, Align.MIN),
+                                 mode=Mode.SUBTRACT)
+                for sx in (-hx, hx):
+                    with Locations((sx, -leg_w / 2.0 + wall + 0.5, leg_h * 0.4),
+                                   ):
+                        Cylinder(hole_d / 2.0, wall + 1.0,
+                                 align=(Align.CENTER, Align.CENTER, Align.MIN),
+                                 rotation=(90, 0, 0),
+                                 mode=Mode.SUBTRACT)
+        return p.part
+
+    # ── default: u-cradle ───────────────────────────────────────────────
+    L = float(d["outerL"])
+    W = float(d["outerW"])
+    H = float(d["outerH"])
+    wall = float(d.get("wall", 3.0))
+    cradle_l = float(d.get("cradleL", L - 2.0 * wall))
+    cradle_w = float(d.get("cradleW", W - 2.0 * wall))
+    hole_d = float(d.get("mountHoleD", 3.2))
+    base_holes = d.get("baseHoles") or []
+
+    with BuildPart() as p:
+        # Outer block.
+        Box(L, W, H, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        # Servo pocket — cut down from the +Z face, leaving a `wall`-thick
+        # floor so the base holes have material to thread into.
+        pocket_h = H - wall
+        with Locations((0, 0, wall)):
+            Box(cradle_l, cradle_w, pocket_h + 1.0,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+                mode=Mode.SUBTRACT)
+        # Base mount holes through the floor (axis -Z).
+        if hole_d > 0.0:
+            for hx, hy in base_holes:
+                with Locations((float(hx), float(hy), -0.5)):
+                    Cylinder(hole_d / 2.0, wall + 1.0,
+                             align=(Align.CENTER, Align.CENTER, Align.MIN),
+                             mode=Mode.SUBTRACT)
+    return p.part
+
+
+# ── Structural linkages (leg segments, horn couplers) ────────────────────────
+
+
+def build_linkage(entry: dict) -> Any:
+    """Structural linkage — dispatches on `dims.kind`.
+
+      * ``bar`` — a flat leg-link: a rounded-end bar (length × width ×
+        thickness) with a pivot bore at each end. `dims`: length, width,
+        thickness, endR, pivotD, centerDistance.
+      * ``coupler`` — a servo-horn coupler: a hub cylinder with a spline
+        socket bore up the axis and an M3 bolt circle through the top deck.
+        `dims`: hubR, thickness, boreR, boltCircleR, boltD, boltCount.
+
+    XY-centred, MIN-aligned on Z.
+    """
+    import math
+
+    from build123d import (
+        Align, BuildPart, Box, Cylinder, Locations, Mode,
+    )
+
+    d = entry["dims"]
+    kind = d.get("kind", "bar")
+
+    if kind == "coupler":
+        hub_r = float(d["hubR"])
+        t = float(d["thickness"])
+        bore_r = float(d.get("boreR", 2.87))
+        bc_r = float(d.get("boltCircleR", hub_r * 0.7))
+        bolt_d = float(d.get("boltD", 3.2))
+        bolt_n = int(d.get("boltCount", 4))
+        with BuildPart() as p:
+            Cylinder(hub_r, t, align=(Align.CENTER, Align.CENTER, Align.MIN))
+            # Spline socket — blind bore from the bottom face up most of t.
+            Cylinder(bore_r, t * 0.7,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN),
+                     mode=Mode.SUBTRACT)
+            # M3 bolt circle through the deck.
+            if bolt_d > 0.0 and bolt_n > 0:
+                for k in range(bolt_n):
+                    ang = math.radians(360.0 / bolt_n * k)
+                    with Locations((math.cos(ang) * bc_r,
+                                    math.sin(ang) * bc_r, -0.5)):
+                        Cylinder(bolt_d / 2.0, t + 1.0,
+                                 align=(Align.CENTER, Align.CENTER, Align.MIN),
+                                 mode=Mode.SUBTRACT)
+        return p.part
+
+    # ── default: bar ────────────────────────────────────────────────────
+    length = float(d["length"])
+    width = float(d["width"])
+    t = float(d["thickness"])
+    end_r = float(d.get("endR", width / 2.0))
+    pivot_d = float(d.get("pivotD", 4.0))
+    cdist = float(d.get("centerDistance", length - 2.0 * end_r))
+    half = cdist / 2.0
+
+    with BuildPart() as p:
+        # Straight shank between the two pivot centres.
+        Box(cdist, width, t, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        # Rounded ends (cylinders at each pivot centre).
+        for sx in (-half, half):
+            with Locations((sx, 0, 0)):
+                Cylinder(end_r, t, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        # Pivot bores.
+        if pivot_d > 0.0:
+            for sx in (-half, half):
+                with Locations((sx, 0, -0.5)):
+                    Cylinder(pivot_d / 2.0, t + 1.0,
+                             align=(Align.CENTER, Align.CENTER, Align.MIN),
+                             mode=Mode.SUBTRACT)
+    return p.part
+
+
 # ── Keep-out boxes (electronics) ────────────────────────────────────────────
 
 

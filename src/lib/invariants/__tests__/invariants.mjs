@@ -102,8 +102,8 @@ function setDfm({ manifold, selfInt, zeroThick, threadEng, bearingFit, clearance
 
 // ── library structural tests ────────────────────────────────────────────────
 
-test('library: exports 27 invariants', () => {
-    assert.equal(INVARIANTS.length, 27);
+test('library: exports 31 invariants', () => {
+    assert.equal(INVARIANTS.length, 31);
 });
 
 test('library: every id is unique', () => {

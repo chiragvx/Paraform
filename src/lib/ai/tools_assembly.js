@@ -28,8 +28,9 @@
  */
 
 import { N, S, B, ARR, fail } from './tools_util.js';
-import { getDocumentStore, addConnector } from '../../../lib/document/index.js';
+import { getDocumentStore, addConnector, addBox } from '../../../lib/document/index.js';
 import { connectorsCompatible } from '../library/mate_solver.js';
+import { getAIContext } from './context.js';
 
 // ── Closed sets mirrored from lib/document/types.js (makeConnector) ──────────
 // We re-declare them here so we can REJECT (not silently coerce) bad input.
@@ -55,6 +56,60 @@ function normalize3(v) {
 function sizeStr(size) {
     if (!size || size.nominal === undefined || size.nominal === null) return 'unspecified';
     return `${size.nominal}${size.unit ? ` ${size.unit}` : ''}`;
+}
+
+// ── Design-for-Serviceability classification ────────────────────────────────
+//
+// The studio's standard-part catalog ids (b123d_server/standard_parts/*.json)
+// carry a stable prefix that tells us the part class. The JS document only
+// stores `params.entryId`, so we key the heuristic on that string (plus the
+// feature name as a fallback). Break-prone, powered, or wear parts (servos,
+// motors, batteries, electronics boards, sensors, cameras) must stay
+// REPLACEABLE — reachable + fastened, never glued or buried. Passive
+// commodities (bearings, standoffs, fasteners) are part of the fasten plan but
+// are not standalone serviceable line-items. Everything we MODEL ourselves
+// (Box / Cylinder / Extrude / …) is custom structure that can be BAKED IN
+// (integrated / permanent).
+
+/** Custom modelled body feature types — fabricable structure, bake-in candidates. */
+const STRUCTURAL_BODY_TYPES = new Set([
+    'Box', 'Cylinder', 'Sphere', 'Torus',
+    'Extrude', 'Revolve', 'Sweep', 'Loft', 'Helix',
+    'BuildScript', 'ImportSTEP', 'ImportedMesh',
+]);
+
+/** entryId / name substrings that mark a break-prone, must-stay-accessible part. */
+const REPLACEABLE_PATTERNS = [
+    'servo', 'motor', 'actuator', 'stepper', 'dynamixel',
+    'keepout', 'electronic', 'board', 'pcb', 'mcu', 'esp32', 'arduino',
+    'nano', 'devkit', 'a4988', 'driver',
+    'battery', 'lipo', 'cell', 'power',
+    'sensor', 'imu', 'lidar', 'encoder', 'camera', 'lens',
+    'controller', 'switch', 'relay',
+];
+
+/** Passive commodity parts — fastened/seated but not a serviceable line-item. */
+const PASSIVE_PATTERNS = ['bearing', 'standoff', 'tnut', 't-nut', 'screw', 'bolt', 'nut', 'washer', 'iso', 'fastener'];
+
+/** Classify a feature → 'replaceable' | 'passive' | 'structural' | 'other'. */
+function classifyFeature(f) {
+    if (!f) return 'other';
+    const entryId = String((f.params && f.params.entryId) || '').toLowerCase();
+    const name = String(f.name || '').toLowerCase();
+    const hay = `${entryId} ${name}`;
+    if (f.type === 'StandardPart') {
+        if (REPLACEABLE_PATTERNS.some((p) => hay.includes(p))) return 'replaceable';
+        if (PASSIVE_PATTERNS.some((p) => hay.includes(p))) return 'passive';
+        // An unrecognised catalog part is treated as passive hardware by default.
+        return 'passive';
+    }
+    if (STRUCTURAL_BODY_TYPES.has(f.type)) return 'structural';
+    return 'other';
+}
+
+/** A short, human-readable label for a feature in plan summaries. */
+function featLabel(f) {
+    return (f && (f.name || (f.params && f.params.entryId) || f.type || f.id)) || 'part';
 }
 
 /** Compact connector view for read tools. */
@@ -415,6 +470,222 @@ const TOOLS = [
                     orderableCount: orderable.length,
                     fabricateCount: fabricate.length,
                     ...(note ? { note } : {}),
+                };
+            } catch (e) {
+                return fail(e);
+            }
+        },
+    },
+
+    // ── S4 — Design-for-Assembly / Serviceability sort ───────────────────────
+    {
+        name: 'plan_serviceability',
+        description:
+            'Design-for-Assembly / Serviceability planning (pipeline stage S4). Sorts the assembly into break-prone parts that must stay REPLACEABLE (servos, motors, batteries, electronics boards, sensors, cameras — fastened, never glued, with a clear removal path) versus structural bodies that can be BAKED IN (integrated / permanent). Produces an acyclic assembly order (structure first, then powered/electronic parts last so they stay on top and reachable) and a per-part fasten plan with an access note. Read-mostly: it reasons over the document (or a supplied component list) and records the plan to the design context — it does not modify geometry. Run it after the skeleton is laid out (S3) and before building detailed structure (S5).',
+        input_schema: {
+            type: 'object',
+            properties: {
+                componentIds: ARR('string', 'Optional: scope the sort to features owned by these component ids. If omitted, the whole document is sorted.'),
+            },
+        },
+        handler: (i) => {
+            try {
+                const input = i || {};
+                const doc = getDocumentStore().doc;
+                const features = (doc && doc.features) || {};
+                const order = (doc && doc.featureOrder) || Object.keys(features);
+                const scope = (Array.isArray(input.componentIds) && input.componentIds.length)
+                    ? new Set(input.componentIds)
+                    : null;
+
+                const inScope = (f) => {
+                    if (!f || f.enabled === false) return false;
+                    if (!scope) return true;
+                    return scope.has(f.componentId || 'root');
+                };
+
+                const replaceable = [];   // break-prone componentIds (feature ids)
+                const bakedIn = [];       // structural bodies that can be integrated
+                const passive = [];       // fasteners/bearings/standoffs (hardware)
+                const fastenPlan = [];
+
+                // Walk in build order so the plan is deterministic & stable.
+                for (const id of order) {
+                    const f = features[id];
+                    if (!inScope(f)) continue;
+                    const klass = classifyFeature(f);
+                    const label = featLabel(f);
+
+                    if (klass === 'replaceable') {
+                        replaceable.push(f.id);
+                        fastenPlan.push({
+                            part: f.id,
+                            fasteners: 'screws (M2/M2.5/M3) — bolted to a mount face',
+                            accessNote: `${label}: keep the removal path clear — mount on an outer/top face so it can be unbolted and swapped without disassembling structure.`,
+                        });
+                    } else if (klass === 'passive') {
+                        passive.push(f.id);
+                        fastenPlan.push({
+                            part: f.id,
+                            fasteners: 'press-fit / seated hardware',
+                            accessNote: `${label}: seated commodity hardware — fits during sub-assembly, no standalone service access required.`,
+                        });
+                    } else if (klass === 'structural') {
+                        bakedIn.push(f.id);
+                    }
+                    // 'other' (modify/pattern/sketch features) carry no own line.
+                }
+
+                // Acyclic assembly order: structural shells/brackets go down first,
+                // then passive seated hardware, then the break-prone powered parts
+                // last so they end up on top and remain reachable for service.
+                const assemblyOrder = [...bakedIn, ...passive, ...replaceable];
+
+                const spec = { replaceable, bakedIn, assemblyOrder, fastenPlan };
+
+                // Persist to the design context (DSO `assembly` slot). The method
+                // is provided centrally; tolerate its absence in headless/tests.
+                let persisted = false;
+                try {
+                    const ctx = getAIContext();
+                    if (ctx && typeof ctx.setAssemblyPlan === 'function') {
+                        ctx.setAssemblyPlan(spec);
+                        persisted = true;
+                    }
+                } catch (_) { /* never blocks the plan */ }
+
+                return {
+                    ok: true,
+                    ...spec,
+                    passive,
+                    persisted,
+                    summary: `Serviceability sort: ${replaceable.length} replaceable (break-prone, fastened, accessible), ${bakedIn.length} baked-in structural, ${passive.length} seated hardware; assembly order has ${assemblyOrder.length} steps.`,
+                };
+            } catch (e) {
+                return fail(e);
+            }
+        },
+    },
+
+    // ── S3 — Skeleton massing envelope ───────────────────────────────────────
+    {
+        name: 'plan_skeleton_envelope',
+        description:
+            'Lay out the SKELETON massing envelope (pipeline stage S3): the compound shape that defines WHERE the functional parts — electronics, camera, servos, battery — sit, BEFORE any detailed structure is built. Advisory and read-mostly: it records the envelope and per-host placement (frame + keep-out) to the design context (DSO `skeleton` slot), and can optionally drop a rough translucent box feature so the layout is visible in the viewport. This locks down massing/host frames so downstream structural parts (S5) can be authored as functions of the components they carry. Z-up, all dimensions in mm.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                envelope: {
+                    type: 'object',
+                    description: 'Rough overall bounding box of the machine body in world mm, Z-up: { min:[x,y,z], max:[x,y,z] }.',
+                    properties: {
+                        min: ARR('number', 'Envelope minimum corner [x,y,z] mm.'),
+                        max: ARR('number', 'Envelope maximum corner [x,y,z] mm.'),
+                    },
+                    required: ['min', 'max'],
+                },
+                hosts: {
+                    type: 'array',
+                    description: 'The functional components to host inside the envelope and where each sits.',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            componentId: S('Id of the functional component/part this host slot is for (or a role placeholder if not yet placed).'),
+                            role: S('Functional role', { enum: ['actuator', 'controller', 'battery', 'sensor', 'camera', 'other'] }),
+                            frame: ARR('number', 'Seat position [x,y,z] in world mm, Z-up — where the part is centred / mounted.'),
+                            keepout: ARR('number', 'Reserved clearance box [dx,dy,dz] in mm around the frame the structure must not intrude on.'),
+                        },
+                        required: ['componentId', 'role', 'frame'],
+                    },
+                },
+                visualize: B('If true, drop a rough box feature spanning the envelope so the massing is visible in the viewport (advisory geometry). Default false.'),
+            },
+            required: ['envelope', 'hosts'],
+        },
+        handler: (i) => {
+            try {
+                const input = i || {};
+
+                const min = vec3(input.envelope && input.envelope.min);
+                const max = vec3(input.envelope && input.envelope.max);
+                if (!min || !max) {
+                    return { ok: false, error: 'envelope must be { min:[x,y,z], max:[x,y,z] } with finite numbers (world mm, Z-up).' };
+                }
+                // Normalise so max >= min on every axis.
+                const lo = [Math.min(min[0], max[0]), Math.min(min[1], max[1]), Math.min(min[2], max[2])];
+                const hi = [Math.max(min[0], max[0]), Math.max(min[1], max[1]), Math.max(min[2], max[2])];
+                const size = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+                if (!(size[0] > 0 && size[1] > 0 && size[2] > 0)) {
+                    return { ok: false, error: 'envelope is degenerate — min and max must differ on every axis (non-zero size in mm).' };
+                }
+
+                // Validate / normalise the host list.
+                const rawHosts = Array.isArray(input.hosts) ? input.hosts : [];
+                if (!rawHosts.length) {
+                    return { ok: false, error: 'hosts must be a non-empty array of { componentId, role, frame } — these are the functional parts the skeleton positions.' };
+                }
+                const hosts = [];
+                for (const h of rawHosts) {
+                    if (!h || typeof h.componentId !== 'string' || !h.componentId.length) {
+                        return { ok: false, error: 'every host needs a string componentId.' };
+                    }
+                    const frame = vec3(h.frame);
+                    if (!frame) {
+                        return { ok: false, error: `host ${JSON.stringify(h.componentId)} needs a frame [x,y,z] in world mm (the seat position).` };
+                    }
+                    const keepout = vec3(h.keepout);   // optional; null if absent/degenerate
+                    hosts.push({
+                        componentId: h.componentId,
+                        role: typeof h.role === 'string' ? h.role : 'other',
+                        frame,
+                        keepout: keepout ? keepout.map(Math.abs) : null,
+                    });
+                }
+
+                const spec = { envelope: { min: lo, max: hi }, hosts };
+
+                // Optionally visualise the massing as a rough box. addBox sits on
+                // Z=0 (Align.MIN, centred in XY), so a box at the origin won't sit
+                // where the envelope is — we report the offset to apply so the
+                // advisory box reads as the envelope footprint, and flag it.
+                let envelopeFeatureId = null;
+                let visualizeNote;
+                if (input.visualize === true) {
+                    try {
+                        const f = addBox({ length: size[0], width: size[1], height: size[2], centered: true });
+                        if (f && f.id) {
+                            envelopeFeatureId = f.id;
+                            spec.envelopeFeatureId = f.id;
+                            visualizeNote = `Advisory massing box created (${envelopeFeatureId}) sized ${size[0]}×${size[1]}×${size[2]}mm. It sits centred-in-XY on Z=0; move it to envelope center [${((lo[0] + hi[0]) / 2)}, ${((lo[1] + hi[1]) / 2)}, ${lo[2]}] if the envelope is offset from the origin.`;
+                        }
+                    } catch (_) { /* visualization is best-effort; never blocks the plan */ }
+                }
+
+                // Coverage advisory: warn about host frames outside the envelope.
+                const outside = hosts.filter((h) => (
+                    h.frame[0] < lo[0] || h.frame[0] > hi[0] ||
+                    h.frame[1] < lo[1] || h.frame[1] > hi[1] ||
+                    h.frame[2] < lo[2] || h.frame[2] > hi[2]
+                )).map((h) => h.componentId);
+
+                // Persist to the design context (DSO `skeleton` slot).
+                let persisted = false;
+                try {
+                    const ctx = getAIContext();
+                    if (ctx && typeof ctx.setSkeleton === 'function') {
+                        ctx.setSkeleton(spec);
+                        persisted = true;
+                    }
+                } catch (_) { /* never blocks the plan */ }
+
+                return {
+                    ok: true,
+                    ...spec,
+                    persisted,
+                    ...(envelopeFeatureId ? { envelopeFeatureId } : {}),
+                    ...(outside.length ? { warning: `host frame(s) outside the envelope: ${outside.join(', ')} — re-check their placement or grow the envelope.` } : {}),
+                    ...(visualizeNote ? { note: visualizeNote } : {}),
+                    summary: `Skeleton envelope ${size[0]}×${size[1]}×${size[2]}mm hosting ${hosts.length} functional part(s)${envelopeFeatureId ? ' + advisory massing box' : ''}.`,
                 };
             } catch (e) {
                 return fail(e);

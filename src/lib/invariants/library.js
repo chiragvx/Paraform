@@ -740,6 +740,392 @@ async function assemblyDofSaneCheck(doc, _ctx) {
     );
 }
 
+// ── Functional-design-brain gates (PLAN-functional-design-brain.md §5) ───────
+//
+// These four checks are the deterministic verification gates that stop the AI
+// from shipping a cosmetic "box dog" — geometry that *looks* like the artifact
+// but has no actuators, no print clearance, collides through its own motion, or
+// can't come off the printer. They cross the stored morphology spec (the DSO
+// S2 slot, read from the AI design context) against the actually-built model.
+
+/**
+ * Read the morphology spec out of the AI design context. May be null/undefined
+ * (not every document is a mechanism). Fail-safe: any import or access error
+ * resolves to null so the calling check degrades to "not applicable".
+ *
+ * Morphology shape (DSO S2, PLAN-functional-design-brain.md §1):
+ *   { links:[{id, ...}],
+ *     joints:[{ id, type:'revolute'|'prismatic'|'fixed', axis, range:[min,max],
+ *               drivenBy:<actuatorId>, source?, target?, bodies?:[...] }],
+ *     symmetry, dof }
+ */
+async function getMorphology() {
+    try {
+        const mod = await import('../ai/context.js');
+        const ctx = mod && mod.getAIContext && mod.getAIContext();
+        const m = ctx && ctx.morphology;
+        return (m && typeof m === 'object') ? m : null;
+    } catch {
+        return null;
+    }
+}
+
+/** A joint that actually articulates (worth checking for actuator + motion). */
+function isMovingJoint(j) {
+    const t = j && typeof j.type === 'string' && j.type.toLowerCase();
+    return t === 'revolute' || t === 'prismatic';
+}
+
+/**
+ * Build a set of every component/part id the document has actually placed, so a
+ * morphology reference can be checked for "is this thing really in the model".
+ * Looks at components (by id), their declared role, and the partRef of any
+ * feature so an actuator placed as a StandardPart is discoverable.
+ */
+function docPlacedIds(doc) {
+    const ids = new Set();
+    const roleById = new Map();
+    const components = (doc && doc.components) || {};
+    for (const id of Object.keys(components)) {
+        const c = components[id];
+        if (!c) continue;
+        ids.add(id);
+        const role = c.role || (c.params && c.params.role) || null;
+        if (role) roleById.set(id, String(role).toLowerCase());
+    }
+    const features = (doc && doc.features) || {};
+    for (const fid of Object.keys(features)) {
+        const f = features[fid];
+        if (!f) continue;
+        ids.add(fid);
+        const ref = partRefOf(f);
+        if (ref && ref.entryId) ids.add(ref.entryId);
+        const cid = f.params && (f.params.componentId || f.params.component);
+        if (cid) ids.add(cid);
+    }
+    return { ids, roleById };
+}
+
+// i-functional-complete (per-document) — THE gate that fails a cosmetic dog.
+//
+// Cross the stored morphology spec against the built model: every declared
+// MOVING joint must have (a) an actuator placed, (b) a structural mount, and
+// (c) a link. If no morphology is recorded, this is a static/cosmetic doc and
+// the check is not-applicable (pass). If a mechanism morphology IS recorded but
+// joints lack actuators/mounts/links, this is an ERROR — the model bluffed.
+async function functionalCompleteCheck(doc, _ctx) {
+    const morph = await getMorphology();
+    if (!morph) return notApplicable('no morphology spec (not a mechanism)');
+
+    const joints = Array.isArray(morph.joints) ? morph.joints : [];
+    const moving = joints.filter(isMovingJoint);
+    if (moving.length === 0) {
+        return notApplicable('morphology declares no moving joints');
+    }
+
+    const { ids } = docPlacedIds(doc);
+    const links = (doc && doc.components) || {};
+    const declaredLinks = Array.isArray(morph.links) ? morph.links : [];
+    const linkIds = new Set(declaredLinks.map((l) => (l && (l.id || l.componentId)) || null).filter(Boolean));
+
+    const incomplete = [];
+    for (const j of moving) {
+        const missing = [];
+
+        // (a) actuator: the joint's driver must be a placed component/part.
+        const driver = j.drivenBy || j.driver || j.actuator || j.servoId || null;
+        if (!driver) missing.push('actuator (no drivenBy declared)');
+        else if (!ids.has(driver)) missing.push(`actuator '${driver}' not placed`);
+
+        // (b) structural mount + (c) link: the joint connects two bodies; both
+        // must exist in the model. We accept ids from the joint's own
+        // source/target/bodies, or — failing that — the declared link ids.
+        const bodies = [];
+        if (j.source) bodies.push(j.source);
+        if (j.target) bodies.push(j.target);
+        if (Array.isArray(j.bodies)) bodies.push(...j.bodies);
+        if (j.mount) bodies.push(j.mount);
+        if (j.link) bodies.push(j.link);
+        const resolvedBodies = bodies.filter((b) => b && (ids.has(b) || linkIds.has(b)));
+        if (bodies.length === 0) {
+            // No bodies declared on the joint — fall back to: does ANY structural
+            // link exist for this joint to hang on? With zero links it's cosmetic.
+            if (declaredLinks.length === 0 && Object.keys(links).length === 0) {
+                missing.push('mount/link (no structural bodies in model)');
+            }
+        } else if (resolvedBodies.length < 1) {
+            missing.push('mount/link (declared bodies not in model)');
+        }
+
+        if (missing.length) incomplete.push({ joint: j.id || '(unnamed)', missing });
+    }
+
+    const measured = { movingJoints: moving.length, incomplete };
+    if (incomplete.length === 0) {
+        return pass(
+            `all ${moving.length} moving joint${moving.length === 1 ? '' : 's'} have actuator + mount + link`,
+            measured,
+        );
+    }
+    const first = incomplete[0];
+    return err(
+        `functional gap: ${incomplete.length} joint${incomplete.length === 1 ? '' : 's'} incomplete ` +
+            `(e.g. '${first.joint}': ${first.missing.join(', ')})`,
+        'place the missing actuator/mount/link so each moving joint is actually driven — ' +
+            'a cosmetic shell with no actuators fails this gate',
+        measured,
+    );
+}
+
+// i-printed-fit (per-document) — printed-to-printed mating clearance.
+//
+// At every printed-to-printed mating joint, assert a designed-in clearance
+// ≥ ~0.2 mm (the practical minimum for a 0.4 mm FDM nozzle); below that the two
+// printed parts won't assemble. We read declared clearance off the joint /
+// connector (params.clearance, or a connector's `fit.clearance`) and only
+// consider joints where BOTH bodies are printed (process profile = 3d-print or
+// component material flagged printed). Missing data → not-applicable per joint.
+const FDM_MIN_PRINTED_CLEARANCE_MM = 0.2; // 0.4 mm nozzle practical minimum
+
+function isPrintedComponent(comp, profileId) {
+    if (!comp) return profileId === '3d-print' || profileId === 'fdm';
+    const proc = (comp.process || (comp.params && comp.params.process) || '').toLowerCase();
+    if (proc.includes('print') || proc === 'fdm' || proc === 'fff') return true;
+    if (comp.printed === true || (comp.params && comp.params.printed === true)) return true;
+    // Fall back to the document-level process profile.
+    return profileId === '3d-print' || profileId === 'fdm';
+}
+
+async function printedFitCheck(doc, ctx) {
+    const joints = (doc && doc.joints) || {};
+    const jointIds = Object.keys(joints);
+    if (jointIds.length === 0) return notApplicable('no joints');
+
+    const components = (doc && doc.components) || {};
+    const profile = (ctx && ctx.profile) || null;
+    const profileId = (doc && doc.profileId)
+        || (doc && doc.settings && doc.settings.profileId)
+        || (profile && profile.id) || (profile && profile.label) || null;
+
+    const tight = [];
+    let evaluated = 0;
+    for (const jid of jointIds) {
+        const j = joints[jid];
+        if (!j) continue;
+        const a = j.sourceComponentId || j.source || (j.params && j.params.source);
+        const b = j.targetComponentId || j.target || (j.params && j.params.target);
+        const ca = a ? components[a] : null;
+        const cb = b ? components[b] : null;
+        // Only printed↔printed mates matter for this gate.
+        if (!isPrintedComponent(ca, profileId) || !isPrintedComponent(cb, profileId)) continue;
+
+        // Designed-in clearance: declared on the joint or its mate params.
+        const declared = Number(
+            (j.clearance != null ? j.clearance : undefined) ??
+            (j.params && (j.params.clearance ?? j.params.fitClearance)) ??
+            (j.fit && j.fit.clearance),
+        );
+        if (!Number.isFinite(declared)) continue; // nothing to assert → skip
+        evaluated++;
+        if (declared < FDM_MIN_PRINTED_CLEARANCE_MM) {
+            tight.push({ joint: jid, clearance: declared });
+        }
+    }
+
+    if (evaluated === 0) return notApplicable('no printed-to-printed joints with declared clearance');
+    const measured = { evaluated, min: FDM_MIN_PRINTED_CLEARANCE_MM, tight };
+    if (tight.length === 0) {
+        return pass(`all ${evaluated} printed mates clear ≥ ${FDM_MIN_PRINTED_CLEARANCE_MM} mm`, measured);
+    }
+    const first = tight[0];
+    return warn(
+        `printed fit too tight: ${tight.length} mate${tight.length === 1 ? '' : 's'} below ` +
+            `${FDM_MIN_PRINTED_CLEARANCE_MM} mm (e.g. '${first.joint}' = ${first.clearance} mm)`,
+        `design in ≥ ${FDM_MIN_PRINTED_CLEARANCE_MM} mm clearance at printed-to-printed mating joints (0.4 mm nozzle)`,
+        measured,
+    );
+}
+
+// i-motion-clearance (per-document) — clear through the full joint range.
+//
+// For each revolute/prismatic joint in the morphology spec, the articulating
+// sub-assembly must clear through its declared `range` without colliding. We
+// delegate to a kernel sweep via the SAME measure API the other invariants use
+// (ctx.measure). The Python endpoint `motion_sweep` is being added separately;
+// until it lands the helper is unavailable → we return a WARNING (fail SAFE),
+// never an error and never a throw.
+//
+// ── motionSweep measure contract (Python `motion_sweep` must match) ──────────
+//   REQUEST  (one query object, passed to ctx.measure):
+//     {
+//       type:   'motionSweep',
+//       joints: [ { axis,            // [x,y,z] unit axis OR named axis string
+//                   range,           // [min, max] (deg for revolute, mm for prismatic)
+//                   bodies } ],      // ids of bodies that move with this joint
+//       samples: <int>              // # of poses to sample across each range
+//     }
+//   RESPONSE:
+//     {
+//       ok: true,
+//       collisions: [ { joint?, t?, a?, b?, volume? }, ... ]   // empty ⇒ clears
+//     }
+//   On any failure the endpoint SHOULD return { ok:false, error } — the check
+//   then degrades to a warning. The check NEVER throws.
+async function motionClearanceCheck(doc, ctx) {
+    const morph = await getMorphology();
+    if (!morph) return notApplicable('no morphology spec (not a mechanism)');
+    const joints = Array.isArray(morph.joints) ? morph.joints : [];
+    const moving = joints.filter(isMovingJoint);
+    if (moving.length === 0) return notApplicable('morphology declares no moving joints');
+
+    const measure = ctx && ctx.measure;
+    if (typeof measure !== 'function') {
+        return warn(
+            'motion-clearance could not be evaluated: no measure client (motion_sweep unavailable)',
+            'run with a kernel measure client so the motion sweep can sample the joint ranges',
+            { reason: 'no-measure', movingJoints: moving.length },
+        );
+    }
+
+    const samples = (ctx && ctx.motionSamples) || 12;
+    const sweepJoints = moving.map((j) => ({
+        axis: j.axis ?? null,
+        range: Array.isArray(j.range) ? j.range : null,
+        bodies: Array.isArray(j.bodies) ? j.bodies
+            : [j.source, j.target, j.link, j.mount].filter(Boolean),
+    }));
+
+    const query = { type: 'motionSweep', joints: sweepJoints, samples };
+    let result;
+    try {
+        const r = await measure(query);
+        result = Array.isArray(r) ? r[0] : r;
+    } catch {
+        return warn(
+            'motion-clearance could not be evaluated: measure transport failed (fail-safe)',
+            'retry once the kernel motion_sweep endpoint is reachable',
+            { reason: 'transport', movingJoints: moving.length },
+        );
+    }
+
+    // Endpoint unavailable / not yet implemented → fail SAFE as a warning.
+    if (!result || result.ok !== true || !Array.isArray(result.collisions)) {
+        return warn(
+            'motion-clearance could not be evaluated: motion_sweep endpoint unavailable (fail-safe)',
+            'the kernel motion_sweep endpoint is being added separately; this gate is advisory until then',
+            { reason: 'endpoint-unavailable', movingJoints: moving.length,
+              error: (result && result.error) || null },
+        );
+    }
+
+    const collisions = result.collisions;
+    const measured = { movingJoints: moving.length, samples, collisions };
+    if (collisions.length === 0) {
+        return pass(`all ${moving.length} moving joint${moving.length === 1 ? '' : 's'} clear through range`, measured);
+    }
+    const first = collisions[0] || {};
+    return err(
+        `motion collision: ${collisions.length} interference${collisions.length === 1 ? '' : 's'} through joint range` +
+            (first.joint ? ` (e.g. joint '${first.joint}')` : ''),
+        'adjust the joint range, reshape the colliding bodies, or move the actuator so the sub-assembly clears its full sweep',
+        measured,
+    );
+}
+
+// i-print-ready (per-component) — fits the default bed; flag supports / split.
+//
+// Each printed part must fit the printer's build volume and is flagged if it
+// likely needs supports (rough overhang heuristic) or exceeds the bed (needs a
+// split). measured = bbox. Reads the part's bbox via ctx.measure({type:'bbox'}).
+// No measure / no geometry → not-applicable.
+const DEFAULT_BED_MM = Object.freeze({ x: 200, y: 200, z: 200 });
+
+function bodyFeatureIdsOfComponent(doc, componentId) {
+    const features = (doc && doc.features) || {};
+    const out = [];
+    for (const fid of Object.keys(features)) {
+        const f = features[fid];
+        if (!f || !isBody(f)) continue;
+        const cid = f.params && (f.params.componentId || f.params.component);
+        if (cid === componentId) out.push(fid);
+    }
+    return out;
+}
+
+async function printReadyCheck(component, ctx) {
+    if (!component) return notApplicable('no component');
+    const doc = (ctx && ctx.doc) || await getDoc();
+    const profile = (ctx && ctx.profile) || null;
+    const profileId = (doc && doc.profileId)
+        || (doc && doc.settings && doc.settings.profileId)
+        || (profile && profile.id) || (profile && profile.label) || null;
+    if (!isPrintedComponent(component, profileId)) return notApplicable('not a printed part');
+
+    const measure = ctx && ctx.measure;
+    if (typeof measure !== 'function') return notApplicable('no measure client');
+
+    // Find a body feature to measure. Prefer one bound to this component.
+    const bodyIds = bodyFeatureIdsOfComponent(doc, component.id);
+    const featureId = bodyIds[0]
+        || (component.params && component.params.featureId)
+        || component.featureId
+        || component.rootFeatureId
+        || null;
+    if (!featureId) return notApplicable('no body geometry for component');
+
+    let r;
+    try {
+        const out = await measure({ type: 'bbox', featureId });
+        r = Array.isArray(out) ? out[0] : out;
+    } catch {
+        return notApplicable('bbox measure transport failed');
+    }
+    if (!r || r.ok !== true) return notApplicable((r && r.error) || 'bbox query failed');
+    const size = r.size || (r.min && r.max
+        ? [r.max[0] - r.min[0], r.max[1] - r.min[1], r.max[2] - r.min[2]]
+        : null);
+    if (!size || size.length < 3 || !size.every((n) => Number.isFinite(n))) {
+        return notApplicable('bbox returned malformed size');
+    }
+
+    const bed = (ctx && ctx.bed) || DEFAULT_BED_MM;
+    // Cheapest-fit orientation: sort part dims descending and bed dims
+    // descending, then compare largest-to-largest. A part fits if every sorted
+    // dim is ≤ the corresponding sorted bed dim (any axis-aligned re-orient).
+    const partDims = size.slice(0, 3).map(Math.abs).sort((a, b) => b - a);
+    const bedDims = [bed.x, bed.y, bed.z].sort((a, b) => b - a);
+    const exceedsBed = partDims.some((d, i) => d > bedDims[i]);
+
+    // Rough overhang heuristic: a part that is much taller than its footprint
+    // (tall + slender) and/or has a large flat top relative to base is a likely
+    // support candidate. v1 coarse signal: height > 2× the smaller footprint dim.
+    const [w, d, h] = size.slice(0, 3).map(Math.abs);
+    const footprintMin = Math.min(w, d);
+    const likelyNeedsSupports = footprintMin > 0 && h > footprintMin * 2;
+
+    const measured = { bbox: { size: [w, d, h], min: r.min ?? null, max: r.max ?? null }, bed };
+
+    if (exceedsBed) {
+        return warn(
+            `part exceeds bed: ${partDims.map((n) => n.toFixed(1)).join('×')} mm > bed ` +
+                `${bedDims.join('×')} mm — needs split`,
+            'split the part into bed-sized pieces with printed joints, or scale down',
+            { ...measured, exceedsBed: true, likelyNeedsSupports },
+        );
+    }
+    if (likelyNeedsSupports) {
+        return warn(
+            `part likely needs supports (height ${h.toFixed(1)} mm > 2× footprint ${footprintMin.toFixed(1)} mm)`,
+            're-orient for self-support or add a print-orientation note; supports add cleanup + cost',
+            { ...measured, exceedsBed: false, likelyNeedsSupports: true },
+        );
+    }
+    return pass(
+        `fits bed (${partDims.map((n) => n.toFixed(1)).join('×')} mm ≤ ${bedDims.join('×')} mm), no obvious support need`,
+        { ...measured, exceedsBed: false, likelyNeedsSupports: false },
+    );
+}
+
 // 27. i-standardpart-not-deprecated
 async function standardPartNotDeprecatedCheck(feature, _ctx) {
     if (!isStandardPart(feature)) return notApplicable('not a StandardPart');
@@ -1057,6 +1443,54 @@ export const INVARIANTS = [
         severity: SEVERITY.WARNING,
         rationale: 'deprecated catalog entries will not survive future catalog versions.',
         citation: null,
+        version: '1.0',
+    },
+    {
+        id: 'i-functional-complete',
+        name: 'Functional completeness vs morphology',
+        category: 'mechanical',
+        scope: SCOPE.PER_DOCUMENT,
+        check: functionalCompleteCheck,
+        severity: SEVERITY.ERROR,
+        rationale: 'a mechanism whose declared moving joints lack actuators / mounts / links ' +
+                   'is a cosmetic shell — the gate that fails a "box dog".',
+        citation: 'PLAN-functional-design-brain.md §5 (check_functional_complete)',
+        version: '1.0',
+    },
+    {
+        id: 'i-printed-fit',
+        name: 'Printed-to-printed mating clearance',
+        category: 'assembly',
+        scope: SCOPE.PER_DOCUMENT,
+        check: printedFitCheck,
+        severity: SEVERITY.WARNING,
+        rationale: 'printed parts that mate with < ~0.2 mm designed clearance (0.4 mm nozzle) ' +
+                   'will not assemble off the printer.',
+        citation: 'PLAN-functional-design-brain.md §5 (check_printed_fit)',
+        version: '1.0',
+    },
+    {
+        id: 'i-motion-clearance',
+        name: 'Motion clearance through joint range',
+        category: 'assembly',
+        scope: SCOPE.PER_DOCUMENT,
+        check: motionClearanceCheck,
+        severity: SEVERITY.ERROR,
+        rationale: 'a kinematic chain that collides mid-stride is unbuildable; the static-pose ' +
+                   'interference check misses the sweep.',
+        citation: 'PLAN-functional-design-brain.md §5 (check_motion_clearance) — kernel motion_sweep',
+        version: '1.0',
+    },
+    {
+        id: 'i-print-ready',
+        name: 'Part print-ready (bed fit / supports)',
+        category: 'geometric',
+        scope: SCOPE.PER_COMPONENT,
+        check: printReadyCheck,
+        severity: SEVERITY.WARNING,
+        rationale: 'a printed part that exceeds the bed needs a split, and a tall/slender part ' +
+                   'likely needs supports — both block a clean single-piece print.',
+        citation: 'PLAN-functional-design-brain.md §5 (check_print_ready)',
         version: '1.0',
     },
 ];

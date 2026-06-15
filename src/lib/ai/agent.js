@@ -58,7 +58,7 @@ const MAX_REPAIRS_PER_ERROR = 2;
 // complete (one nudge per stop; if it stops again with no work in between, we
 // accept it's finished). Bounded so it can't nudge forever in one turn.
 const MAX_AUTO_CONTINUES = 50;
-const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If anything is unfinished, unverified, or still needed to satisfy the goal, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
+const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If the request was a FUNCTIONAL machine (robot, mechanism, anything that moves or carries electronics), it must NOT be a stack of bare primitives: did you plan_mechanism (every joint → an actuator + a structural mount), place the real actuators/electronics, build the structural parts (parametrically, via build_part_recipe or code), verify motion clearance (run_invariants), and pass design_review? If anything is unfinished, unverified, or still cosmetic-only, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
 
 // Visual-verify gate. The field's strongest accuracy lever (CAD Skills / Zoo
 // both MANDATE it; ablations show a large quality regression without it): never
@@ -142,10 +142,16 @@ const NON_MUTATING_TOOLS = new Set([
     'find_compatible_connectors', 'list_connectors', 'generate_bom',
     'get_context', 'propose_brief', 'name_feature', 'record_decision', 'explain_decision',
     'add_requirement', 'verify_requirement', 'set_units',
-    'export_for_print',
+    'export_for_print', 'export_parts',
     'capture_views', 'web_search', 'web_fetch',
     'plan_assembly', 'check_assembly_constraints',
+    // Functional-design pipeline — planning/analysis tools that record a spec to
+    // the design context but never mutate geometry (so they skip the compile-check).
+    'plan_mechanism', 'plan_serviceability', 'design_review', 'mine_patterns',
 ]);
+// NOTE: plan_skeleton_envelope and build_part_recipe are deliberately NOT here —
+// the first can drop an advisory massing box and the second creates a real
+// scripted body, so both must trip the self-repair compile-check like any build.
 // NOTE: add_mate and declareConnector are deliberately NOT in this set. They
 // mutate the assembly (placement / snap contract), so a build-breaking mate or
 // a connector that makes the model fail to compile must trip the self-repair

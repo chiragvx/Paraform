@@ -524,6 +524,165 @@ def _eval_interference(query: dict, namespace: dict, result: dict) -> dict:
     return {"ok": True, "intersects": vol > 1e-9, "volume": vol}
 
 
+# ─── Motion-range clearance (swept interference) ────────────────────────────
+
+# Hard caps so a pathological request can't wedge the kernel. The JS invariant
+# `i-motion-clearance` passes a sane `samples`, but we clamp regardless.
+_MOTION_MAX_SAMPLES_PER_JOINT = 64
+_MOTION_MAX_JOINTS = 64
+_MOTION_MAX_BODY_PAIRS = 4096  # samples × moving × static, summed over joints
+_MOTION_AABB_PAD = 1e-6        # mm — broad-phase slop
+
+
+def _aabb(body: Any) -> Optional[tuple]:
+    """(min[xyz], max[xyz]) for a body, or None if it has no usable bbox."""
+    try:
+        bb = body.bounding_box()
+    except Exception:
+        return None
+    mn = _xyz(getattr(bb, "min", None) or getattr(bb, "min_point", None))
+    mx = _xyz(getattr(bb, "max", None) or getattr(bb, "max_point", None))
+    return (mn, mx)
+
+
+def _aabb_overlap(a: Optional[tuple], b: Optional[tuple]) -> bool:
+    """Axis-aligned bbox overlap test (broad-phase). Unknown bbox → assume
+    overlap so we never skip a narrow-phase check on missing info."""
+    if a is None or b is None:
+        return True
+    (amn, amx), (bmn, bmx) = a, b
+    for k in range(3):
+        if amx[k] + _MOTION_AABB_PAD < bmn[k] or bmx[k] + _MOTION_AABB_PAD < amn[k]:
+            return False
+    return True
+
+
+def _pose_body(body: Any, axis_dir: list, pivot: list, angle_deg: float) -> Any:
+    """Rotate `body` by `angle_deg` (degrees) about the line through `pivot`
+    along `axis_dir`. Z-up, mm. Reuses build123d's `Shape.rotate(Axis, deg)`
+    — the same primitive `pattern_circular` uses — so we don't reinvent the
+    transform. Returns a posed copy; the original body is left untouched."""
+    from build123d import Axis, Vector  # type: ignore
+    ax = Axis(Vector(*pivot), Vector(*axis_dir))
+    return body.rotate(ax, float(angle_deg))
+
+
+def _eval_motion_sweep(query: dict, namespace: dict, result: dict) -> dict:
+    """Sweep articulating joints across their range and report collisions.
+
+    Request:
+      { type:'motionSweep',
+        joints:[ { axis:[x,y,z], pivot:[x,y,z], range:[minDeg,maxDeg],
+                   movingBodies:[ids], staticBodies:[ids] } ],
+        samples:N }
+
+    Response:
+      { ok, collisions:[ { jointIndex, angleDeg, pair:[idA,idB], volume } ],
+        clear: bool }
+
+    For each joint we sample `samples` angles across `range` (inclusive of
+    both endpoints), re-pose every moving body about the joint axis through
+    its pivot, and run pairwise interference against the static bodies. We
+    broad-phase with an AABB overlap test before paying for the OCCT boolean
+    (the narrow phase = the same `bodyA & bodyB` volume the `interference`
+    measure uses). Work is bounded by hard caps so it can't wedge the server.
+
+    Z-up, mm throughout. Angles in degrees (build123d `rotate` takes degrees).
+    """
+    joints = query.get("joints")
+    if not isinstance(joints, list) or not joints:
+        return {"ok": False, "error": "motionSweep requires a non-empty 'joints' list"}
+    if len(joints) > _MOTION_MAX_JOINTS:
+        joints = joints[:_MOTION_MAX_JOINTS]
+
+    try:
+        samples = int(query.get("samples", 8))
+    except (TypeError, ValueError):
+        samples = 8
+    samples = max(2, min(samples, _MOTION_MAX_SAMPLES_PER_JOINT))
+
+    collisions: list = []
+    pair_budget = _MOTION_MAX_BODY_PAIRS
+
+    for ji, joint in enumerate(joints):
+        if not isinstance(joint, dict):
+            continue
+        axis_dir = joint.get("axis") or [0.0, 0.0, 1.0]
+        pivot = joint.get("pivot") or [0.0, 0.0, 0.0]
+        rng = joint.get("range") or [0.0, 0.0]
+        try:
+            lo, hi = float(rng[0]), float(rng[1])
+        except (TypeError, ValueError, IndexError):
+            return {"ok": False, "error": f"joint {ji}: 'range' must be [minDeg, maxDeg]"}
+
+        moving_ids = [i for i in (joint.get("movingBodies") or []) if i]
+        static_ids = [i for i in (joint.get("staticBodies") or []) if i]
+        if not moving_ids or not static_ids:
+            continue
+
+        # Resolve once; reuse across samples. Static bboxes precomputed for
+        # broad-phase. A body that won't resolve is skipped (not fatal).
+        moving = []
+        for mid in moving_ids:
+            try:
+                moving.append((mid, _resolve_body(mid, namespace, result)))
+            except Exception:
+                continue
+        statics = []
+        for sid in static_ids:
+            try:
+                sbody = _resolve_body(sid, namespace, result)
+                statics.append((sid, sbody, _aabb(sbody)))
+            except Exception:
+                continue
+        if not moving or not statics:
+            continue
+
+        # Inclusive sample of [lo, hi]. A zero-width range degenerates to a
+        # single repeated pose — still worth one collision check.
+        span = hi - lo
+        for si in range(samples):
+            t = si / (samples - 1) if samples > 1 else 0.0
+            angle = lo + span * t
+            for (mid, mbody) in moving:
+                try:
+                    posed = _pose_body(mbody, axis_dir, pivot, angle)
+                except Exception:
+                    # If a pose can't be formed, skip this body at this angle
+                    # rather than failing the whole sweep.
+                    continue
+                posed_aabb = _aabb(posed)
+                for (sid, sbody, saabb) in statics:
+                    if pair_budget <= 0:
+                        break
+                    pair_budget -= 1
+                    # Broad-phase: skip the boolean if AABBs can't overlap.
+                    if not _aabb_overlap(posed_aabb, saabb):
+                        continue
+                    # Narrow-phase: same boolean-intersection volume the
+                    # `interference` measure uses.
+                    try:
+                        inter = posed & sbody
+                        vol = float(inter.volume)
+                    except Exception:
+                        vol = 0.0
+                    if vol > 1e-9:
+                        collisions.append({
+                            "jointIndex": ji,
+                            "angleDeg":   angle,
+                            "pair":       [mid, sid],
+                            "volume":     vol,
+                        })
+                if pair_budget <= 0:
+                    break
+            if pair_budget <= 0:
+                break
+        if pair_budget <= 0:
+            break
+
+    return {"ok": True, "collisions": collisions, "clear": len(collisions) == 0}
+
+
 def _eval_centroid(query: dict, namespace: dict, result: dict) -> dict:
     """Centroid: center of mass for a body, face centroid for a face descriptor."""
     descriptor = query.get("descriptor")
@@ -586,6 +745,7 @@ _DISPATCH: dict = {
     "manifold":         _eval_manifold,
     "selfIntersection": _eval_self_intersection,
     "interference":     _eval_interference,
+    "motionSweep":      _eval_motion_sweep,
     "centroid":         _eval_centroid,
     "normal":           _eval_normal,
 }

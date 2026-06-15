@@ -12,7 +12,32 @@
       "shaftR": 2.4, "shaftH": 6.0, "shaftX": -5.5
     },
     "bbox": { "min": [-16, -6.1, 0], "max": [16, 6.1, 32.5] },
-    "metadata": { "mountInterface": "servo-mount-9g", "splineInterface": "spline-SG90" }
+    "metadata": {
+      "mountInterface": "servo-mount-9g",
+      "splineInterface": "spline-SG90",
+      "torqueKgCm": 1.8,
+      "nextRung": "servo-sg92r"
+    }
+  },
+  {
+    "id": "servo-sg92r",
+    "standard": "TowerPro SG92R",
+    "category": "Servo",
+    "nominalSize": "9g",
+    "name": "SG92R micro servo (carbon gear, high torque)",
+    "dims": {
+      "bodyL": 22.9, "bodyW": 12.2, "bodyH": 22.5,
+      "flangeEar": 4.6, "flangeT": 2.5, "flangeZ": 16.6,
+      "bossR": 5.5, "bossH": 4.0,
+      "shaftR": 2.4, "shaftH": 6.0, "shaftX": -5.5
+    },
+    "bbox": { "min": [-16.05, -6.1, 0], "max": [16.05, 6.1, 32.5] },
+    "metadata": {
+      "mountInterface": "servo-mount-9g",
+      "splineInterface": "spline-SG90",
+      "torqueKgCm": 2.5,
+      "nextRung": "servo-mg90s"
+    }
   },
   {
     "id": "servo-mg90s",
@@ -27,7 +52,12 @@
       "shaftR": 2.4, "shaftH": 6.0, "shaftX": -5.5
     },
     "bbox": { "min": [-16, -6.1, 0], "max": [16, 6.1, 32.5] },
-    "metadata": { "mountInterface": "servo-mount-9g", "splineInterface": "spline-SG90" }
+    "metadata": {
+      "mountInterface": "servo-mount-9g",
+      "splineInterface": "spline-SG90",
+      "torqueKgCm": 2.2,
+      "nextRung": "servo-mg996r"
+    }
   },
   {
     "id": "servo-mg996r",
@@ -44,7 +74,12 @@
       "mountHoles": [[-24.5, -5], [-24.5, 5], [24.5, -5], [24.5, 5]]
     },
     "bbox": { "min": [-27.5, -10, 0], "max": [27.5, 10, 42.7] },
-    "metadata": { "mountInterface": "servo-mount-standard", "splineInterface": "spline-25T" }
+    "metadata": {
+      "mountInterface": "servo-mount-standard",
+      "splineInterface": "spline-25T",
+      "torqueKgCm": 10.0,
+      "nextRung": "servo-ds3218"
+    }
   },
   {
     "id": "servo-ds3218",
@@ -61,7 +96,12 @@
       "mountHoles": [[-24.5, -5], [-24.5, 5], [24.5, -5], [24.5, 5]]
     },
     "bbox": { "min": [-27.5, -10, 0], "max": [27.5, 10, 43.5] },
-    "metadata": { "mountInterface": "servo-mount-standard", "splineInterface": "spline-25T" }
+    "metadata": {
+      "mountInterface": "servo-mount-standard",
+      "splineInterface": "spline-25T",
+      "torqueKgCm": 20.0,
+      "nextRung": null
+    }
   },
   {
     "id": "servo-dynamixel-ax12",
@@ -76,6 +116,11 @@
       "shaftR": 3.75, "shaftH": 0.0, "shaftX": 0.0
     },
     "bbox": { "min": [-16, -16, 0], "max": [16, 16, 38.5] },
-    "metadata": { "mountInterface": "dynamixel-fr05", "splineInterface": "dynamixel-horn-ax" }
+    "metadata": {
+      "mountInterface": "dynamixel-fr05",
+      "splineInterface": "dynamixel-horn-ax",
+      "torqueKgCm": 15.3,
+      "nextRung": null
+    }
   }
 ]

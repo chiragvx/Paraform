@@ -19,7 +19,7 @@
 import { N, S, B, num, fail } from './tools_util.js';
 import { measure } from '../measure/api.js';
 import { runAllInvariants } from '../invariants/runner.js';
-import { getDocumentStore, exportDocumentAs, downloadDocumentAs } from '../../../lib/document/index.js';
+import { getDocumentStore, exportDocumentAs, downloadDocumentAs, componentDescendants } from '../../../lib/document/index.js';
 
 // ── Doc / body enumeration ────────────────────────────────────────────────────
 //
@@ -288,6 +288,199 @@ async function exportForPrint(input) {
     }
 }
 
+// ── Tool 2b: export_parts (per-component STL + orientation) ───────────────────
+//
+// export_for_print emits the WHOLE document as one blob. For an assembly you
+// print part-by-part: each printed component as its OWN STL, oriented for the
+// bed. We reuse the single-export kernel path (exportDocumentAs) per component
+// by handing it a sub-document scoped to that component's subtree — same emit,
+// same kernel render+STL, just a filtered feature set. Loop components, export
+// each, return a manifest.
+
+/** Components that own at least one enabled body-emitting feature. */
+function printableComponents(doc) {
+    const features = (doc && doc.features) || {};
+    const components = (doc && doc.components) || {};
+    const owners = new Set();
+    for (const fid of Object.keys(features)) {
+        const f = features[fid];
+        if (f && f.enabled !== false && BODY_EMITTING.has(f.type)) owners.add(f.componentId || 'root');
+    }
+    const out = [];
+    for (const cid of owners) {
+        const c = components[cid];
+        out.push({ id: cid, name: (c && c.name) || (cid === 'root' ? 'Document' : cid) });
+    }
+    return out;
+}
+
+/**
+ * Build a shallow sub-document containing ONLY the features owned by `componentId`
+ * (and its descendant components, so a parent part still exports its children).
+ * The exporter bakes component placement from the tree, so we keep the full
+ * `components` map — only the feature set is narrowed. Returns a doc the exporter
+ * accepts via `exportDocumentAs(fmt, { doc })`.
+ */
+function subDocForComponent(doc, componentId) {
+    const descendants = componentDescendants(doc, componentId).map((c) => c.id);
+    const keep = new Set([componentId, ...descendants]);
+    const features = {};
+    const order = (doc.featureOrder && doc.featureOrder.length)
+        ? doc.featureOrder
+        : Object.keys(doc.features || {});
+    const subOrder = [];
+    for (const fid of order) {
+        const f = (doc.features || {})[fid];
+        if (!f) continue;
+        if (keep.has(f.componentId || 'root')) {
+            features[fid] = f;
+            subOrder.push(fid);
+        }
+    }
+    return {
+        ...doc,
+        features,
+        featureOrder: subOrder,
+        // Scope joints/connectors away so the exporter doesn't try to mate across
+        // components that aren't in this slice (best-effort; absent → empty).
+        joints: {},
+    };
+}
+
+/** Pick a print orientation from a body's bbox: lay the largest face on the bed. */
+function suggestOrientation(size) {
+    if (!Array.isArray(size) || size.length < 3 || !size.every(Number.isFinite)) {
+        return { layFlatAxis: null, note: 'Could not measure the bounding box — orient the largest flat face down manually.' };
+    }
+    const [sx, sy, sz] = size;
+    // The bed-down axis is the SHORTEST one (lay flat → minimise height, maximise
+    // bed contact). Z already up means no rotation if Z is already shortest.
+    const axes = [['X', sx], ['Y', sy], ['Z', sz]];
+    axes.sort((a, b) => a[1] - b[1]);
+    const shortest = axes[0][0];
+    const tallest = axes[2][0];
+    let note;
+    if (shortest === 'Z') note = 'Already oriented well: shortest dimension is vertical (good bed contact, low height).';
+    else note = `Rotate so the ${shortest} axis points up (it is the thinnest) to lay the largest face on the bed and cut print height.`;
+    return {
+        layFlatAxis: shortest,
+        tallestAxis: tallest,
+        sizeMm: { x: round(sx), y: round(sy), z: round(sz) },
+        note,
+    };
+}
+
+/**
+ * Export EACH printed component as its own STL (not one whole-model blob), with
+ * a suggested print orientation per part. Returns a manifest:
+ *   [{ componentId, name, filename, orientation, withinBed, needsSplit, ... }]
+ * Reuses the single-export kernel path (exportDocumentAs) once per component.
+ * Triggers a browser download per part when in a DOM; headless it returns the
+ * manifest (and base64 bytes) for the caller. Never throws.
+ */
+async function exportParts(input) {
+    const i = input || {};
+    const bed = {
+        x: num(i.bedX, DEFAULT_BED.x),
+        y: num(i.bedY, DEFAULT_BED.y),
+        z: num(i.bedZ, DEFAULT_BED.z),
+    };
+    const doc = liveDoc();
+    const comps = printableComponents(doc);
+    if (!comps.length) {
+        return { ok: true, parts: [], note: 'No components own any printable bodies — nothing to export.' };
+    }
+
+    const wantDownload = i.download !== false; // default: trigger downloads
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const parts = [];
+
+    for (const comp of comps) {
+        const slug = String(comp.name || comp.id).replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || comp.id;
+        const filename = `${slug}.stl`;
+        const entry = { componentId: comp.id, name: comp.name, filename, withinBed: null, needsSplit: false };
+
+        // Per-part orientation + bed fit from the component's body bbox(es).
+        try {
+            const ids = bodyIds(doc, comp.id);
+            if (ids.length) {
+                const res = await measure(ids.map((id) => ({ type: 'bbox', featureId: id })));
+                const list = Array.isArray(res) ? res : [res];
+                let amin = [Infinity, Infinity, Infinity];
+                let amax = [-Infinity, -Infinity, -Infinity];
+                let saw = false;
+                for (const b of list) {
+                    if (b && b.ok === true && Array.isArray(b.min) && Array.isArray(b.max)) {
+                        saw = true;
+                        for (let a = 0; a < 3; a++) { amin[a] = Math.min(amin[a], b.min[a]); amax[a] = Math.max(amax[a], b.max[a]); }
+                    }
+                }
+                if (saw) {
+                    const size = [amax[0] - amin[0], amax[1] - amin[1], amax[2] - amin[2]];
+                    entry.orientation = suggestOrientation(size);
+                    // withinBed: the part's footprint must fit the bed in SOME
+                    // orientation. Sort dims; two smallest are the footprint.
+                    const sorted = size.slice().sort((a, b) => a - b);
+                    const fitsFlat = sorted[0] <= bed.z && sorted[1] <= Math.max(bed.x, bed.y) && sorted[2] <= Math.max(bed.x, bed.y);
+                    entry.withinBed = fitsFlat;
+                    entry.needsSplit = !fitsFlat;
+                } else {
+                    entry.orientation = suggestOrientation(null);
+                }
+            } else {
+                entry.orientation = suggestOrientation(null);
+            }
+        } catch {
+            entry.orientation = suggestOrientation(null);
+        }
+
+        // The actual per-part export — reuse the single-export kernel path on a
+        // sub-document scoped to this component's subtree.
+        try {
+            const subDoc = subDocForComponent(doc, comp.id);
+            const r = await exportDocumentAs('stl', { doc: subDoc, filename });
+            if (!r || r.ok === false) {
+                entry.exported = false;
+                entry.error = (r && r.error) || 'export failed';
+            } else {
+                entry.exported = true;
+                entry.filename = r.filename || filename;
+                // Trigger a browser download per part when we can (best-effort).
+                if (wantDownload && typeof document !== 'undefined' && typeof URL !== 'undefined' && typeof Blob !== 'undefined' && r.bytes) {
+                    try {
+                        const blob = new Blob([r.bytes], { type: r.mime || 'model/stl' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = r.filename || filename;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } catch { /* download is best-effort */ }
+                }
+            }
+        } catch (e) {
+            entry.exported = false;
+            entry.error = fail(e).error;
+        }
+
+        parts.push(entry);
+    }
+
+    const failed = parts.filter((p) => p.exported === false).length;
+    const split = parts.filter((p) => p.needsSplit).length;
+    const notes = [];
+    if (failed) notes.push(`${failed} part(s) failed to export — see their error fields.`);
+    if (split) notes.push(`${split} part(s) exceed the ${bed.x}×${bed.y}×${bed.z}mm bed and need splitting.`);
+    notes.push('Each part is exported as its own STL with a suggested bed orientation; slice each separately.');
+
+    return {
+        ok: true,
+        parts,
+        bedMm: bed,
+        exportedAt: stamp,
+        note: notes.join(' '),
+    };
+}
+
 // ── Tool 3: recommend_material (pure data) ────────────────────────────────────
 
 const MATERIALS = {
@@ -512,6 +705,21 @@ export const DFM_TOOLS = [
             required: ['format'],
         },
         handler: (i) => exportForPrint(i),
+    },
+    {
+        name: 'export_parts',
+        description:
+            'Export an ASSEMBLY for printing PART-BY-PART: each printed component as its OWN STL (not one whole-model blob), with a suggested print orientation per part. This is the S9 per-part export — you print an assembly one part at a time, each oriented for the bed. Loops every component that owns geometry, exports each to its own STL via the kernel, and returns a manifest [{ componentId, name, filename, orientation, withinBed, needsSplit }]. A part whose smallest footprint still overflows the bed is flagged needsSplit. Use this instead of export_for_print once a model has multiple components. Triggers a download per part in the browser.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                bedX: N('Printer bed X size in mm (default 220).'),
+                bedY: N('Printer bed Y size in mm (default 220).'),
+                bedZ: N('Printer max build height in mm (default 250).'),
+                download: B('Trigger a browser download per part (default true). Set false to only return the manifest.'),
+            },
+        },
+        handler: (i) => exportParts(i),
     },
     {
         name: 'recommend_material',

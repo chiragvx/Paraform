@@ -1,0 +1,65 @@
+{
+  "note": "Servo upgrade ladder, weakest -> strongest. When a joint is 'servo too weak', step to nextRung for a deterministic torque bump. torqueKgCm = stall torque at the higher of the servo's rated voltages (kg.cm). catalogId matches b123d_server/standard_parts/servos.json where the part exists; null = not yet in catalog (placement should fall back to the nearest catalogued rung).",
+  "ladder": [
+    {
+      "id": "SG90",
+      "name": "TowerPro SG90 micro servo",
+      "torqueKgCm": 1.8,
+      "torqueNote": "~1.8 kg.cm at 4.8-6V; plastic gears, the floor of the ladder",
+      "size": { "class": "9g micro", "bodyLWHmm": [22.8, 12.2, 22.5], "massG": 9 },
+      "gear": "plastic",
+      "voltage": "4.8-6V",
+      "rotationDeg": 180,
+      "nextRung": "SG92R",
+      "catalogId": "servo-sg90"
+    },
+    {
+      "id": "SG92R",
+      "name": "TowerPro SG92R micro servo",
+      "torqueKgCm": 2.5,
+      "torqueNote": "~2.5 kg.cm at 4.8-6V; carbon-fiber-reinforced plastic gears, same 9g footprint as SG90",
+      "size": { "class": "9g micro", "bodyLWHmm": [22.8, 12.2, 22.5], "massG": 9 },
+      "gear": "carbon-reinforced plastic",
+      "voltage": "4.8-6V",
+      "rotationDeg": 180,
+      "nextRung": "MG90S",
+      "catalogId": null
+    },
+    {
+      "id": "MG90S",
+      "name": "TowerPro MG90S micro servo (metal gear)",
+      "torqueKgCm": 2.2,
+      "torqueNote": "~2.2 kg.cm at 6V; METAL gears — the upgrade over SG90/SG92R is durability/stall-survival, not peak torque. Step here when plastic gears strip, not just for more torque.",
+      "size": { "class": "9g micro", "bodyLWHmm": [22.8, 12.2, 22.5], "massG": 13.4 },
+      "gear": "metal",
+      "voltage": "4.8-6V",
+      "rotationDeg": 180,
+      "nextRung": "MG996R",
+      "catalogId": "servo-mg90s"
+    },
+    {
+      "id": "MG996R",
+      "name": "TowerPro MG996R standard servo (metal gear)",
+      "torqueKgCm": 10.0,
+      "torqueNote": "~9.4-11 kg.cm at 4.8-6V; first big torque jump and the first STANDARD-size body — expect a larger mount footprint than the 9g rungs.",
+      "size": { "class": "standard 55g", "bodyLWHmm": [40.7, 19.7, 36.0], "massG": 55 },
+      "gear": "metal",
+      "voltage": "4.8-7.2V",
+      "rotationDeg": 120,
+      "nextRung": "DS3218",
+      "catalogId": "servo-mg996r"
+    },
+    {
+      "id": "DS3218",
+      "name": "DSServo DS3218 standard servo (20kg)",
+      "torqueKgCm": 20.0,
+      "torqueNote": "~19-21.5 kg.cm at 6.8V (waterproof variant ~20 kg.cm); top of the standard-size ladder. Same standard footprint as MG996R, much higher torque + speed.",
+      "size": { "class": "standard 60g", "bodyLWHmm": [40.0, 20.0, 37.0], "massG": 60 },
+      "gear": "metal",
+      "voltage": "4.8-6.8V",
+      "rotationDeg": 180,
+      "nextRung": null,
+      "catalogId": "servo-ds3218"
+    }
+  ]
+}

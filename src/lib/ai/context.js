@@ -42,6 +42,17 @@ class AIContext {
         this.fluency = 'auto';
         /** structured design brief or null */
         this._brief = null;
+        // ── Functional-design state (the DSO — see PLAN-functional-design-brain.md)
+        /** morphology + kinematic spec (plan_mechanism) or null */
+        this._morphology = null;
+        /** skeleton layout / massing envelope (plan_skeleton_envelope) or null */
+        this._skeleton = null;
+        /** assembly + serviceability plan (plan_serviceability) or null */
+        this._assemblyPlan = null;
+        /** research / pattern spec (mine_patterns) or null */
+        this._research = null;
+        /** partId → { hosts, recipe, load, wall, neighbors } binding */
+        this._partBindings = new Map();
         this.turn = 0;
         this._reqSeq = 0;
     }
@@ -135,6 +146,28 @@ class AIContext {
     setUnits(u) { if (typeof u === 'string' && u.trim()) this.units = u.trim(); }
     setFluency(f) { if (['auto', 'novice', 'expert'].includes(f)) this.fluency = f; }
 
+    // ── Functional-design state (DSO) ──────────────────────────────────────────
+    // Every setter is defensive (a malformed spec from a weak model becomes null,
+    // never a throw) and every getter is read-only. These feed the verification
+    // gates (i-functional-complete, i-motion-clearance, design_review) and the
+    // per-turn context block.
+    setMorphology(spec) { this._morphology = (spec && typeof spec === 'object') ? spec : null; return this._morphology; }
+    get morphology() { return this._morphology; }
+    setSkeleton(spec) { this._skeleton = (spec && typeof spec === 'object') ? spec : null; return this._skeleton; }
+    get skeleton() { return this._skeleton; }
+    setAssemblyPlan(spec) { this._assemblyPlan = (spec && typeof spec === 'object') ? spec : null; return this._assemblyPlan; }
+    get assemblyPlan() { return this._assemblyPlan; }
+    setResearch(spec) { this._research = (spec && typeof spec === 'object') ? spec : null; return this._research; }
+    get research() { return this._research; }
+    bindPart(partId, binding) {
+        if (typeof partId !== 'string' || !partId.trim()) return false;
+        if (!binding || typeof binding !== 'object') return false;
+        this._partBindings.set(partId.trim(), binding);
+        return true;
+    }
+    partBinding(partId) { return (typeof partId === 'string' && this._partBindings.get(partId)) || null; }
+    get partBindings() { return this._partBindings; }
+
     // ── Snapshot / restore ──────────────────────────────────────────────────────
     snapshot() {
         return {
@@ -144,6 +177,11 @@ class AIContext {
             units: this.units,
             fluency: this.fluency,
             brief: this._brief,
+            morphology: this._morphology,
+            skeleton: this._skeleton,
+            assemblyPlan: this._assemblyPlan,
+            research: this._research,
+            partBindings: [...this._partBindings.entries()],
             turn: this.turn,
         };
     }
@@ -159,6 +197,11 @@ class AIContext {
             if (typeof s.units === 'string') this.units = s.units;
             if (typeof s.fluency === 'string') this.fluency = s.fluency;
             this._brief = (s.brief && typeof s.brief === 'object') ? s.brief : null;
+            this._morphology = (s.morphology && typeof s.morphology === 'object') ? s.morphology : null;
+            this._skeleton = (s.skeleton && typeof s.skeleton === 'object') ? s.skeleton : null;
+            this._assemblyPlan = (s.assemblyPlan && typeof s.assemblyPlan === 'object') ? s.assemblyPlan : null;
+            this._research = (s.research && typeof s.research === 'object') ? s.research : null;
+            this._partBindings = new Map(Array.isArray(s.partBindings) ? s.partBindings.filter((e) => Array.isArray(e) && e.length === 2) : []);
             this.turn = Number.isFinite(s.turn) ? s.turn : 0;
         } catch { /* ignore corrupt snapshot */ }
     }
@@ -187,6 +230,23 @@ class AIContext {
         if (this.decisions.length) {
             const d = this.decisions.slice(-6).map((x) => x.why ? `${x.what} (${x.why})` : x.what).join('; ');
             lines.push(`Decisions so far: ${d}`);
+        }
+        // Functional-design state (the pipeline's running spec) — so the model
+        // always knows what mechanism it committed to and what's left to satisfy.
+        const m = this._morphology;
+        if (m && typeof m === 'object') {
+            const dof = Number.isFinite(m.dof) ? `${m.dof} DOF` : '';
+            const kp = Number.isFinite(m.kinematicPoints) ? `${m.kinematicPoints} moving joints` : '';
+            const nj = Array.isArray(m.joints) ? m.joints.length : 0;
+            lines.push(`Mechanism committed: ${m.archetype || 'custom'} — ${[dof, kp].filter(Boolean).join(', ') || `${nj} joints`}. EVERY joint needs an actuator + a structural mount (i-functional-complete will fail otherwise).`);
+        }
+        if (this._skeleton && Array.isArray(this._skeleton.hosts)) {
+            lines.push(`Skeleton laid out: ${this._skeleton.hosts.length} hosted component(s) in the envelope.`);
+        }
+        if (this._assemblyPlan) {
+            const rep = Array.isArray(this._assemblyPlan.replaceable) ? this._assemblyPlan.replaceable.length : 0;
+            const baked = Array.isArray(this._assemblyPlan.bakedIn) ? this._assemblyPlan.bakedIn.length : 0;
+            lines.push(`Serviceability: ${rep} replaceable (keep accessible), ${baked} baked-in.`);
         }
         if (this.fluency !== 'auto') lines.push(`User fluency: ${this.fluency}.`);
         if (!lines.length) return '';

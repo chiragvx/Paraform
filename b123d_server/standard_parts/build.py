@@ -410,6 +410,9 @@ _BUILDERS = {
     "Standoff":         lambda e: _mechatronic_builder("build_standoff")(e),
     "Horn":             lambda e: _mechatronic_builder("build_horn")(e),
     "KeepOut":          lambda e: _mechatronic_builder("build_keepout")(e),
+    # Functional-design brain — structural robotics parts (see mechatronic.py).
+    "Bracket":          lambda e: _mechatronic_builder("build_bracket")(e),
+    "Linkage":          lambda e: _mechatronic_builder("build_linkage")(e),
 }
 
 

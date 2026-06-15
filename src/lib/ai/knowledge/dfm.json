@@ -1,0 +1,138 @@
+{
+  "note": "Design-for-Manufacture / Design-for-Assembly rule packs for FDM 3D printing, tuned to a default 0.4 mm nozzle unless 'applies' narrows it. Values are practical defaults a gate can check against; tighten per material/printer. Each entry: { rule, value, unit, applies, note }.",
+  "rules": [
+    {
+      "rule": "printed-mating-clearance-loose-0p4-nozzle",
+      "value": 0.4,
+      "unit": "mm",
+      "applies": "diametral/total gap between two printed parts intended to slide or rotate freely (e.g. pin in bore, shaft in journal); 0.4 mm nozzle",
+      "note": "Loose running fit. Split this as ~0.2 mm radial per side. Increase if either surface is unfinished or the printer is poorly calibrated."
+    },
+    {
+      "rule": "printed-mating-clearance-snug-0p4-nozzle",
+      "value": 0.2,
+      "unit": "mm",
+      "applies": "designed-in gap for a printed-to-printed assembly fit that should locate but still go together by hand; 0.4 mm nozzle",
+      "note": "The minimum reliable clearance at a 0.4 mm nozzle. The plan's check_printed_fit floor: >=0.2 mm at every printed-to-printed mating joint or it won't assemble."
+    },
+    {
+      "rule": "printed-mating-clearance-press-0p4-nozzle",
+      "value": 0.1,
+      "unit": "mm",
+      "applies": "interference/press fit between printed parts (heat-set insert pocket, pin meant to stay put); 0.4 mm nozzle",
+      "note": "Slight interference. Below ~0.1 mm the parts effectively fuse / crack on insertion. For heat-set brass inserts, size the pocket to the insert's lead diameter, not the major."
+    },
+    {
+      "rule": "printed-mating-clearance-scale-with-nozzle",
+      "value": 0.5,
+      "unit": "x nozzle",
+      "applies": "rule of thumb to rescale clearance bands for non-0.4 mm nozzles",
+      "note": "Approximate the snug clearance as ~0.5x nozzle width (0.2 mm @ 0.4 nozzle, ~0.3 mm @ 0.6 nozzle, ~0.125 mm @ 0.25 nozzle). Larger nozzles need larger clearances."
+    },
+    {
+      "rule": "min-wall-structural",
+      "value": 2.0,
+      "unit": "mm",
+      "applies": "load-bearing wall / link / bracket on a 0.4 mm nozzle",
+      "note": "~5 perimeters at 0.4 mm. Below this, structural parts flex and delaminate at layer lines. Brackets carrying servo/joint loads should derive wall from load (plan S5) but never go under 2 mm."
+    },
+    {
+      "rule": "min-wall-cosmetic",
+      "value": 1.2,
+      "unit": "mm",
+      "applies": "non-structural shell / cover / fairing on a 0.4 mm nozzle",
+      "note": "~3 perimeters. Fine for enclosures that carry no load."
+    },
+    {
+      "rule": "min-wall-vertical-feature",
+      "value": 0.8,
+      "unit": "mm",
+      "applies": "thin standing rib, fin, or vent slat oriented vertically; 0.4 mm nozzle",
+      "note": "~2 perimeters. Thinner standing features wobble during printing and won't bond."
+    },
+    {
+      "rule": "min-boss-wall-around-screw",
+      "value": 2.0,
+      "unit": "mm",
+      "applies": "wall thickness of material surrounding a screw/insert boss",
+      "note": "Wall around a tapped/insert hole must be >= ~0.8x the screw nominal and >= 2 mm so the boss doesn't split when the screw is driven."
+    },
+    {
+      "rule": "overhang-max-angle-no-support",
+      "value": 45,
+      "unit": "deg from vertical",
+      "applies": "self-supporting overhang on FDM; angle measured from the vertical (build) axis",
+      "note": "Up to ~45 deg from vertical prints cleanly without support. Steeper (toward horizontal) needs support or a redesign (chamfer instead of fillet on downward faces)."
+    },
+    {
+      "rule": "bridge-max-unsupported-span",
+      "value": 5,
+      "unit": "mm",
+      "applies": "horizontal unsupported bridge between two anchored points",
+      "note": "Short bridges (<=~5 mm, generously up to ~10 mm with good cooling) print without support. Longer spans sag — add a support, a center pillar, or split the part."
+    },
+    {
+      "rule": "teardrop-horizontal-hole",
+      "value": 0,
+      "unit": "flag",
+      "applies": "holes printed with their axis horizontal (parallel to the bed)",
+      "note": "A round horizontal hole sags at its top; use a teardrop/diamond profile or orient the hole axis vertical so it prints as stacked circles."
+    },
+    {
+      "rule": "bolt-thread-engagement-plastic",
+      "value": 2.0,
+      "unit": "x nominal diameter",
+      "applies": "thread engagement depth for a bolt into a plastic/printed tapped boss",
+      "note": "Engage >= 2x the bolt nominal diameter (e.g. >= 6 mm for an M3) in plastic so threads don't strip. Prefer heat-set brass inserts over tapping plastic directly for any repeated assembly."
+    },
+    {
+      "rule": "bolt-thread-engagement-aluminum",
+      "value": 1.5,
+      "unit": "x nominal diameter",
+      "applies": "thread engagement depth for a bolt into aluminum",
+      "note": "Engage >= 1.5x nominal in aluminum."
+    },
+    {
+      "rule": "bolt-thread-engagement-steel",
+      "value": 1.0,
+      "unit": "x nominal diameter",
+      "applies": "thread engagement depth for a bolt into steel",
+      "note": "Engage >= 1.0x nominal (full-diameter) in steel."
+    },
+    {
+      "rule": "heat-set-insert-boss-depth",
+      "value": 1.1,
+      "unit": "x insert length",
+      "applies": "blind pocket depth for a heat-set threaded insert",
+      "note": "Make the pocket ~10% deeper than the insert so displaced plastic has somewhere to go and the insert seats flush. Pocket diameter = insert lead diameter."
+    },
+    {
+      "rule": "countersink-clearance-hole",
+      "value": 0.5,
+      "unit": "mm added to nominal",
+      "applies": "through-clearance hole for a bolt shank (not tapped)",
+      "note": "Clearance hole ~ nominal + 0.5 mm (e.g. 3.5 mm for M3) so the bolt passes freely and pulls the joint tight against the head/nut."
+    },
+    {
+      "rule": "first-layer-hole-shrink-compensation",
+      "value": 0.2,
+      "unit": "mm oversize on diameter",
+      "applies": "any small printed hole that must hit a target diameter",
+      "note": "FDM holes print undersize (elephant-foot + inward perimeter pull). Oversize the modeled diameter by ~0.1-0.3 mm or plan to ream/drill."
+    },
+    {
+      "rule": "min-fillet-load-path",
+      "value": 1.0,
+      "unit": "mm",
+      "applies": "inside corners on a load-carrying structural part",
+      "note": "Add a >= 1 mm fillet to interior corners in the load path; sharp internal corners are stress risers that crack under cyclic joint load. (Plan S6 surface gate.)"
+    },
+    {
+      "rule": "servo-body-air-gap",
+      "value": 2.0,
+      "unit": "mm",
+      "applies": "clearance between a servo can and the pocket/shell that encloses it",
+      "note": "Leave >= 2 mm around an enclosed servo body for cooling and tolerance; don't print a zero-gap pocket. Pairs with the pattern-card vent strategy."
+    }
+  ]
+}
