@@ -50,6 +50,43 @@ class StudioRuntime {
   }
   clearIsolation() { this.isolatedFeatureIds = null; }
 
+  // ── Render visibility (client-only — NO recompile) ─────────────────────
+  // Set of featureIds whose body meshes are hidden in the scene. This is a
+  // pure render flag (mesh.visible = false), NOT feature suppression: the
+  // body stays in the document and the kernel never re-runs. Toggled from
+  // the eye button in the feature tree. SUPPRESS (a real model edit that
+  // recompiles, via setFeatureEnabled) is a separate concept and lives only
+  // on the right-click context menu.
+  //
+  // bridge.applyHiddenBodies(set) sets mesh.visible accordingly and
+  // re-applies after every recompile, so visibility survives a regen.
+  hiddenBodies = $state(new Set());
+
+  /** Flip a body's render visibility. Reassigns a NEW Set so $state fires. */
+  toggleBodyVisible(featureId) {
+    const next = new Set(this.hiddenBodies);
+    if (next.has(featureId)) next.delete(featureId);
+    else next.add(featureId);
+    this.hiddenBodies = next;
+    this.bridge?.applyHiddenBodies(this.hiddenBodies);
+  }
+
+  /** @returns {boolean} true when the body's mesh is render-hidden. */
+  isBodyHidden(featureId) {
+    return this.hiddenBodies.has(featureId);
+  }
+
+  /** Explicitly set a body's render visibility. No-op if already in state. */
+  setBodyHidden(featureId, hidden) {
+    const has = this.hiddenBodies.has(featureId);
+    if (hidden === has) return;
+    const next = new Set(this.hiddenBodies);
+    if (hidden) next.add(featureId);
+    else next.delete(featureId);
+    this.hiddenBodies = next;
+    this.bridge?.applyHiddenBodies(this.hiddenBodies);
+  }
+
   // Scene / material / lighting controls (driven by ScenePanel)
   materialColor = $state('#8c9aaa');
   surfaceFinish = $state('semi-gloss');

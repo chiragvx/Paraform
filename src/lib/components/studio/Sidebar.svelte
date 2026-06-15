@@ -250,9 +250,12 @@
     store?.selectFeature(id);
   }
 
+  // Eye button = pure RENDER visibility (instant, client-only, no recompile).
+  // This is NOT suppression — suppression (a real model edit that recompiles)
+  // lives only on the right-click context menu's Suppress/Unsuppress action.
   function toggleVisible(e, feature) {
     e.stopPropagation();
-    setFeatureEnabled(feature.id, !(feature.enabled !== false));
+    studio.toggleBodyVisible(feature.id);
   }
 
   function onDeleteFeature(e, feature) {
@@ -731,18 +734,19 @@
                 <span class="text-[10px] opacity-60">{row.count}</span>
               {/if}
               {#if isPart}
+                {@const hidden = studio.isBodyHidden(feature.id)}
                 <button
                   type="button"
                   onclick={(e) => toggleVisible(e, feature)}
                   class="rounded p-0.5 text-muted-foreground/60 opacity-0 hover:bg-accent hover:text-foreground group-hover:opacity-100 data-[on=true]:opacity-100"
-                  data-on={!enabled}
-                  title={enabled ? 'Suppress' : 'Unsuppress'}
-                  aria-label={enabled ? 'Suppress part' : 'Unsuppress part'}
+                  data-on={hidden}
+                  title={hidden ? 'Show' : 'Hide'}
+                  aria-label={hidden ? 'Show part' : 'Hide part'}
                 >
-                  {#if enabled}
-                    <Eye class="size-3.5" />
-                  {:else}
+                  {#if hidden}
                     <EyeOff class="size-3.5" />
+                  {:else}
+                    <Eye class="size-3.5" />
                   {/if}
                 </button>
               {/if}
@@ -840,6 +844,7 @@
         {@const Icon = ICONS[feature.type] || Box}
         {@const enabled = feature.enabled !== false}
         {@const isSel = selectedId === feature.id}
+        {@const hidden = studio.isBodyHidden(feature.id)}
         <div
           class={[
             'group flex w-full items-center gap-1 pr-3 py-1 transition-colors',
@@ -887,14 +892,14 @@
             type="button"
             onclick={(e) => toggleVisible(e, feature)}
             class="rounded p-0.5 text-muted-foreground/60 opacity-0 hover:bg-accent hover:text-foreground group-hover:opacity-100 data-[on=true]:opacity-100"
-            data-on={!enabled}
-            title={enabled ? 'Suppress feature' : 'Unsuppress feature'}
-            aria-label={enabled ? 'Suppress feature' : 'Unsuppress feature'}
+            data-on={hidden}
+            title={hidden ? 'Show feature' : 'Hide feature'}
+            aria-label={hidden ? 'Show feature' : 'Hide feature'}
           >
-            {#if enabled}
-              <Eye class="size-3.5" />
-            {:else}
+            {#if hidden}
               <EyeOff class="size-3.5" />
+            {:else}
+              <Eye class="size-3.5" />
             {/if}
           </button>
           <button

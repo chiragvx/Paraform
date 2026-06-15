@@ -492,6 +492,19 @@
     applyIsolation();
   });
 
+  // ── Render visibility (eye button — instant, NO recompile) ─────────────
+  // Push studio.hiddenBodies into the scene whenever the set changes or the
+  // bridge is (re)created. The bridge sets mesh.visible accordingly and also
+  // re-applies the set after each recompile, so toggling visibility never
+  // triggers a kernel regen (that's what SUPPRESS / setFeatureEnabled is for).
+  $effect(() => {
+    const hidden = studio.hiddenBodies; // track the set identity
+    const bridge = studio.bridge;       // re-run when the bridge is (re)created
+    try { bridge?.applyHiddenBodies?.(hidden); } catch (err) {
+      console.warn('[viewport] applyHiddenBodies failed:', err);
+    }
+  });
+
   // Show snap indicators while a snap-aware gesture is active (face-pick
   // mode armed by another tool, or measure tool active via the
   // MeasureToolMount).

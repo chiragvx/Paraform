@@ -4,7 +4,10 @@
  * Renders inside a host DOM element. Subscribes to a DocumentStore and
  * rebuilds on every commit. Each row shows the feature's display name,
  * type label, and three affordances:
- *   - eye toggle  → suppress / unsuppress (commits a `set-enabled` change)
+ *   - eye toggle  → RENDER visibility only (instant, client-only, NO
+ *                   recompile — toggles studio.hiddenBodies / mesh.visible).
+ *                   Suppression (the model edit that recompiles) lives on the
+ *                   right-click context menu's Suppress action instead.
  *   - select      → highlights the row, sets `store._selectedFeatureId`,
  *                   notifies the inspector via the `onSelect` callback
  *   - delete      → commits a `remove-feature` change
@@ -42,6 +45,16 @@ export class FeatureTree {
         this.host  = host;
         this.store = store;
         this.opts  = opts;
+        // Studio runtime singleton (owns hiddenBodies — pure render visibility).
+        // Resolved lazily so this plain-DOM module stays importable outside the
+        // Svelte/Vite runes context (raw-node tests never construct the tree).
+        // Pre-warm it so the first render can reflect hidden state synchronously.
+        this._runtime = (opts && opts.runtime) || null;
+        if (!this._runtime) {
+            import('../../src/lib/studio/runtime.svelte.js')
+                .then((m) => { this._runtime = m.studio; this.render(); })
+                .catch(() => { /* runtime unreachable — eye is a soft no-op */ });
+        }
         this._query = '';
         this._wantsFocus = false;
         this._ctxMenu = null;
@@ -134,7 +147,7 @@ export class FeatureTree {
                 this._showContextMenu(id, e.clientX, e.clientY);
             });
             const eye = row.querySelector('[data-act="toggle"]');
-            if (eye) eye.addEventListener('click', (e) => { e.stopPropagation(); this._toggleEnabled(id); });
+            if (eye) eye.addEventListener('click', (e) => { e.stopPropagation(); this._toggleVisible(id); });
             const del = row.querySelector('[data-act="delete"]');
             if (del) del.addEventListener('click', (e) => { e.stopPropagation(); this._delete(id); });
         }
@@ -284,10 +297,15 @@ export class FeatureTree {
             : '';
         const color = colorForType(f.type);
         const tlabel = typeLabel(f.type);
+        // Eye button = pure RENDER visibility (instant, client-only, NO
+        // recompile). Reflects the studio runtime's hiddenBodies set, NOT
+        // feature suppression. Suppress/Unsuppress (a real model edit that
+        // recompiles) lives on the right-click context menu below.
+        const hidden = this._isHidden(f.id);
         return (
             `<div class="${cls.join(' ')}" data-id="${esc(f.id)}" title="${esc(tlabel)} · ${esc(f.id)}" style="--row-accent:${color};">` +
-              `<button class="pf4-icon pf4-eye" data-act="toggle" title="${f.enabled ? 'Suppress' : 'Unsuppress'}" aria-label="toggle">` +
-                (f.enabled ? svgEye() : svgEyeOff()) +
+              `<button class="pf4-icon pf4-eye" data-act="toggle" title="${hidden ? 'Show' : 'Hide'}" aria-label="toggle visibility">` +
+                (hidden ? svgEyeOff() : svgEye()) +
               `</button>` +
               typeBadgeHtml(f.type, { size: 18 }) +
               `<div class="pf4-row-text">` +
@@ -379,6 +397,39 @@ export class FeatureTree {
         }
     }
 
+    /** @returns {boolean} true when the body's mesh is render-hidden. */
+    _isHidden(id) {
+        try { return !!this._runtime?.isBodyHidden?.(id); }
+        catch { return false; }
+    }
+
+    /**
+     * Eye button — flip RENDER visibility only (instant, client-only, NO
+     * recompile). Routes through the studio runtime's hiddenBodies set, which
+     * pushes mesh.visible into the scene via bridge.applyHiddenBodies. This is
+     * NOT suppression — that's `_toggleEnabled`, reachable from the context
+     * menu's Suppress action and the kernel-recompiling path.
+     */
+    _toggleVisible(id) {
+        const f = this.store.doc.features[id];
+        if (!f) return;
+        const apply = (rt) => {
+            try { rt?.toggleBodyVisible?.(id); } catch (e) { console.warn('[FeatureTree toggleVisible]', e); }
+            // hiddenBodies isn't a store commit, so the subscription won't
+            // re-render us — refresh locally to update the eye glyph.
+            this.render();
+        };
+        if (this._runtime) { apply(this._runtime); return; }
+        import('../../src/lib/studio/runtime.svelte.js')
+            .then((m) => { this._runtime = m.studio; apply(this._runtime); })
+            .catch((e) => console.warn('[FeatureTree] runtime unreachable; eye is a no-op', e));
+    }
+
+    /**
+     * Suppress / unsuppress — a real MODEL edit (commits set-enabled, triggers
+     * a kernel recompile). Reached from the right-click context menu's
+     * Suppress action. The eye button NO LONGER calls this.
+     */
     _toggleEnabled(id) {
         const f = this.store.doc.features[id];
         if (!f) return;
