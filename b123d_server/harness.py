@@ -1132,6 +1132,71 @@ def _make_bs_run(helpers: dict):
     return _bs_run
 
 
+# ── Incremental recompile body cache (Phase G4) ─────────────────────────────
+# Process-level memo of feature bodies keyed by the client-computed dependency
+# hash (see lib/document/dep_hash.js + emit.js `incremental` mode). Emitted code
+# in incremental mode wraps each body feature as:
+#
+#     n_<id> = _ckpt_get("<hash>")
+#     if n_<id> is None:
+#         <original statement>
+#         _ckpt_put("<hash>", n_<id>)
+#
+# so unchanged features (hash hit) skip the expensive OCCT op and reuse a cached
+# body; only the edited feature + its downstream (whose hashes changed) actually
+# recompute. This is ENTIRELY FAIL-SAFE: any error in get/put/copy yields a miss
+# (None) so the caller recomputes — identical geometry, just no speedup. So even
+# if a body type doesn't copy cleanly, correctness is never at risk, and the
+# whole path is additionally gated behind the emitter's opt-in flag.
+_CKPT_CACHE: dict = {}
+_CKPT_MAX = 256
+
+
+def _ckpt_copy(body):
+    """Return an isolated copy of a build123d body so a cached entry can't be
+    mutated by downstream ops in any compile. Tries build123d's native copy,
+    then deepcopy; returns None if neither works (→ treated as a miss)."""
+    try:
+        c = getattr(body, "copy", None)
+        if callable(c):
+            return c()
+    except Exception:
+        pass
+    try:
+        import copy as _copy
+        return _copy.deepcopy(body)
+    except Exception:
+        return None
+
+
+def _ckpt_get(key):
+    """Fetch a memoised body by dependency hash, or None to force recompute."""
+    try:
+        if not key:
+            return None
+        body = _CKPT_CACHE.get(key)
+        if body is None:
+            return None
+        return _ckpt_copy(body)
+    except Exception:
+        return None
+
+
+def _ckpt_put(key, body):
+    """Memoise a freshly-computed body under its dependency hash. Returns the
+    body unchanged so it can be used in expression position too. Never raises."""
+    try:
+        if key and body is not None:
+            if len(_CKPT_CACHE) >= _CKPT_MAX:
+                _CKPT_CACHE.clear()  # crude cap; correctness-preserving
+            stored = _ckpt_copy(body)
+            if stored is not None:
+                _CKPT_CACHE[key] = stored
+    except Exception:
+        pass
+    return body
+
+
 def execute_b123d(code: str, formats: tuple = (), deflection: float = 0.1) -> dict:
     """
     Execute emitted build123d Python code and return:
@@ -1173,6 +1238,10 @@ def execute_b123d(code: str, formats: tuple = (), deflection: float = 0.1) -> di
         "offset_face":      offset_face,
         "draft":            draft,
         "standard_parts":   _sp_facade,
+        # Phase G4 — incremental recompile body cache (fail-safe; only used by
+        # emitted code when the client opts into incremental emit).
+        "_ckpt_get":        _ckpt_get,
+        "_ckpt_put":        _ckpt_put,
     }
 
     # `_bs_run` runs UNTRUSTED BuildScript code in a restricted sandbox (see
