@@ -15,13 +15,16 @@
   // Default snippet shown when creating a brand-new script. Mirrors the
   // DEFAULT_BUILD_SCRIPT in lib/document/operations.js so users see the same
   // starting point whether they open the dialog or call the API directly.
-  const DEFAULT_SCRIPT = `# Write build123d code here. Anything you assign to a name
-# here is added to the kernel namespace and visible to
-# downstream features in the timeline.
+  const DEFAULT_SCRIPT = `# Write build123d Python here, then assign your final body to a
+# variable named \`result\` — that is what gets rendered. A script
+# that assigns no \`result\` just defines helpers and renders nothing.
+#
+# Runs sandboxed: build123d, math and numpy are available; the
+# filesystem, network and os/subprocess are not.
 #
 # build123d 0.10's public API ('Box', 'Cylinder', 'BuildPart',
-# 'Locations', 'Mode', ...) is already in scope at runtime,
-# but the explicit import keeps your script portable.
+# 'Locations', 'Mode', ...) is already in scope, but the explicit
+# import keeps your script portable.
 
 from build123d import *
 
@@ -153,7 +156,7 @@ result = part.part
   bind:open={dialogs.script}
   onclose={cancel}
   title={titleText}
-  description="build123d Python — assign your final body to a name to expose it to downstream features."
+  description="build123d Python (sandboxed) — assign your final body to a variable named `result` to render it."
   class="max-w-3xl"
 >
   {#snippet children()}

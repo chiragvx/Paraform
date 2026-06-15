@@ -53,6 +53,7 @@ import { ASSEMBLY_CHECK_TOOLS } from './tools_assembly_check.js';
 import { PLANNER_TOOLS } from './tools_planner.js';
 import { VISION_TOOLS } from './tools_vision.js';
 import { WEB_TOOLS } from './tools_web.js';
+import { CODE_TOOLS } from './tools_code.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -675,6 +676,10 @@ const BODY_EMITTING = new Set([
     'PathPattern', 'Mirror', 'StandardPart', 'ImportedMesh',
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
+    // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
+    // Helper-only scripts (no `result`) still list here harmlessly — the AI
+    // verifies real geometry with measure.
+    'BuildScript',
 ]);
 
 /** Compact JSON view of the live document for the agent's eyes. */
@@ -810,7 +815,7 @@ function _collectTools() {
         TOOLS, GEOMETRY_EXT_TOOLS, SKETCH_TOOLS, SELECTION_TOOLS,
         CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
         ASSEMBLY_CHECK_TOOLS, PLANNER_TOOLS,
-        VISION_TOOLS, WEB_TOOLS,
+        VISION_TOOLS, WEB_TOOLS, CODE_TOOLS,
     ];
     const out = [];
     const seen = new Set();
