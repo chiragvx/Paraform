@@ -321,3 +321,49 @@ syntax-check on all 7 hand-edited files.
    the `PLAN.md` KinematicsPanel) once the agent path is proven.
 5. **Then** the data flywheel at volume → RL post-training with a geometric **+
    assembly** reward (unique to us).
+
+---
+
+## 9. Addendum — fixes from a real "12-tooth gear" run
+
+A live run (`make a gear with 12 teeth + M3 screw holes, Ø500×50, smooth teeth`)
+exposed three concrete platform issues (separate from raw model quality). All
+fixed and unit-tested:
+
+- **`addGear` — a one-call parametric spur gear.** The model flailed and gave up
+  because there was no gear capability and it can't synthesize a tooth profile
+  from primitives. New `Gear` feature type (mirrors the `Casing` precedent):
+  toothed disk + optional centre bore + optional **bolt circle** of screw holes
+  + smooth-edge fillet, sized by `outerDiameter` / `module` / `pitchDiameter`,
+  in one tool call. The emitter builds a tapered-tooth profile and **degrades to
+  a bored disk** if the kernel ever chokes, so it always compiles. (Teeth are
+  straight-flank v1; true involute flanks are a future refinement.) The system
+  prompt now routes gears to `addGear` instead of a fruitless library search.
+- **`validateInput` rejected `componentId: null`.** Weak models pass `null` for
+  optional "use the default" fields constantly; it returned *"field 'componentId'
+  must be a string."* Now an explicit `null`/`undefined` on a **non-required**
+  field is treated as omitted (and `makeFeature` coerces a null componentId to
+  `'root'`). This brittleness was silently breaking many calls.
+- **Patterns accepted a dangling `featureId`.** A mistyped/hallucinated id
+  (`hole_…dd5` vs the real `…dd6`) was accepted and emitted `n_<missing>` →
+  kernel *"name not defined"* compile crash. Pattern tools now reject a
+  non-existent source with a clear message, and reject circular-patterning a
+  **Hole** (which repeats the whole bored body, not the hole) with a pointer to
+  `addGear`'s bolt circle or the pattern-the-tool-then-cut approach.
+
+Also fixed earlier this session: the visual-gate **vision regression** (text-only
+`gpt-oss` errored on injected renders — now vision-gated; see §6 P0.1).
+
+### Manual test items (gear run)
+- [ ] **Gear one-shot:** ask the AI for "a 12-tooth gear, Ø500, 50mm thick, Ø50
+  centre hole, 12 M3 screw holes on a Ø100 bolt circle, smooth teeth." Confirm it
+  calls `addGear` once (not cylinder + circular-pattern), and `measure {type:"bbox"}`
+  shows ~500×500×50. Eyeball the teeth + bolt ring (on a vision model) or measure
+  the bolt-hole centres.
+- [ ] **Gear fallback:** confirm a gear always compiles even with odd params
+  (e.g. tiny module, huge bore) — worst case a bored disk, never a hard error.
+- [ ] **null optional field:** any tool call with `componentId: null` succeeds.
+- [ ] **Dangling pattern ref:** `addCircularPattern` with a non-existent
+  `featureId` returns a clear "no feature with id" error (no compile crash).
+- [ ] **Pattern-a-hole:** circular-patterning a Hole is rejected with the
+  bolt-circle / `addGear` hint.

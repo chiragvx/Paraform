@@ -23,6 +23,7 @@ import {
     addFillet, addChamfer, addShell, addHole,
     addUnion, addCut, addIntersect,
     addCasing,
+    addGear,
     addLinearPattern, addCircularPattern, addMirror,
     addStandardPart,
     addDocumentParameter, setDocumentParameter,
@@ -68,6 +69,23 @@ const B = (desc) => ({ type: 'boolean', description: desc });
 function feat(f, summary) {
     if (!f || !f.id) return { ok: false, error: 'operation did not return a feature' };
     return { ok: true, featureId: f.id, name: f.name || f.type, summary: summary || `${f.type} ${f.id}` };
+}
+
+/**
+ * Guard a pattern/transform whose source must be an EXISTING body. A dangling
+ * featureId (a mistyped / hallucinated id, e.g. the model passing hole_…dd5 when
+ * it created hole_…dd6) used to be accepted and then emit `n_<missing>` →
+ * kernel "name not defined" compile crash. Returns an error string if the
+ * feature is missing, plus a hint when the source is a Hole/cut (patterning a
+ * hole replicates the whole bored body, not the hole — for a ring of holes use
+ * addGear's bolt circle, or pattern the cutting TOOL before the cut). null = OK.
+ */
+function patternSourceError(featureId, op) {
+    let f;
+    try { f = getDocumentStore().doc.features[featureId]; } catch { return null; }
+    if (!f) return { ok: false, error: `${op}: no feature with id '${featureId}'. Pass the id the creating op returned (check get_document_summary). A pattern repeats an existing BODY.` };
+    if (f.type === 'Hole') return { ok: false, error: `${op}: '${featureId}' is a Hole (a subtractive cut, not a body) — patterning it repeats the whole bored body, not the hole. For a ring of screw holes use addGear's bolt circle, or place a cylinder tool, pattern THAT, then addCut.` };
+    return null;
 }
 
 const TOOLS = [
@@ -290,6 +308,31 @@ const TOOLS = [
         handler: (i) => feat(addCasing(i), `Casing around ${Array.isArray(i.targets) ? i.targets.length : 0} component(s), wall=${i.wall ?? 2}mm${i.splitPlane ? `, split ${i.splitPlane}` : ''}`),
     },
 
+    // ── Gear generator ────────────────────────────────────────────────────────
+    {
+        name: 'addGear',
+        description: 'Create a parametric spur gear in ONE call: a toothed disk with an optional centre bore and an optional ring of screw holes (bolt circle). Do NOT try to build a gear from primitives + circular-pattern — use this. Size it by exactly one of module, outerDiameter (the overall/tip diameter), or pitchDiameter. For a ring of screw holes around the centre, set boltCount + boltCircleDiameter + boltHoleDiameter (an M3 screw clearance ≈ 3.4mm; tap ≈ 2.5mm). toothFillet rounds the tooth edges ("smooth teeth"). Sits on Z=0, spanning 0..thickness. Dimensions mm. Verify with measure {type:"bbox"} after.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                teeth: N('Number of teeth (>= 3, default 12)'),
+                module: N('Module = mm of pitch diameter per tooth (preferred sizing). Pitch dia = module×teeth; outer dia = module×(teeth+2).'),
+                outerDiameter: N('Overall / tip diameter (mm). Sets module = outerDiameter/(teeth+2). Use when the user gives the gear\'s outside diameter.'),
+                pitchDiameter: N('Pitch diameter (mm). Sets module = pitchDiameter/teeth.'),
+                thickness: N('Gear thickness / face width (mm, default 10)'),
+                bore: N('Centre hole DIAMETER (mm, default 0 = no bore)'),
+                pressureAngle: N('Pressure angle (deg, default 20)'),
+                boltCount: N('Number of screw holes evenly spaced around the centre (0 = none)'),
+                boltCircleDiameter: N('Diameter of the circle the screw holes sit on (mm)'),
+                boltHoleDiameter: N('Each screw-hole diameter (mm, default 3 for M3)'),
+                toothFillet: N('Fillet radius for smooth tooth/edge rounding (mm, default 0 = sharp)'),
+                componentId: S('Target component id (default: active / root)'),
+            },
+            required: ['teeth'],
+        },
+        handler: (i) => feat(addGear(i), `Gear ${i.teeth}T${i.outerDiameter ? ` OD${i.outerDiameter}` : i.module ? ` m${i.module}` : ''}×${i.thickness ?? 10}mm${i.bore ? ` bore Ø${i.bore}` : ''}${i.boltCount ? `, ${i.boltCount}× Ø${i.boltHoleDiameter ?? 3} bolts` : ''}`),
+    },
+
     // ── Patterns ─────────────────────────────────────────────────────────────
     {
         name: 'addLinearPattern',
@@ -305,7 +348,8 @@ const TOOLS = [
             },
             required: ['featureId', 'count', 'spacing'],
         },
-        handler: (i) => feat(addLinearPattern(i.featureId, { direction: i.direction, count: i.count, spacing: i.spacing, componentId: i.componentId }), `LinearPattern ×${i.count}`),
+        handler: (i) => patternSourceError(i.featureId, 'addLinearPattern')
+            || feat(addLinearPattern(i.featureId, { direction: i.direction, count: i.count, spacing: i.spacing, componentId: i.componentId }), `LinearPattern ×${i.count}`),
     },
     {
         name: 'addCircularPattern',
@@ -321,7 +365,8 @@ const TOOLS = [
             },
             required: ['featureId', 'count'],
         },
-        handler: (i) => feat(addCircularPattern(i.featureId, { axis: i.axis, count: i.count, angle: i.angle, componentId: i.componentId }), `CircularPattern ×${i.count}`),
+        handler: (i) => patternSourceError(i.featureId, 'addCircularPattern')
+            || feat(addCircularPattern(i.featureId, { axis: i.axis, count: i.count, angle: i.angle, componentId: i.componentId }), `CircularPattern ×${i.count}`),
     },
     {
         name: 'addMirror',
@@ -335,7 +380,8 @@ const TOOLS = [
             },
             required: ['featureId', 'plane'],
         },
-        handler: (i) => feat(addMirror(i.featureId, i.plane, { componentId: i.componentId }), `Mirror across ${i.plane}`),
+        handler: (i) => patternSourceError(i.featureId, 'addMirror')
+            || feat(addMirror(i.featureId, i.plane, { componentId: i.componentId }), `Mirror across ${i.plane}`),
     },
 
     // ── Library / standard parts ───────────────────────────────────────────────
@@ -628,7 +674,7 @@ const BODY_EMITTING = new Set([
     'Move', 'Rotate', 'Scale', 'Align', 'LinearPattern', 'CircularPattern',
     'PathPattern', 'Mirror', 'StandardPart', 'ImportedMesh',
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
-    'Casing',
+    'Casing', 'Gear',
 ]);
 
 /** Compact JSON view of the live document for the agent's eyes. */
@@ -836,6 +882,11 @@ function validateInput(schema, input) {
     for (const [key, val] of Object.entries(obj)) {
         const spec = props[key];
         if (!spec || !spec.type) continue; // unknown / open field — allow
+        // An explicit null/undefined on a NON-required field means "not provided"
+        // — weak models routinely pass `componentId: null` for "use the default".
+        // (Required fields are already enforced above.) Treat it as omitted, not
+        // a type error, so a sane optional default doesn't get rejected.
+        if (val === undefined || val === null) continue;
         const t = spec.type;
         if (t === 'number' && typeof val !== 'number') return `field '${key}' must be a number`;
         if (t === 'string' && typeof val !== 'string') return `field '${key}' must be a string`;
