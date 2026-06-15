@@ -19,6 +19,7 @@ import os
 import sys
 import threading
 import traceback
+from collections import OrderedDict
 from typing import Any
 
 # Load the project-root .env so GEMINI_API_KEY / GOOGLE_API_KEY / ANTHROPIC_API_KEY
@@ -230,6 +231,75 @@ _last_execution_ns:     dict | None = None
 _last_execution_result: dict | None = None
 
 
+# ── Execute result cache (content-addressed) ─────────────────────────────────
+#
+# Identical emitted code at the same tessellation deflection produces
+# byte-identical geometry — OCCT is deterministic for a fixed kernel build — so
+# we can replay a prior /execute response instead of re-running build123d +
+# BRepMesh + GLB export. This is the SERVER tier of the studio's compile cache:
+# the browser keeps its own in-memory result cache (lib/document/executor.js),
+# but that's lost on reload. Reopening a document, a second tab, or a second
+# user all land here, where a warm entry turns a multi-hundred-ms kernel
+# round-trip into a dict lookup.
+#
+# Each entry holds the FULL split — the JSON-able response AND the private
+# namespace / result / topology the harness stashes for /measure (build123d
+# Body objects aren't serialisable). Keeping them together lets a cache hit
+# serve geometry AND re-stash the live shapes, so /measure stays correct
+# regardless of whether the geometry came from a fresh build or the cache.
+# Only ok:true results are cached — a transient error must never go sticky.
+#
+# Memory: an entry pins a base64 GLB plus the live OCCT shapes for that doc, so
+# the cap trades resident memory for hit rate. Tune or disable via
+# KERNEL_EXECUTE_CACHE_SIZE (0 disables — every call rebuilds, as before).
+try:
+    _EXECUTE_CACHE_SIZE = max(0, int(os.environ.get("KERNEL_EXECUTE_CACHE_SIZE", "8")))
+except (TypeError, ValueError):
+    _EXECUTE_CACHE_SIZE = 8
+
+_execute_cache: "OrderedDict[str, dict]" = OrderedDict()
+
+
+def _execute_cache_key(code: str, formats: tuple, deflection: float) -> str:
+    """Hash (code + deflection + formats) → cache key.
+
+    Deflection is folded in because the same code at draft vs ultra tessellates
+    differently. Formats (step/stl/brep) change the response payload, so they
+    matter too; sorted for order-independence.
+    """
+    h = hashlib.sha256()
+    h.update(code.encode("utf-8"))
+    h.update(b"\x00")
+    h.update(repr(deflection).encode("utf-8"))
+    h.update(b"\x00")
+    h.update(",".join(sorted(formats)).encode("utf-8"))
+    return h.hexdigest()
+
+
+def _execute_cache_get(key: str) -> dict | None:
+    """LRU get — returns the cached entry (touched as MRU) or None.
+
+    Caller MUST hold `_kernel_lock` (the cache mutates ordering on read)."""
+    if _EXECUTE_CACHE_SIZE <= 0:
+        return None
+    entry = _execute_cache.get(key)
+    if entry is not None:
+        _execute_cache.move_to_end(key)
+    return entry
+
+
+def _execute_cache_put(key: str, entry: dict) -> None:
+    """LRU put — stores the entry and evicts the oldest past the cap.
+
+    Caller MUST hold `_kernel_lock`."""
+    if _EXECUTE_CACHE_SIZE <= 0:
+        return
+    _execute_cache[key] = entry
+    _execute_cache.move_to_end(key)
+    while len(_execute_cache) > _EXECUTE_CACHE_SIZE:
+        _execute_cache.popitem(last=False)
+
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.route("/health", methods=["GET"])
@@ -271,30 +341,48 @@ def execute():
     if not code:
         return jsonify({"ok": False, "error": "Empty code payload", "kernelVersion": _KERNEL_VERSION}), 400
 
-    # Serialize the actual kernel build + cache write (OCCT isn't thread-safe);
-    # connection handling stays concurrent via threaded=True.
+    # Content-addressed cache key — pure hash, safe to compute outside the lock.
+    formats_t = tuple(formats)
+    cache_key = _execute_cache_key(code, formats_t, deflection)
+
+    # Serialize the actual kernel build + cache read/write (OCCT isn't
+    # thread-safe); connection handling stays concurrent via threaded=True.
     try:
         with _kernel_lock:
-            result = execute_b123d(code, formats=tuple(formats), deflection=deflection)
+            entry = _execute_cache_get(cache_key)
+            if entry is None:
+                result = execute_b123d(code, formats=formats_t, deflection=deflection)
 
-            # Attach kernel version to every response — clients route geometry
-            # to warnings if the kernel that produced it drifts from the doc's
-            # saved pin.
-            if isinstance(result, dict):
-                result["kernelVersion"] = _KERNEL_VERSION
+                # Attach kernel version to every response — clients route
+                # geometry to warnings if the kernel that produced it drifts
+                # from the doc's saved pin.
+                if isinstance(result, dict):
+                    result["kernelVersion"] = _KERNEL_VERSION
 
-            # Pop the private fields the harness stashes for /measure so they
-            # don't leak into the JSON response (build123d Body objects aren't
-            # serialisable and would crash jsonify). Populate the process-local
-            # last-execution cache on success — inside the lock so /measure
-            # never observes a half-updated cache.
-            ns      = result.pop("__namespace__", None) if isinstance(result, dict) else None
-            raw_res = result.pop("__result__",    None) if isinstance(result, dict) else None
-            topo    = result.pop("__topology__",  None) if isinstance(result, dict) else None
+                # Split the JSON-able response from the private fields the
+                # harness stashes for /measure (build123d Body objects aren't
+                # serialisable and would crash jsonify). Keep them together in
+                # one cache entry so a hit can both return geometry AND re-stash
+                # the live shapes.
+                ns      = result.pop("__namespace__", None) if isinstance(result, dict) else None
+                raw_res = result.pop("__result__",    None) if isinstance(result, dict) else None
+                topo    = result.pop("__topology__",  None) if isinstance(result, dict) else None
+                entry = {"response": result, "ns": ns, "raw_res": raw_res, "topo": topo}
 
-            if result.get("ok") and ns is not None and raw_res is not None:
-                # Stash the live shapes for /measure. Include the freshly-built
-                # topology so descriptor resolution doesn't have to rebuild it.
+                # Cache only successful builds — inside the lock so /measure
+                # never observes a half-updated cache, and never a failure.
+                if isinstance(result, dict) and result.get("ok"):
+                    _execute_cache_put(cache_key, entry)
+
+            response = entry["response"]
+            ns, raw_res, topo = entry["ns"], entry["raw_res"], entry["topo"]
+
+            # Re-stash the live shapes for /measure on BOTH paths (fresh build
+            # and cache hit) so the most recent /execute always owns the measure
+            # state — a hit must hand /measure the cached doc's shapes, not the
+            # previous build's. Include the topology so descriptor resolution
+            # doesn't have to rebuild it.
+            if isinstance(response, dict) and response.get("ok") and ns is not None and raw_res is not None:
                 if isinstance(raw_res, dict) and topo is not None:
                     raw_res["__topology__"] = topo
                 global _last_execution_ns, _last_execution_result
@@ -308,10 +396,10 @@ def execute():
             "kernelVersion": _KERNEL_VERSION,
         }), 500
 
-    if not result.get("ok"):
-        return jsonify(result), 400
+    if not response.get("ok"):
+        return jsonify(response), 400
 
-    return jsonify(result)
+    return jsonify(response)
 
 
 @app.route("/measure", methods=["POST"])
