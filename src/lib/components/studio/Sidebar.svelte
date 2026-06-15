@@ -57,6 +57,7 @@
     renameFeatureChange,
   } from '../../../../lib/document/index.js';
   import { canReparentFeature, canReparentComponent } from '$lib/document/reparent.js';
+  import { importImageAsReferenceFeature } from '$lib/reference/image_canvas.js';
   import { studio } from '$lib/studio/runtime.svelte.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
   import { dialogs } from '$lib/dialogs/dialogs.svelte.js';
@@ -94,6 +95,9 @@
   import Brick from '@lucide/svelte/icons/brick-wall';
   import FileBox from '@lucide/svelte/icons/file-box';
   import FileCode from '@lucide/svelte/icons/file-code';
+  import ImageIcon from '@lucide/svelte/icons/image';
+  import ListOrdered from '@lucide/svelte/icons/list-ordered';
+  import TimelineStrip from './TimelineStrip.svelte';
 
   // ── Feature-type → icon ────────────────────────────────────────────────
   const ICONS = {
@@ -342,6 +346,31 @@
     scrubOpen = !scrubOpen;
   }
 
+  // ── Reference image (Phase A1) ──────────────────────────────────────────
+  // Hidden <input type=file> driven by the toolbar button. On pick we commit a
+  // ReferenceImage feature and select it so the Inspector opens its controls.
+  let refImageInput = $state(null);
+  function pickReferenceImage() {
+    refImageInput?.click();
+  }
+  async function onReferenceImageFile(e) {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = ''; // allow re-picking the same file
+    if (!file) return;
+    try {
+      const { feature } = await importImageAsReferenceFeature(file);
+      if (feature?.id) store?.selectFeature(feature.id);
+    } catch (err) {
+      console.error('[sidebar] reference image import failed:', err);
+    }
+  }
+
+  // Horizontal timeline strip toggle (Phase B3) — independent of scrubOpen.
+  let stripOpen = $state(false);
+  function toggleStrip() {
+    stripOpen = !stripOpen;
+  }
+
   // ── Context menus (one generic menu, items per row kind) ─────────────────
   // ctxMenu = { x, y, items, row } | null
   let ctxMenu = $state(null);
@@ -571,6 +600,28 @@
       <button
         type="button"
         class="rounded p-0.5 hover:bg-accent hover:text-foreground"
+        onclick={pickReferenceImage}
+        title="Add reference image"
+        aria-label="Add reference image"
+      >
+        <ImageIcon class="size-3.5" />
+      </button>
+      <button
+        type="button"
+        class="rounded p-0.5 hover:bg-accent hover:text-foreground"
+        class:bg-accent={stripOpen}
+        class:text-foreground={stripOpen}
+        onclick={toggleStrip}
+        title="Timeline strip"
+        aria-label="Toggle timeline strip"
+      >
+        <ListOrdered class="size-3.5" />
+      </button>
+      <button
+        type="button"
+        class="rounded p-0.5 hover:bg-accent hover:text-foreground"
+        class:bg-accent={scrubOpen}
+        class:text-foreground={scrubOpen}
         onclick={rollMarker}
         title="Roll marker"
         aria-label="Roll marker"
@@ -580,8 +631,21 @@
     </span>
   </div>
 
+  <!-- Hidden file input for reference-image import (Phase A1). -->
+  <input
+    bind:this={refImageInput}
+    type="file"
+    accept="image/*"
+    class="hidden"
+    onchange={onReferenceImageFile}
+  />
+
   {#if scrubOpen}
     <TimelineScrub />
+  {/if}
+
+  {#if stripOpen}
+    <TimelineStrip />
   {/if}
 
   <!-- Active-component breadcrumb -->

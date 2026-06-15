@@ -574,6 +574,12 @@ const TOOLS = [
         handler: () => documentSummary(),
     },
     {
+        name: 'get_timeline',
+        description: 'Return the feature history as an ordered build timeline (each step: index, id, type, name, enabled, params). Use this to find which EARLIER step controls an attribute the user wants changed, then patch that step with setFeatureParams — downstream steps regenerate automatically. Prefer editing the responsible step over appending a new feature.',
+        input_schema: { type: 'object', properties: {} },
+        handler: () => timelineSummary(),
+    },
+    {
         name: 'list_components',
         description: 'List the components (sub-assemblies) in the document with their parent and origin.',
         input_schema: { type: 'object', properties: {} },
@@ -714,6 +720,40 @@ export function documentSummary() {
         bodies,
         connectors: Object.keys(doc.connectors || {}).length,
         joints: Object.keys(doc.joints || {}).length,
+    };
+}
+
+/**
+ * The document's feature history as an ordered timeline (Phase C3). Same data
+ * as documentSummary but framed as a build sequence the agent can edit IN
+ * PLACE: each step carries its position so the model can target an EARLIER step
+ * by id and patch it with setFeatureParams — downstream steps regenerate
+ * deterministically (the whole doc re-emits), so it must NOT append a duplicate
+ * to "fix" something an earlier step already controls.
+ */
+export function timelineSummary() {
+    const doc = getDocumentStore().doc;
+    const order = doc.featureOrder || Object.keys(doc.features || {});
+    const steps = order
+        .map((id, index) => {
+            const f = doc.features[id];
+            if (!f) return null;
+            return {
+                index,
+                id: f.id,
+                type: f.type,
+                name: f.name || f.type,
+                enabled: f.enabled !== false,
+                isBody: BODY_EMITTING.has(f.type),
+                params: _compactParams(f.params),
+            };
+        })
+        .filter(Boolean);
+    return {
+        ok: true,
+        count: steps.length,
+        steps,
+        note: 'Steps are in build order. To change an EARLIER step, call setFeatureParams on its id — downstream steps regenerate automatically. Do NOT append a duplicate feature to fix what an earlier step controls.',
     };
 }
 

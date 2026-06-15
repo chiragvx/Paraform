@@ -6,7 +6,7 @@
  * reactive — e.g. a command can be enabled only when `runtime.bridge` is set.
  */
 
-import { setActiveComponentProvider, getDocumentStore } from '../../../lib/document/index.js';
+import { setActiveComponentProvider, setInsertIndexResolver, getDocumentStore } from '../../../lib/document/index.js';
 import { componentPathFor as _componentPathFor } from '../../../lib/document/types.js';
 import { measure as measureClient } from '../measure/api.js';
 
@@ -177,6 +177,17 @@ class StudioRuntime {
     // runtime from operations.js (circular dep), so the runtime pushes
     // a getter in at boot.
     setActiveComponentProvider(() => this.activeComponentId);
+    // Phase B2 — insert-at-marker. When the rollback marker is active, new
+    // features splice in right AFTER the marked feature (SolidWorks rollback-bar
+    // behaviour) instead of appending at the end. Returns null when no marker is
+    // set, so default behaviour is untouched.
+    setInsertIndexResolver((doc) => {
+      const head = this.rollbackHead;
+      if (!head) return null;
+      const order = doc?.featureOrder || [];
+      const idx = order.indexOf(head);
+      return idx < 0 ? null : idx + 1;
+    });
   }
   clearBoot() {
     this.viewport = null;
@@ -186,6 +197,7 @@ class StudioRuntime {
     this.startMeasure = null;
     this.measureToolActive = false;
     setActiveComponentProvider(null);
+    setInsertIndexResolver(null);
   }
 
   /** No-validation setter; commit 3 (browser UI) will gate this on existence. */

@@ -58,6 +58,7 @@
   import { solveMateTransform, connectorsCompatible } from '$lib/library/mate_solver.js';
   import { ReferencePlanes } from '../../../../app/viewport/reference_planes.js';
   import { SketchOverlay } from '../../../../app/viewport/sketch_overlay.js';
+  import { syncReferenceImages } from '$lib/reference/image_canvas.js';
   import { enterSketch } from '$lib/sketch/boot.js';
   import SelectionFilterToolbarMount from './SelectionFilterToolbarMount.svelte';
   import Maximize2 from '@lucide/svelte/icons/maximize-2';
@@ -819,6 +820,22 @@
     $effect(() => {
       const v = studio.sketchOverlayVisible;
       try { studio.sketchOverlay?.setVisible?.(!!v); } catch {}
+    });
+
+    // ── Phase A1 — Reference-image planes ──────────────────────────────────
+    // Mount/update/remove a textured plane for every ReferenceImage feature.
+    // The sync helper is idempotent and content-hashed, so it's cheap to run
+    // on every store tick; skip selection-only events (they never add/remove
+    // a ReferenceImage or change its placement). Initial pass mounts any
+    // planes a restored document already carries.
+    function syncRefImages() {
+      try { syncReferenceImages(store.doc, viewport.scene); }
+      catch (err) { console.warn('[viewport] syncReferenceImages failed:', err); }
+    }
+    syncRefImages();
+    const offRefImages = store.subscribe((_doc, eventLabel) => {
+      if (eventLabel === 'select' || eventLabel === 'refs') return;
+      syncRefImages();
     });
 
     // ── E3.5 — Cosmetic-thread overlay ────────────────────────────────────
@@ -1608,6 +1625,17 @@
       try { offRefPlanesPickSel?.(); } catch {}
       try { referencePlanes.dispose(); } catch {}
       try { sketchOverlay.dispose(); } catch {}
+      try { offRefImages?.(); } catch {}
+      // Drop every mounted reference-image plane: clear the doc-derived set so
+      // the next sync removes them, then run one final sync against the now-
+      // empty selection (the registry lives on scene.userData and would
+      // otherwise leak across a viewport rebuild / hot reload).
+      try {
+        const reg = viewport.scene?.userData?.__refImages;
+        if (reg && reg.size) {
+          syncReferenceImages({ features: {}, featureOrder: [] }, viewport.scene);
+        }
+      } catch {}
       try { offConnectors(); } catch {}
       try { connectorOverlay.dispose(); } catch {}
       picking.dispose();
