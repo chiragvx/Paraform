@@ -2,39 +2,47 @@
 
 **Status:** proposed · **Owner:** Chirag · **Created:** 2026-06-17
 **Goal:** Make the native desktop app the *product*, not a second surface.
-Ship a signed, notarized, auto-updating Windows + macOS app where the CAD
-kernel runs locally, compiles are unlimited and free, and the cloud is
-optional (sync/accounts), not load-bearing.
+Ship a signed, notarized, auto-updating Windows + macOS app where the **CAD
+kernel (compute) runs on-device** — while accounts and project storage stay in
+the cloud.
+
+> **Shape of the bet:** *thick client for compute, thin cloud for identity +
+> data.* The heavy OCCT/build123d work moves to the user's own CPU (kills the
+> hosted-kernel compute cost — the real scalability ceiling). Sign-in stays
+> **mandatory**, projects **save to the cloud** (with local save as a fallback),
+> and the app is **never meant to run fully offline**.
 
 > **Why this is mostly a packaging job, not a rewrite.** The Tauri shell
 > (`src-tauri/`), the Rust sidecar lifecycle (`src-tauri/src/lib.rs` — spawns
 > the kernel on `127.0.0.1:7823`, kills it on exit), the PyInstaller freeze of
 > the whole kernel (`b123d_server/build_sidecar.py`), and the self-bootstrap
 > (`scripts/ensure-sidecar.js`) already exist and have compiled on Windows. The
-> AI proxy, auth gate, and billing are registered on the *same* Flask app
-> (`b123d_server/server.py:42-57`) that gets frozen, so desktop already has a
-> self-contained backend. The remaining work is the *shipping last mile* +
-> deciding what "100% on-device" means for accounts and revenue.
+> remaining work is the *shipping last mile* + adapting the **mandatory** cloud
+> auth/sync to run inside the native shell.
 
 ---
 
 ## 1. North star
 
-A creator downloads one installer, double-clicks, and is designing functional
-machines offline within seconds — no tunnel, no hosted kernel, no sign-in wall,
-no per-day compile caps. Their own CPU does the OCCT work; their own API key
-(or a local model) does the AI. Cloud sign-in exists only to sync projects
-across their machines.
+A creator downloads one installer, signs in, and is designing functional
+machines within seconds — no tunnel, no hosted kernel, no per-day compile caps.
+Their own CPU does the OCCT work; their projects live in the cloud (synced
+across their machines) with a local save as a safety net. The account is always
+present; the *compute* is what we move on-device.
 
-This is the right long-term bet because it removes the two costs that cap
-scalability today:
+Why this is the long-term scalable architecture:
 
-- **Server-side OCCT compute** — every compile currently can hit a hosted
-  kernel (`VITE_ENGINE_URL` / HF Space). On-device, compute scales with users'
-  own hardware → marginal cost ≈ $0.
-- **Metered SaaS friction** — daily caps (`b123d_server/auth_gate.py`) exist to
-  bound that compute cost. Remove the hosted compute and the caps lose their
-  reason to exist; the product gets faster *and* cheaper to run.
+- **On-device compute removes the cost ceiling.** Every compile currently can
+  hit a hosted kernel (`VITE_ENGINE_URL` / HF Space). On-device, OCCT compute
+  scales with users' own hardware → our marginal compute cost ≈ $0, and the app
+  gets faster (localhost, no network round-trip).
+- **The cloud keeps doing what it's good at** — identity, durable project
+  storage, cross-device sync, billing. It stays the source of truth for *data*,
+  not for *geometry compute*.
+- **Compile caps lose their cost rationale.** Daily compile caps
+  (`b123d_server/auth_gate.py`) exist to bound hosted compute. With the kernel
+  local, local compiles can be uncapped — the account stays mandatory for
+  identity/storage, not to meter free local CPU.
 
 ---
 
@@ -48,46 +56,40 @@ scalability today:
 | Self-bootstrapping build | ✅ done | `scripts/ensure-sidecar.js`, npm `tauri:build` |
 | Desktop vs web detection + URL routing | ✅ done | `lib/platform/runtime.js`, `lib/document/kernel_client.js:24` |
 | AI runs through local sidecar | ✅ done | `/ai/chat` registered in `server.py:42` |
+| Mandatory sign-in gate | ✅ exists (web-shaped) | `VITE_REQUIRE_AUTH`, `session.svelte.js`, `App.svelte` |
+| Cloud project sync | ✅ exists | Supabase `cad_documents`/`cad_folders`, local-first mirror |
 | Windows dev build compiled | ✅ verified | `src-tauri/target/debug/` fingerprints present |
 | **macOS sidecar build** | ❌ not done | needs a Mac — PyInstaller can't cross-compile |
 | **Code signing (Win + Mac)** | ❌ not done | no certs, no notarization step |
 | **Auto-update** | ❌ not done | no updater plugin / release feed |
-| **Local-first auth/licensing** | ⚠️ partial | login is *mandatory* when Supabase configured (`VITE_REQUIRE_AUTH`), caps are server-enforced |
+| **Desktop-shaped auth (deep-link OAuth)** | ❌ not done | redirect today assumes web origin |
 | **Release CI (3 OS matrix)** | ❌ not done | `ci.yml` is tests-only, ubuntu-only |
 
 ---
 
-## 3. Strategic decisions to lock before building
+## 3. Strategic decisions — RESOLVED
 
-These change *what* we build, so they gate Phase 2+. Recommendations in **bold**.
+### D1 — Web app's fate → **PAUSE (abandon, do not delete)** ✅
+Keep the web studio code dormant in the repo. No active changes, no deletion.
+Stop treating it as a shipping surface; downloads point to native. Revisit later
+if a zero-install trial is wanted.
 
-### D1 — What happens to the web app?
-- **(Recommended) Web → marketing + trial only.** Keep `#/`, `#/pricing`, a
-  read-only or watermarked browser demo. The studio product is native. Lowest
-  risk, preserves SEO/funnel.
-- Full sunset: delete the web studio path entirely. Cleaner but throws away the
-  zero-install top-of-funnel.
+### D2 — Accounts & data model → **Mandatory sign-in, cloud-primary storage** ✅
+- Sign-in is **required**; the app is **not** designed to run fully offline.
+- Projects **save to the cloud** as the source of truth; **local save is a
+  supported fallback** (safety net / quick scratch).
+- The **kernel/compute is the only thing that moves on-device.** Auth, storage,
+  and sync remain cloud services.
+- Local compiles can be **uncapped** (free local CPU); the mandatory account is
+  for identity + storage, not compute metering.
+- *Open sub-decision (not blocking):* pricing tiers (what Pro unlocks once
+  compute is free — likely storage limits, hosted-AI fallback keys, premium
+  libraries). Decide before Phase 3 billing wiring.
 
-### D2 — Accounts & monetization once compute is free/local
-The current model (Stripe Pro unlocks higher *server* caps) is meaningless when
-the kernel is local. Options:
-- **(Recommended) Local-first, optional account.** App runs fully without
-  sign-in (BYO AI key or local model). Sign-in unlocks **cloud project sync**
-  across devices. Monetize Pro as a one-time/subscription unlock for
-  *sync + hosted AI fallback keys + premium part libraries* — validated by a
-  thin license check, not by gating the kernel.
-- Keep hosted AI as the paid hook: app is free + local, Pro = "use our managed
-  AI keys without bringing your own."
-- Pure offline, no accounts at all (simplest; drops sync + recurring revenue).
-
-### D3 — PyInstaller packaging mode
-- **(Recommended) Switch `--onefile` → `--onedir`.** `--onefile` re-unpacks the
-  whole OCCT payload to a temp dir on *every* launch → slow, heavy first
-  compile. `--onedir` ships a folder Tauri bundles as resources; far faster cold
-  start. Trade-off: bundle is a directory, not one file (fine inside an
-  installer).
-
-> I'll surface D1/D2 as a question after this plan so Phase 2 is unblocked.
+### D3 — PyInstaller packaging mode → **switch `--onefile` → `--onedir`** (recommended)
+`--onefile` re-unpacks the whole OCCT payload to a temp dir on *every* launch →
+slow, heavy first compile. `--onedir` ships a folder Tauri bundles as resources;
+far faster cold start. Confirm during Phase 5.
 
 ---
 
@@ -106,14 +108,26 @@ native dylibs that `--collect-all OCP` can miss.
 - [ ] `npm run tauri:build` on macOS → produces a `.app` / `.dmg`.
 - [ ] Smoke: launch `.app`, confirm sidecar boots, design a part end-to-end.
 
-### Phase 2 — Decouple from mandatory cloud (local-first) · ~1-2 weeks
-*(gated on D1/D2)*
-- [ ] Make sign-in genuinely optional in desktop: default `VITE_REQUIRE_AUTH=0` for native builds; the studio gate (`App.svelte`) must allow a full offline session. (`session.svelte.js` already boots non-blocking.)
-- [ ] Remove/neutralize server caps for the local kernel: `auth_gate.py` should no-op when the kernel is the bundled sidecar (e.g. `REQUIRE_AUTH=0` baked into the frozen build / detect loopback caller). Compiles + AI become uncapped locally.
-- [ ] Default AI to **bring-your-own-key / local model** (Ollama base URL already documented in `.env.example`). Hosted-key fallback becomes a signed-in Pro convenience, not the default.
-- [ ] Re-target Supabase auth for desktop: OAuth via deep-link scheme (`com.paraform.app://`) or localhost loopback instead of web-origin redirect (`.env.example` redirect notes). Email/magic-link works as-is.
-- [ ] Recast billing: Stripe Checkout opens in the system browser, returns via deep-link; `profiles.plan` gates *sync/AI-fallback*, not the kernel.
-- [ ] Storage stays local-first (already: `.paraform.json` changelog-fold + library local mirror). Cloud sync becomes opt-in on sign-in.
+### Phase 2 — Make mandatory cloud auth + sync work in the native shell · ~1-2 weeks
+*(NOT decoupling from the cloud — adapting it to the desktop shell.)*
+- [ ] **Desktop OAuth:** Supabase magic-link/OAuth redirect today targets a web
+  origin (`.env.example` redirect notes). Add a deep-link scheme
+  (`com.paraform.app://auth`) or localhost-loopback callback so sign-in
+  completes inside the app. Email/password works as-is.
+- [ ] **Keep the gate mandatory** in native: `VITE_REQUIRE_AUTH=1` for desktop
+  builds; the studio gate (`App.svelte`) must require a signed-in session before
+  the studio loads. Handle "session expired / no network" with a clear re-auth
+  prompt rather than a silent offline mode.
+- [ ] **Cloud-primary save:** confirm the Supabase document sync
+  (`cad_documents`) is the source of truth on desktop; surface explicit **local
+  save** (export/import of `.paraform.json`) as the fallback path.
+- [ ] **Uncap local compiles:** `auth_gate.py` should not meter the bundled
+  local kernel (bake `REQUIRE_AUTH=0`/loopback-trust into the frozen build) —
+  the account is still mandatory at the app level, but local OCCT isn't capped.
+- [ ] **AI key path:** decide BYO-key (default) vs. hosted fallback (signed-in
+  Pro). Ollama/local-model base URL already documented in `.env.example`.
+- [ ] **Billing in-app:** Stripe Checkout opens in the system browser, returns
+  via deep-link; `profiles.plan` gates storage/AI tier (per D2 sub-decision).
 
 ### Phase 3 — Code signing + notarization · ~3-5 days + accounts
 - [ ] **Apple:** enroll Apple Developer Program ($99/yr). Sign `.app` **and the embedded sidecar Mach-O + every OCP dylib** with hardened runtime; notarize + staple. This is the fiddly part — every binary inside the bundle must be signed. Configure in `tauri.conf.json` `bundle.macOS` + env (`APPLE_*`).
@@ -132,9 +146,9 @@ native dylibs that `--collect-all OCP` can miss.
 - [ ] Installer cosmetics: real icons (already referenced in `tauri.conf.json`), DMG background, license screen, file associations for `.paraform.json` (open-with).
 - [ ] Crash/log surface: ship logs to a user-visible location for support.
 
-### Phase 6 — Web repositioning (gated on D1) · ~2-4 days
-- [ ] Landing/pricing point to native downloads.
-- [ ] Web studio becomes trial/demo or is retired; remove the hosted-kernel/tunnel default from `index.html` if web studio is dropped.
+### Phase 6 — Web: pause (no code change) · ~0.5 day
+- [ ] Stop treating web as a shipping surface; landing/pricing point to native downloads.
+- [ ] Leave the web studio code dormant — **do not delete.** No refactor.
 
 ---
 
@@ -142,37 +156,39 @@ native dylibs that `--collect-all OCP` can miss.
 
 1. **Mac OCP/OCCT dylib bundling (HIGH).** Could be 2 days or 2 weeks. Phase 0 exists to find out *first*.
 2. **Notarizing a bundle embedding a heavyweight Python binary (MED-HIGH).** Apple's hardened-runtime requirement vs. PyInstaller + OCP dylibs is a known snag.
-3. **App size + cold start (MED).** Mitigated by `--onedir` (D3).
-4. **Auth/licensing redesign (MED).** Mostly product/business work, not technical; gated on D2.
-5. **No more server-side usage telemetry/caps (LOW, by design).** Abuse vector shifts to "they use their own compute," which is fine.
+3. **Desktop OAuth round-trip (MED).** Deep-link/loopback callback + token refresh in a non-browser shell; "session expired, no network" UX since we're not offline-tolerant.
+4. **App size + cold start (MED).** Mitigated by `--onedir` (D3).
+5. **Pricing redesign once compute is free (LOW, product).** Gated D2 sub-decision; not technical.
 
 ---
 
 ## 6. Cost summary
 
-- **Engineering:** ~4-8 focused weeks, dominated by Mac sidecar bring-up + signing, **not** application porting.
-- **Recurring $:** Apple Developer $99/yr + Windows signing ~$120-400/yr + CI minutes (incl. a Mac runner).
-- **Savings unlocked:** hosted-kernel compute → ~$0; removes the scalability ceiling that justified daily caps.
+- **Engineering:** ~4-8 focused weeks, dominated by Mac sidecar bring-up + signing + desktop-OAuth, **not** application porting.
+- **Recurring $:** Apple Developer $99/yr + Windows signing ~$120-400/yr + CI minutes (incl. a Mac runner). Cloud (Supabase/Stripe) stays as-is.
+- **Savings unlocked:** hosted-kernel compute → ~$0; removes the scalability ceiling that justified compile caps.
 
 ---
 
 ## 7. Definition of done
 
 - [ ] Signed + notarized installers for Windows (.msi/.exe) and macOS (.dmg, arm64 + x86_64) download and launch clean on machines that never had the toolchain.
-- [ ] Kernel runs locally; compiles + AI work fully **offline** with no caps.
-- [ ] Optional sign-in syncs projects; the app is fully usable without it.
+- [ ] Kernel runs **locally**; local compiles are uncapped and fast.
+- [ ] **Mandatory sign-in** works in the native shell; projects save to the cloud with a local-save fallback.
 - [ ] Auto-update delivers a new signed release end-to-end.
-- [ ] Web is repositioned per D1.
+- [ ] Web left dormant (paused, not deleted).
 
 ---
 
-## 8. Immediate next steps (executable now, no Mac required)
+## 8. Immediate next steps
 
-1. Resolve **D1/D2** (auth + web fate) — gates Phase 2.
-2. Phase 2 groundwork that's platform-independent: make native auth optional +
-   bake `REQUIRE_AUTH=0` into the bundled sidecar so local compiles/AI are
-   uncapped (`auth_gate.py`, `tauri.conf.json` env, `session.svelte.js`).
-3. Draft the Phase 4 GitHub Actions `release` matrix (can be written now, runs
-   once Phase 0/1/3 land).
-4. Schedule the **Phase 0 Mac spike** — the one thing that needs hardware and
+> Decision: **plan only for now** — no code changes yet. When green-lit, start with:
+
+1. Schedule the **Phase 0 Mac spike** — the one thing that needs hardware and
    de-risks the whole effort.
+2. Phase 2 groundwork that's platform-independent and safe to start early:
+   desktop deep-link OAuth callback, and baking loopback-trust into the bundled
+   sidecar so local compiles are uncapped while auth stays mandatory.
+3. Settle the D2 pricing sub-decision (what Pro unlocks) before Phase 3 billing.
+4. Draft the Phase 4 GitHub Actions `release` matrix (writable now, runs once
+   Phase 0/1/3 land).
