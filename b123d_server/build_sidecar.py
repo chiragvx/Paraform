@@ -53,6 +53,35 @@ def main() -> None:
     triple = os.environ.get("TARGET_TRIPLE") or detect_triple()
     name = f"b123d_server-{triple}"
 
+    # The kernel is a HEADLESS Flask server — it does CAD geometry via OCP and
+    # ships meshes over HTTP. It never imports a Qt/VTK GUI binding (verified:
+    # `import build123d` pulls none of them, and no server module references
+    # them). But build123d's environment commonly has BOTH PyQt5 and PySide6
+    # installed (viewer extras), and PyInstaller ABORTS if it tries to collect
+    # two Qt bindings at once ("attempt to collect multiple Qt bindings
+    # packages"). Excluding all GUI bindings fixes that abort and strips
+    # hundreds of MB of dead weight (PySide6 + PyQtWebEngine + VTK) from the
+    # frozen sidecar, which also speeds up cold start.
+    excludes = [
+        # Qt/VTK GUI bindings — not needed by the headless compile path (Box →
+        # mesh → glb), and dual PyQt5+PySide6 makes PyInstaller abort outright
+        # ("attempt to collect multiple Qt bindings packages"). Dropping these
+        # is the bulk of the size win (~hundreds of MB). Verified safe by the
+        # post-build geometry probe in this script's workflow.
+        "PyQt5", "PyQt6", "PyQtWebEngine",
+        "PySide2", "PySide6", "shiboken2", "shiboken6",
+        "vtk", "vtkmodules",
+        # ML stacks pulled transitively into the dependency graph but never
+        # imported by the kernel (verified: no kernel module imports them).
+        # torch alone is 100s of MB — excluding it keeps the sidecar lean.
+        "torch", "tensorboard", "tensorflow", "sklearn", "keras",
+        # NOTE: do NOT exclude IPython / matplotlib / jupyter / ocp_vscode /
+        # numpy / scipy / PIL — build123d imports IPython at RUNTIME (display
+        # hooks), and the geometry stack uses numpy/scipy/PIL for array/image
+        # interchange. Excluding IPython makes every /execute fail with
+        # "No module named 'IPython'".
+    ]
+
     # PyInstaller args. We use --onefile so Tauri sees a single binary; the
     # build123d package brings OCP (a heavy C++ binding) along with several
     # data files, hence --collect-all.
@@ -65,8 +94,24 @@ def main() -> None:
         "--collect-all", "build123d",
         "--collect-all", "OCP",
         "--collect-all", "ocpsvg",
+        # build123d's mesher (3MF/STL export) loads lib3mf.dll from the SEPARATE
+        # `lib3mf` package dir (mesher.py: Lib3MF.Wrapper(os.path.join(
+        # dirname(Lib3MF.__file__), "lib3mf"))). --collect-all build123d does
+        # NOT reach it, so without this the frozen kernel dies on first compile
+        # with "lib3mf.dll could not be found". --collect-all bundles the DLL
+        # alongside the module so the wrapper's relative path resolves.
+        "--collect-all", "lib3mf",
         "--collect-submodules", "flask",
         "--collect-submodules", "flask_cors",
+        # build123d derives __version__ from importlib.metadata, which needs the
+        # package's .dist-info bundled. Without this the frozen kernel reports
+        # build123d_version "unknown" and the client's version-drift handshake
+        # (kernelVersion → naming-contract mismatch warnings) can't function.
+        "--copy-metadata", "build123d",
+    ]
+    for mod in excludes:
+        args += ["--exclude-module", mod]
+    args += [
         "--distpath", str(here / "dist"),
         "--workpath", str(here / "build"),
         "--specpath", str(here / "build"),

@@ -30,7 +30,15 @@
       // This URL DIES when the tunnel or the local kernel stops — it is not a
       // permanent host. Swap it for the HF Space URL as soon as that's up. To
       // refresh after a restart: start a new tunnel and replace the URL below.
-      window.__PARAFORM_ENGINE_URL__ = 'https://profiles-punch-traveler-petersburg.trycloudflare.com';
+      //
+      // DESKTOP GUARD: only inject this web fallback when NOT inside the Tauri
+      // shell. The packaged desktop app talks to its bundled local sidecar
+      // (127.0.0.1:7823 via lib/platform/runtime.js). Without this guard,
+      // kernel_client.js would pick up this global BEFORE the desktop default
+      // and mis-route the app to a dead/remote tunnel.
+      if (!('__TAURI_INTERNALS__' in window)) {
+        window.__PARAFORM_ENGINE_URL__ = 'https://profiles-punch-traveler-petersburg.trycloudflare.com';
+      }
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>
