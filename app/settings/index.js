@@ -39,6 +39,7 @@ const SESSION_ONLY_PATHS = Object.freeze([
     'ai.openaiApiKey',
     'ai.anthropicApiKey',
     'ai.geminiApiKey',
+    'ai.visionCriticApiKey',
 ]);
 
 /** Recursively freeze a value so the constants below are immutable end-to-end. */
@@ -98,7 +99,7 @@ export const DEFAULT_SETTINGS = deepFreeze({
     // when it's stuck repeating a failing call). Leaves the cheap default model
     // driving the easy majority of steps. Must be a model the active provider can
     // serve (e.g. another OpenRouter id). See agent.js resolveModelConfig.
-    ai:          { provider: 'openai', openaiModel: 'openai/gpt-oss-120b:free', escalationModel: '', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 32768, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
+    ai:          { provider: 'openai', openaiModel: 'nvidia/nemotron-3-ultra-550b-a55b:free', escalationModel: '', geminiModel: 'gemini-2.5-flash', anthropicModel: 'claude-opus-4-8', maxTokens: 32768, openaiApiKey: '', openaiBaseUrl: '', geminiApiKey: '', anthropicApiKey: '' },
     keybindings: { ...DEFAULT_KEYBINDINGS },
 });
 

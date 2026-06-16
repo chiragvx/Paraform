@@ -28,6 +28,14 @@
 import { runAgentTurn } from './agent.js';
 import { setAttachedImages, clearAttachedImages } from './attachments.js';
 import { getAIContext } from './context.js';
+import { getDocumentStore } from '../../../lib/document/index.js';
+import { getPlanGraph } from './plan/graph.js';
+import { loadPlanGraphFromDoc } from './plan/sync.js';
+import { captureCheckpoint, restoreCheckpoint } from './plan/checkpoints.js';
+
+// When a document is opened, restore its persisted plan-graph so the design
+// intent + map + versions come back with the project.
+try { getDocumentStore().subscribe((_doc, ev) => { if (ev === 'load') { try { loadPlanGraphFromDoc(); } catch { /* */ } } }); } catch { /* headless */ }
 import { isCloudEnabled } from '../../../lib/cloud.js';
 import { session } from '../auth/session.svelte.js';
 import { cloudListChats, cloudUpsertChat, cloudDeleteChat } from '../../../lib/cloud_projects.js';
@@ -113,6 +121,7 @@ function serialize() {
                 if (h && h.images) { const { images, ...rest } = h; return rest; }
                 return h;
             }),
+            checkpoints: Array.isArray(s.checkpoints) ? s.checkpoints : [],
         }));
     return sessions;
 }
@@ -256,6 +265,46 @@ export async function syncCloud(force = false) {
     for (const s of upLocal) _pushSession(s);   // migrate local-only chats up
 }
 
+// ── Checkpoints — coherent revert across chat + document + plan-graph ─────────
+const MAX_CHECKPOINTS = 25;
+
+/** Capture a revert point after a turn: chat position + doc head + plan snapshot. */
+function recordCheckpoint(label) {
+    try {
+        const s = chat.sessions.find((x) => x.id === chat.currentId);
+        if (!s) return;
+        const ckpt = captureCheckpoint({
+            store: getDocumentStore(),
+            graph: getPlanGraph(),
+            chat: { itemsLen: chat.items.length, historyLen: chat.history.length },
+            label: (label && label.trim()) ? label.trim().slice(0, 60) : 'after turn',
+        });
+        s.checkpoints = [...(Array.isArray(s.checkpoints) ? s.checkpoints : []), ckpt].slice(-MAX_CHECKPOINTS);
+    } catch { /* checkpoints are best-effort */ }
+}
+
+/** Revert chat + geometry + plan to a checkpoint (the "re-prompt from here" path). */
+export function revertToCheckpoint(id) {
+    const s = chat.sessions.find((x) => x.id === chat.currentId);
+    if (!s || !Array.isArray(s.checkpoints)) return false;
+    const idx = s.checkpoints.findIndex((c) => c.id === id);
+    if (idx < 0) return false;
+    const ckpt = s.checkpoints[idx];
+    restoreCheckpoint(ckpt, { store: getDocumentStore(), graph: getPlanGraph() });
+    chat.items = chat.items.slice(0, ckpt.chat?.itemsLen ?? chat.items.length);
+    chat.history = chat.history.slice(0, ckpt.chat?.historyLen ?? chat.history.length);
+    s.checkpoints = s.checkpoints.slice(0, idx + 1);   // linear revert — drop later points
+    markDirty();
+    return true;
+}
+
+/** Revert points for the active session, newest last. */
+export function checkpointList() {
+    const s = chat.sessions.find((x) => x.id === chat.currentId);
+    return (s && Array.isArray(s.checkpoints) ? s.checkpoints : [])
+        .map((c) => ({ id: c.id, label: c.label, createdAt: c.createdAt, hasPlan: !!c.planSnapshot }));
+}
+
 // ── Run engine ────────────────────────────────────────────────────────────────
 
 function pushItem(item) { chat.items = [...chat.items, item]; markDirty(); }
@@ -334,6 +383,7 @@ async function drain() {
                 if (job.images && job.images.length) setAttachedImages(job.images);
                 const res = await runAgentTurn({ userMessage: job.text, images: job.images, history: chat.history, onEvent, signal: controller.signal, autoMode: chat.autoMode });
                 chat.history = res.history || chat.history;
+                recordCheckpoint(job.text);
                 markDirty();
             } catch (e) {
                 if (!(reSteering || _pending.length)) pushItem({ role: 'assistant', error: true, text: (e && e.message) || String(e) });

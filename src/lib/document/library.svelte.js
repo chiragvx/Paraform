@@ -21,7 +21,7 @@
  * renameDoc/moveDoc/deleteDoc/duplicateDoc.
  */
 
-import { getDocumentStore, resetDocument } from '../../../lib/document/index.js';
+import { getDocumentStore, resetDocument, DocumentStore } from '../../../lib/document/index.js';
 import { buildDocumentJSON, loadDocumentFromJSON } from './persistence.svelte.js';
 import { captureSnapshots, hasSnapshotProvider } from '../../../lib/viewport/snapshot.js';
 import { isCloudEnabled } from '../../../lib/cloud.js';
@@ -50,6 +50,31 @@ function _uid() { try { return session.user?.id || null; } catch { return null; 
 function _cloudReady() { return isCloudEnabled() && !!_uid(); }
 function _pushFolder(f) { if (_cloudReady() && f) cloudUpsertFolder(_uid(), f); }
 function _pushDoc(d) { if (_cloudReady() && d) cloudUpsertDocument(_uid(), d); }
+
+// Cloud writes from the live auto-save-back loop are throttled per-document so
+// a flurry of edits doesn't hammer Supabase — local persistence stays instant,
+// the cloud mirror settles a few seconds after the user stops typing.
+const CLOUD_PUSH_MS = 4000;
+const _cloudTimers = new Map();
+function _pushDocDebounced(d) {
+    if (!_cloudReady() || !d || !d.id) return;
+    const t = _cloudTimers.get(d.id);
+    if (t) clearTimeout(t);
+    _cloudTimers.set(d.id, setTimeout(() => { _cloudTimers.delete(d.id); _pushDoc(d); }, CLOUD_PUSH_MS));
+}
+
+// A pristine, document-shaped JSON blob for a brand-new file. Built from a
+// throwaway DocumentStore so we never have to hand-maintain the empty shape —
+// `toJSON()` already stamps version 5, so `loadDocumentFromJSON` accepts it.
+function blankDocJSON() {
+    try { return new DocumentStore().toJSON(); } catch { return null; }
+}
+// A document is "blank" when nothing has been committed to it yet — used to
+// avoid materialising junk "Untitled" entries for the default seed.
+function _isBlank(json) {
+    try { return !json || !Array.isArray(json.changelog) || json.changelog.length === 0; }
+    catch { return true; }
+}
 
 function deriveName() {
     try {
@@ -193,13 +218,46 @@ export function saveAsNew({ name, folderId = null, json, thumb = null } = {}) {
     return doc;
 }
 
-/** Load a library document into the studio. Caller navigates to the studio. */
+/**
+ * Capture the live working document into its library entry *now* (synchronous).
+ * Called before any switch (open/new) so in-flight edits are never lost. If the
+ * working doc isn't bound to a library entry yet but has real content, it is
+ * materialised as a new entry so a switch can't drop unsaved work.
+ */
+export function flushActiveDoc() {
+    let json;
+    try { json = buildDocumentJSON(); } catch { json = null; }
+    if (!json) return;
+    const cur = library.currentId ? getDoc(library.currentId) : null;
+    if (cur) {
+        cur.json = json;
+        cur.updatedAt = Date.now();
+        library.docs = [...library.docs];
+        persist();
+        _pushDocDebounced(cur);
+    } else if (!_isBlank(json)) {
+        // Unbound working doc with content → give it a home before we navigate
+        // away. saveAsNew sets currentId; the caller may immediately reassign it
+        // (e.g. openDoc to a different file), but the entry persists either way.
+        saveAsNew({ name: deriveName(), json });
+    }
+}
+
+/**
+ * Switch the studio to a library document. Flushes the current doc first (no
+ * data loss), then loads the target IN PLACE via the shared store instance so
+ * every subscription (autosave, active-doc sync, bridge) keeps working.
+ * Caller navigates to the studio if needed.
+ */
 export function openDoc(id) {
+    ensureHydrated();
     const d = getDoc(id);
     if (!d || !d.json) return false;
+    if (id === library.currentId) return true;   // already the active document
+    flushActiveDoc();                             // uses the OLD currentId
+    library.currentId = d.id;                     // bind target before loading…
     try {
-        loadDocumentFromJSON(d.json);
-        library.currentId = d.id;
+        loadDocumentFromJSON(d.json);             // …so the 'load' notify maps to the right entry
         persist();
         return true;
     } catch (e) {
@@ -208,11 +266,98 @@ export function openDoc(id) {
     }
 }
 
-/** Start a fresh blank working document (not yet in the library). */
+/**
+ * Start a fresh document. Flushes the current one, resets the live store IN
+ * PLACE to a blank seed (NOT resetDocumentStore — that swaps the instance and
+ * orphans subscriptions), then materialises it as a real "Untitled" file so it
+ * shows up in the library immediately. Returns true on success.
+ */
 export function newDoc() {
-    try { resetDocument(); } catch (e) { console.warn('[library] new failed:', e); return false; }
-    library.currentId = null;
-    return true;
+    ensureHydrated();
+    flushActiveDoc();
+    library.currentId = null;                     // detach before loading the seed
+    const seed = blankDocJSON();
+    try {
+        if (seed) loadDocumentFromJSON(seed);
+        else resetDocument();
+    } catch (e) { console.warn('[library] new failed:', e); return false; }
+    // Make every new document a real, listed file (sets currentId).
+    return !!saveAsNew({ name: 'Untitled' });
+}
+
+/** Newest-first slice of the library, for the in-studio "recently opened" menu. */
+export function recentDocs(limit = 6) {
+    return library.docs
+        .slice()
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+        .slice(0, Math.max(0, limit));
+}
+
+/** Duplicate the document that's currently open and switch to the copy. */
+export function duplicateCurrent() {
+    flushActiveDoc();
+    if (!library.currentId) {
+        const made = saveAsNew({ name: deriveName() });
+        if (!made) return null;
+    }
+    const copy = duplicateDoc(library.currentId);
+    if (copy) openDoc(copy.id);
+    return copy;
+}
+
+/**
+ * On boot: if a working document was restored but isn't bound to any library
+ * entry (e.g. it predates the multi-document layer, or its entry was deleted),
+ * give it a home so it shows up as a real file and starts syncing. No-op for a
+ * blank seed or an already-bound document.
+ */
+export function adoptWorkingDocIfUnbound() {
+    ensureHydrated();
+    if (library.currentId && getDoc(library.currentId)) return null;
+    let json;
+    try { json = buildDocumentJSON(); } catch { return null; }
+    if (!json || _isBlank(json)) return null;
+    return saveAsNew({ name: deriveName(), json });
+}
+
+// ── Active-document sync (auto-save-back) ────────────────────────────────────
+// The global-blob autosave (persistence.svelte.js) keeps the *working* doc
+// restorable; this loop additionally mirrors every commit into the bound
+// library entry so the library is the durable, switchable document set.
+let _activeUnsub = null;
+let _activeTimer = null;
+const ACTIVE_SYNC_MS = 800;
+
+function _writeActive() {
+    const cur = library.currentId ? getDoc(library.currentId) : null;
+    if (!cur) return;
+    let json;
+    try { json = buildDocumentJSON(); } catch { return; }
+    if (!json) return;
+    cur.json = json;
+    cur.updatedAt = Date.now();
+    library.docs = [...library.docs];
+    persist();
+    _pushDocDebounced(cur);
+}
+
+export function startActiveDocSync() {
+    if (_activeUnsub || typeof window === 'undefined') return () => {};
+    ensureHydrated();
+    const store = getDocumentStore();
+    _activeUnsub = store.subscribe((_doc, label) => {
+        // select/refs don't change persisted state; loads are already captured
+        // by openDoc/newDoc setting currentId, so the trailing write is a no-op.
+        if (typeof label === 'string' && (label === 'select' || label === 'refs')) return;
+        if (!library.currentId) return;           // unbound working doc → blob autosave covers it
+        if (_activeTimer) clearTimeout(_activeTimer);
+        _activeTimer = setTimeout(() => { _activeTimer = null; _writeActive(); }, ACTIVE_SYNC_MS);
+    });
+    return () => {
+        if (_activeTimer) { clearTimeout(_activeTimer); _activeTimer = null; _writeActive(); }
+        if (_activeUnsub) _activeUnsub();
+        _activeUnsub = null;
+    };
 }
 
 export function renameDoc(id, name) {

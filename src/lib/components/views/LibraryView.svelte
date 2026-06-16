@@ -87,19 +87,19 @@
   }
 
   function onNewFolder() {
-    const name = window.prompt('Folder name', 'New folder');
+    const name = window.prompt('Project name', 'New project');
     if (name == null) return;
     const f = createFolder(name);
     selectedFolder = f.id;
   }
   function onRenameFolder(id) {
     const f = library.folders.find((x) => x.id === id);
-    const name = window.prompt('Rename folder', f ? f.name : '');
+    const name = window.prompt('Rename project', f ? f.name : '');
     if (name == null) return;
     renameFolder(id, name);
   }
   function onDeleteFolder(id) {
-    if (!window.confirm('Delete this folder? Its documents move to Uncategorised.')) return;
+    if (!window.confirm('Delete this project? Its documents move to Uncategorised.')) return;
     deleteFolder(id);
     if (selectedFolder === id) selectedFolder = 'all';
   }
@@ -187,8 +187,8 @@
         </button>
 
         <div class="!mt-4 mb-1 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-          Folders
-          <button class="rounded p-0.5 hover:bg-accent hover:text-foreground" onclick={onNewFolder} title="New folder" aria-label="New folder">
+          Projects
+          <button class="rounded p-0.5 hover:bg-accent hover:text-foreground" onclick={onNewFolder} title="New project" aria-label="New project">
             <FolderPlus class="size-3.5" />
           </button>
         </div>
@@ -201,8 +201,8 @@
               <span class="flex min-w-0 items-center gap-2"><Folder class="size-4 shrink-0" /> <span class="truncate">{f.name}</span></span>
               <span class="text-xs opacity-60">{countIn(f.id)}</span>
             </button>
-            <button class="ml-0.5 rounded p-1 text-muted-foreground/0 hover:text-foreground group-hover:text-muted-foreground" onclick={() => onRenameFolder(f.id)} title="Rename folder" aria-label="Rename folder"><Pencil class="size-3" /></button>
-            <button class="rounded p-1 text-muted-foreground/0 hover:text-destructive group-hover:text-muted-foreground" onclick={() => onDeleteFolder(f.id)} title="Delete folder" aria-label="Delete folder"><Trash2 class="size-3" /></button>
+            <button class="ml-0.5 rounded p-1 text-muted-foreground/0 hover:text-foreground group-hover:text-muted-foreground" onclick={() => onRenameFolder(f.id)} title="Rename project" aria-label="Rename project"><Pencil class="size-3" /></button>
+            <button class="rounded p-1 text-muted-foreground/0 hover:text-destructive group-hover:text-muted-foreground" onclick={() => onDeleteFolder(f.id)} title="Delete project" aria-label="Delete project"><Trash2 class="size-3" /></button>
           </div>
         {/each}
       </aside>
@@ -237,7 +237,10 @@
         {:else}
           <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {#each visible as d (d.id)}
-              <div class="group relative overflow-visible rounded-xl border border-border bg-card transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg">
+              <div class="group relative overflow-visible rounded-xl border bg-card transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:shadow-lg {d.id === library.currentId ? 'border-primary ring-1 ring-primary/40' : 'border-border hover:border-primary/50'}">
+                {#if d.id === library.currentId}
+                  <span class="absolute left-2 top-2 z-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground shadow-sm">Open</span>
+                {/if}
                 <!-- Thumbnail (click to open) -->
                 <button class="block w-full text-left" onclick={() => onOpenCard(d.id)} title="Open in studio">
                   <div class="aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-gradient-to-br from-muted to-background">

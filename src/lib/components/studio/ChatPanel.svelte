@@ -7,7 +7,7 @@
    * so it SURVIVES this panel being closed/reopened and page reloads, and the
    * user can revisit old chats. This component is just the view + composer.
    */
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { checkAiHealth } from '$lib/ai/provider.js';
   import { readSettings } from '../../../../app/settings/index.js';
   import { togglePanel } from '$lib/studio/panels.svelte.js';
@@ -15,6 +15,8 @@
     chat, submit as submitChat, stop as stopChat, setAutoMode,
     newSession, loadSession, deleteSession, sessionList, ensureHydrated, syncCloud,
   } from '$lib/ai/chat_store.svelte.js';
+  import PlanMap from './PlanMap.svelte';
+  import { refreshPlan } from '$lib/ai/plan/plan_store.svelte.js';
 
   let input = $state('');
   let health = $state(undefined); // undefined=loading, null=unreachable, obj=known
@@ -55,6 +57,10 @@
   }
   // Re-scroll whenever the transcript grows or a stream tick lands.
   $effect(() => { void chat.items.length; void chat.running; scrollToEnd(); });
+  // Refresh the plan-map after each turn (the AI may have edited the plan-graph).
+  // refreshPlan WRITES planState; call it untracked so this effect depends only
+  // on the chat signals above, never on what refreshPlan touches (no feedback loop).
+  $effect(() => { void chat.items.length; void chat.running; untrack(() => refreshPlan()); });
 
   // ── Attachments ──────────────────────────────────────────────────────────
   function fileToImage(file) {
@@ -185,6 +191,8 @@
       {/if}
     </div>
   {:else}
+    <!-- Plan-graph map (design intent — shown when a plan exists) -->
+    <PlanMap />
     <!-- Message list -->
     <div bind:this={listEl} class="flex-1 space-y-2 overflow-y-auto px-3 py-3">
       {#each chat.items as item (item)}

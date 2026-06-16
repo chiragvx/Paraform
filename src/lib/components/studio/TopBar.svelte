@@ -9,11 +9,13 @@
     saveDocumentAs,
     openDocumentFromFile,
     shareDocumentBundle,
-    hasUnsavedChanges,
   } from '$lib/document/persistence.svelte.js';
   import { getDocumentStore } from '../../../../lib/document/index.js';
-  import { setMetadataChange, resetDocument } from '../../../../lib/document/index.js';
-  import { library, saveCurrent as saveToLibrary } from '$lib/document/library.svelte.js';
+  import { setMetadataChange } from '../../../../lib/document/index.js';
+  import {
+    library, saveCurrent as saveToLibrary, ensureHydrated as ensureLibraryHydrated,
+    newDoc, openDoc as openLibraryDoc, recentDocs, duplicateCurrent, renameDoc as renameLibraryDoc,
+  } from '$lib/document/library.svelte.js';
   import { importCadFileAsFeature } from '$lib/import/cad.js';
   import { V1 } from '$lib/flags.js';
 
@@ -28,6 +30,10 @@
   import Settings from '@lucide/svelte/icons/settings';
   import Download from '@lucide/svelte/icons/download';
   import CircleHelp from '@lucide/svelte/icons/circle-help';
+  import Check from '@lucide/svelte/icons/check';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Copy from '@lucide/svelte/icons/copy';
+  import FolderOpen from '@lucide/svelte/icons/folder-open';
 
   const store = getDocumentStore();
 
@@ -43,14 +49,22 @@
   // Bump on every store commit so derived getters re-evaluate.
   let tick = $state(0);
 
+  // The document switcher <details> element (bound so actions can close it).
+  let docMenu = $state(null);
+  function closeDocMenu() { if (docMenu) docMenu.open = false; }
+
   function readFromStore() {
     tick++;
   }
 
   onMount(() => {
+    ensureLibraryHydrated();
     readFromStore();
     return store.subscribe(readFromStore);
   });
+
+  // Recently-touched documents for the switcher (reactive over library.docs).
+  let recent = $derived(recentDocs(7));
 
   let docName = $derived.by(() => {
     void tick;
@@ -80,6 +94,7 @@
   });
 
   function renameDoc() {
+    closeDocMenu();
     const next = window.prompt('Document name', docName);
     if (next == null) return;
     const name = next.trim();
@@ -88,20 +103,23 @@
       // changelog.js exports setMetadataChange — we commit a SET_METADATA
       // patch through the store so persistence/undo behave normally.
       store.commit(setMetadataChange({ name, title: name }));
+      // Keep the library entry's title in lock-step with the doc metadata.
+      if (library.currentId) renameLibraryDoc(library.currentId, name);
     } catch (err) {
       console.warn('[topbar] rename failed:', err);
     }
   }
 
+  // ── Document switcher actions (stay in the studio; no route change) ────────
+  function switchDoc(id) { closeDocMenu(); openLibraryDoc(id); }
+  function onNewDoc()    { closeDocMenu(); newDoc(); }
+  function onDuplicate() { closeDocMenu(); duplicateCurrent(); }
+
   function newDocument() {
-    // Route through the proper confirm-dialog when there are unsaved changes;
-    // otherwise reset directly. Both paths surface through the same UI.
-    if (hasUnsavedChanges()) {
-      dialogs.open('newDocConfirm');
-    } else {
-      try { resetDocument(); }
-      catch (err) { console.warn('[topbar] new doc failed:', err); }
-    }
+    // Auto-save-back keeps the current doc persisted in its library entry, so a
+    // new document is always safe — no unsaved-changes gate needed.
+    try { newDoc(); }
+    catch (err) { console.warn('[topbar] new doc failed:', err); }
   }
 
   function openDoc() {
@@ -191,17 +209,51 @@
       </div>
     </details>
 
-    <!-- Document title + branch chip -->
-    <button
-      type="button"
-      class="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-accent"
-      title="Rename document"
-      onclick={renameDoc}
-    >
-      <span class="text-sm font-medium text-foreground">{docName}</span>
-      <span class="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">Main</span>
-      <ChevronDown class="size-3 text-muted-foreground" />
-    </button>
+    <!-- Document title → switcher dropdown -->
+    <details class="relative" bind:this={docMenu}>
+      <summary
+        class="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-accent list-none cursor-pointer select-none"
+        title="Documents"
+      >
+        <span class="text-sm font-medium text-foreground">{docName}</span>
+        <span class="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">Main</span>
+        <ChevronDown class="size-3 text-muted-foreground" />
+      </summary>
+      <div class="absolute left-0 top-full z-30 mt-1 w-64 rounded-md border border-border bg-popover p-1 shadow-md">
+        <button type="button" class={menuItem} onclick={renameDoc}>Rename…</button>
+        <button type="button" class={menuItem} onclick={onDuplicate}>
+          <Copy class="mr-2 size-3.5" /> Duplicate
+        </button>
+        <div class="my-1 border-t border-border"></div>
+        <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Recently opened</div>
+        {#if recent.length === 0}
+          <div class="px-2 py-1.5 text-xs text-muted-foreground">No saved documents yet</div>
+        {:else}
+          <div class="max-h-64 overflow-y-auto">
+            {#each recent as d (d.id)}
+              <button
+                type="button"
+                class="{menuItem} justify-between gap-2"
+                onclick={() => switchDoc(d.id)}
+                title={d.name}
+              >
+                <span class="truncate">{d.name}</span>
+                {#if d.id === library.currentId}
+                  <Check class="size-3.5 shrink-0 text-primary" />
+                {/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+        <div class="my-1 border-t border-border"></div>
+        <button type="button" class={menuItem} onclick={onNewDoc}>
+          <Plus class="mr-2 size-3.5" /> New document
+        </button>
+        <button type="button" class={menuItem} onclick={() => { closeDocMenu(); goLibrary(); }}>
+          <FolderOpen class="mr-2 size-3.5" /> Manage all documents…
+        </button>
+      </div>
+    </details>
 
     <!-- Save status pill (mirrors StatusBar) -->
     <span class="flex items-center gap-1 text-[10px] text-muted-foreground">

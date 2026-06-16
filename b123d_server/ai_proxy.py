@@ -9,8 +9,11 @@ selected provider's chat API.
 
 Provider routing: the client builds the provider-correct request body (in
 src/lib/ai/providers/*) and tags it with a `provider` field
-(`'openai'` | `'anthropic'` | `'gemini'`, default `'openai'`) plus `model` +
-`stream`. This proxy reads those, builds the right upstream URL + auth headers,
+(`'openai'` | `'cerebras'` | `'nvidia'` | `'zerog'` | `'anthropic'` | `'gemini'`,
+default `'openai'`) plus `model` + `stream`. `cerebras`, `nvidia`, and `zerog`
+share the OpenAI Chat Completions dialect, so they reuse the OpenAI body/header
+builders against their own base URLs.
+This proxy reads those, builds the right upstream URL + auth headers,
 and relays the response (SSE bytes streamed through unchanged). The proxy does
 NOT interpret tool calls or reshape the body beyond stripping its own routing
 fields.
@@ -62,13 +65,28 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 # same code reaches Groq / OpenRouter / Together / Fireworks / vLLM / Ollama /
 # OpenAI — whichever host serves the open-weight model.
 OPENAI_DEFAULT_BASE = "https://openrouter.ai/api/v1"
+# Cerebras Cloud also speaks the OpenAI Chat Completions dialect (wafer-scale
+# inference, generous free tier). Routed exactly like `openai` but to this base
+# with the user's Cerebras key. Overridable via CEREBRAS_BASE_URL.
+CEREBRAS_DEFAULT_BASE = "https://api.cerebras.ai/v1"
+# NVIDIA NIM (hosted build.nvidia.com / self-hosted containers) is likewise
+# OpenAI-compatible. Routed like `openai` to this base with the user's
+# `nvapi-…` key. Overridable via NVIDIA_BASE_URL (e.g. a local NIM container).
+NVIDIA_DEFAULT_BASE = "https://integrate.api.nvidia.com/v1"
+# 0G Compute Router (decentralized inference) speaks the OpenAI Chat Completions
+# dialect too. Routed like `openai` to this base with the user's `sk-…` key
+# (`Authorization: Bearer`). Overridable via ZEROG_BASE_URL.
+ZEROG_DEFAULT_BASE = "https://router-api.0g.ai/v1"
 
 DEFAULT_PROVIDER = "openai"
 # Defaults surfaced so a thin client can omit them. Keep in lockstep with
 # src/lib/ai/agent.js DEFAULT_*_MODEL.
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
-DEFAULT_OPENAI_MODEL = "openai/gpt-oss-120b:free"
+DEFAULT_OPENAI_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+DEFAULT_CEREBRAS_MODEL = "gpt-oss-120b"
+DEFAULT_NVIDIA_MODEL = "meta/llama-3.3-70b-instruct"
+DEFAULT_ZEROG_MODEL = "minimax-m3"
 
 # Routing fields the proxy consumes and must NOT forward upstream as part of
 # the provider body.
@@ -136,6 +154,21 @@ def _openai_key():
 def _openai_base():
     base = os.environ.get("OPENAI_BASE_URL")
     return (base.strip() if base else OPENAI_DEFAULT_BASE).rstrip("/")
+
+
+def _cerebras_base():
+    base = os.environ.get("CEREBRAS_BASE_URL")
+    return (base.strip() if base else CEREBRAS_DEFAULT_BASE).rstrip("/")
+
+
+def _nvidia_base():
+    base = os.environ.get("NVIDIA_BASE_URL")
+    return (base.strip() if base else NVIDIA_DEFAULT_BASE).rstrip("/")
+
+
+def _zerog_base():
+    base = os.environ.get("ZEROG_BASE_URL")
+    return (base.strip() if base else ZEROG_DEFAULT_BASE).rstrip("/")
 
 
 def _anthropic_headers(key):
@@ -272,6 +305,30 @@ def register_ai_routes(app) -> None:
             url = f"{base.rstrip('/')}/chat/completions"
             headers = _openai_headers(client_key)
             body = _build_openai_body(payload)
+        elif provider == "cerebras":
+            # Cerebras is OpenAI-compatible — same headers + body shape, only the
+            # base URL differs (and the default model fallback).
+            base = client_base or _cerebras_base()
+            url = f"{base.rstrip('/')}/chat/completions"
+            headers = _openai_headers(client_key)
+            body = _build_openai_body(payload)
+            body["model"] = payload.get("model") or DEFAULT_CEREBRAS_MODEL
+        elif provider == "nvidia":
+            # NVIDIA NIM is OpenAI-compatible too. The model is user-typed
+            # (free-text in Settings), so it always arrives on `payload`.
+            base = client_base or _nvidia_base()
+            url = f"{base.rstrip('/')}/chat/completions"
+            headers = _openai_headers(client_key)
+            body = _build_openai_body(payload)
+            body["model"] = payload.get("model") or DEFAULT_NVIDIA_MODEL
+        elif provider == "zerog":
+            # 0G Compute Router is OpenAI-compatible (Bearer sk-… key). The model
+            # is user-typed (free-text in Settings), so it arrives on `payload`.
+            base = client_base or _zerog_base()
+            url = f"{base.rstrip('/')}/chat/completions"
+            headers = _openai_headers(client_key)
+            body = _build_openai_body(payload)
+            body["model"] = payload.get("model") or DEFAULT_ZEROG_MODEL
         else:
             return jsonify({"error": f"unknown AI provider '{provider}'"}), 400
 

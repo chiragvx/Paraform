@@ -2,14 +2,16 @@
   import Dialog from '$lib/components/ui/dialog.svelte';
   import Button from '$lib/components/ui/button.svelte';
   import { dialogs } from '$lib/dialogs/dialogs.svelte.js';
-  import { resetDocument } from '../../../../lib/document/index.js';
+  import { newDoc } from '$lib/document/library.svelte.js';
 
   function close() {
     dialogs.close('newDocConfirm');
   }
 
   function discard() {
-    try { resetDocument(); }
+    // newDoc() flushes the current doc into its library entry first, then resets
+    // in place and materialises a fresh "Untitled" file — so nothing is lost.
+    try { newDoc(); }
     catch (err) { console.warn('[new-document] reset failed:', err); }
     close();
   }

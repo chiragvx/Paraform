@@ -5,6 +5,7 @@ import { loadAndApplySettings } from './lib/settings/boot.js';
 import { loadAllSettings } from './lib/settings/schema.js';
 import { loadTheme } from './lib/theme/theme.svelte.js';
 import { restoreDocument, startAutosave } from './lib/document/persistence.svelte.js';
+import { ensureHydrated as ensureLibraryHydrated, startActiveDocSync, adoptWorkingDocIfUnbound } from './lib/document/library.svelte.js';
 import * as v4 from '../lib/document/index.js';
 import { studio } from './lib/studio/runtime.svelte.js';
 import { COMMANDS } from './lib/commands/registry.js';
@@ -55,6 +56,13 @@ if (launchView === 'restore') {
 // Autosave runs in both modes — even on a blank launch the user will commit
 // features that should be persisted for next time.
 try { startAutosave(); } catch (e) { console.warn('[main] autosave failed:', e); }
+
+// Multi-document layer: hydrate the library store NOW (so library.currentId —
+// the active document — is known before the first edit) and mirror every
+// commit back into the bound library entry. This makes the library the durable,
+// switchable document set rather than a manual snapshot archive.
+try { ensureLibraryHydrated(); adoptWorkingDocIfUnbound(); startActiveDocSync(); }
+catch (e) { console.warn('[main] active-doc sync failed:', e); }
 
 const app = mount(App, {
   target: document.getElementById('app'),

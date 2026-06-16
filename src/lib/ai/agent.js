@@ -34,13 +34,30 @@ import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
 import { readSettings } from '../../../app/settings/index.js';
 import { getAIContext } from './context.js';
 import { compileCurrent } from './tools_validation.js';
+import { runVisionCritique, visionCriticActive } from './vision_critic.js';
+import { getPlanGraph } from './plan/graph.js';
+import { seedPlanGraph } from './plan/decompose.js';
+import { syncPlanGraphToDoc } from './plan/sync.js';
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 // OpenAI-compatible GPT-OSS — the core path. The `openai/` prefix matches the
 // model id most aggregators use (Groq / OpenRouter / Together / Fireworks).
 // Point a self-hosted/OpenAI endpoint at a bare `gpt-oss-120b` via settings.
-export const DEFAULT_OPENAI_MODEL = 'openai/gpt-oss-120b:free';
+export const DEFAULT_OPENAI_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+// Cerebras Cloud (OpenAI-compatible, wafer-scale speed, free tier). gpt-oss-120b
+// is its production tool-calling model — the safe default for the agent loop.
+export const DEFAULT_CEREBRAS_MODEL = 'gpt-oss-120b';
+// NVIDIA NIM (OpenAI-compatible). The model id is user-typed in Settings so they
+// can test the catalog; this is just the fallback when the field is left blank.
+export const DEFAULT_NVIDIA_MODEL = 'meta/llama-3.3-70b-instruct';
+// 0G Compute Router (OpenAI-compatible, decentralized inference). The model id
+// is user-typed in Settings (use an id from GET /v1/models, e.g. glm-5,
+// deepseek-v4-pro, qwen3.7-max); this is the fallback when the field is left
+// blank. Pick a tool-calling model — the router 400s if `tools` go to a model
+// that lacks them, and returns "upstream provider request failed" for an
+// unknown id.
+export const DEFAULT_ZEROG_MODEL = 'minimax-m3';
 export const DEFAULT_MAX_TOKENS = 32768;
 // High ceiling for TESTING — lets long multi-step builds (with self-repair,
 // verify-then-fix, and the see→act→re-check vision loop, which each consume
@@ -58,7 +75,7 @@ const MAX_REPAIRS_PER_ERROR = 2;
 // complete (one nudge per stop; if it stops again with no work in between, we
 // accept it's finished). Bounded so it can't nudge forever in one turn.
 const MAX_AUTO_CONTINUES = 50;
-const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If the request was a FUNCTIONAL machine (robot, mechanism, anything that moves or carries electronics), it must NOT be a stack of bare primitives: did you plan_mechanism (every joint → an actuator + a structural mount), place the real actuators/electronics, build the structural parts (parametrically, via build_part_recipe or code), verify motion clearance (run_invariants), and pass design_review? If anything is unfinished, unverified, or still cosmetic-only, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
+const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL request is fully complete and verified. Re-read what they asked for and check: is every part of it built, mated/assembled, and verified (measure / run_invariants / self_critique, and capture_views if it should look right)? If the request is a STATIC/passive part (laptop stand, holder, bracket, mount, enclosure, organizer — no moving joints, no electronics), it is DONE when it is correctly sized, strong/stable enough for its load, and printable — do NOT add servos, motors, or any actuators/electronics to it; that would be a bug. ONLY if the request genuinely MOVES, ARTICULATES, or HOUSES ELECTRONICS is it a functional machine that must not be a stack of bare primitives: in that case did you plan_mechanism (every joint → an actuator + a structural mount), place the real actuators/electronics, build the structural parts (parametrically, via build_part_recipe or code), verify motion clearance (run_invariants), and pass design_review? If anything is unfinished or unverified, CONTINUE now — do the next concrete step yourself without asking. Only if it is genuinely 100% done, briefly confirm what you delivered and stop.";
 
 // Visual-verify gate. The field's strongest accuracy lever (CAD Skills / Zoo
 // both MANDATE it; ablations show a large quality regression without it): never
@@ -67,6 +84,9 @@ const AUTO_NUDGE = "[auto mode] Do not stop yet unless the user's ORIGINAL reque
 // reminder before accepting "done". Bounded so it can't loop.
 const MAX_VISUAL_NUDGES = 1;
 const VISUAL_GATE_NUDGE = "[automatic check] You built or changed geometry this turn but have not visually verified it. Call capture_views now and LOOK at the renders (front/right/top/iso) — check orientation, proportions, symmetry, parts clipping or floating, oversized fillets. A render is DIAGNOSTIC, not proof: convert any visual concern into a measure call (e.g. holes look off-centre → measure the centres) before you claim it's correct. Then finish with your summary.";
+// NOTE: a TEXT-ONLY builder with a vision critic is NOT nudged to look — the
+// loop captures + critiques on its behalf (see the stop-gate in runAgentTurn),
+// because a weak model can't be trusted to call capture_views on its own.
 
 // ── Dynamic per-turn context ──────────────────────────────────────────────────
 //
@@ -97,7 +117,7 @@ function selectionSummary() {
 }
 
 /** Build the system prompt for this turn = base + design context + selection. */
-function buildSystem(visionCapable = true) {
+function buildSystem(visionCapable = true, criticAvailable = false) {
     let block = '';
     try {
         const ctx = getAIContext();
@@ -114,11 +134,16 @@ function buildSystem(visionCapable = true) {
     let scene = '';
     try { scene = sceneDigest() || ''; } catch { scene = ''; }
     const sel = selectionSummary();
-    // When the active model is text-only, OVERRIDE the "you can look now"
-    // mandate from SYSTEM_PROMPT: capturing renders it can't see only wastes a
-    // step (and would error if injected). Point it at numeric verification.
-    const noVision = visionCapable ? '' :
-        '# Heads-up: the CURRENT model cannot SEE images. Do NOT call capture_views to "look" or verify appearance — it cannot help you and the render can\'t be shown to you. Verify everything NUMERICALLY instead: measure (bbox / interference / manifold / centroid / distance / normal), mass_properties, run_invariants, self_critique, and check_assembly_constraints for assemblies. Reason about orientation and placement from those numbers and the "Current bodies" digest.';
+    // Vision guidance depends on what the active model can do:
+    //  - can see            → keep SYSTEM_PROMPT's "look now" mandate (no override)
+    //  - blind + has critic → DO capture_views: a vision reviewer looks for it
+    //  - blind, no critic   → don't waste a step capturing; verify numerically
+    let noVision = '';
+    if (!visionCapable && criticAvailable) {
+        noVision = '# Vision: you cannot see images yourself, BUT a vision reviewer can. After you build or change geometry, CALL capture_views — a separate vision model will inspect the renders (front/right/top/iso) and report concrete problems (a bare box that should be a shaped part, missing holes/pockets/fillets, parts clipping, wrong proportions/orientation) back to you as text. Treat that feedback as authoritative for APPEARANCE, fix what it flags, and ALSO verify dimensions/fit NUMERICALLY (measure, mass_properties, run_invariants, self_critique).';
+    } else if (!visionCapable) {
+        noVision = '# Heads-up: the CURRENT model cannot SEE images. Do NOT call capture_views to "look" or verify appearance — it cannot help you and the render can\'t be shown to you. Verify everything NUMERICALLY instead: measure (bbox / interference / manifold / centroid / distance / normal), mass_properties, run_invariants, self_critique, and check_assembly_constraints for assemblies. Reason about orientation and placement from those numbers and the "Current bodies" digest.';
+    }
     return [SYSTEM_PROMPT, block, scene, sel, noVision].filter(Boolean).join('\n\n');
 }
 
@@ -130,6 +155,23 @@ function errorSignature(error) {
 function truncate(s, n) {
     const str = String(s == null ? '' : s);
     return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+/**
+ * Return a view of the history with all image parts removed. A TEXT-ONLY model
+ * must never receive image input or the provider rejects the entire request
+ * ("No endpoints found that support image input") — this strips user-attached
+ * reference images AND any captured renders from the body we send it. The
+ * original `messages` array is untouched (kept intact for a vision-capable
+ * escalation path and for the critic, which reads renders directly).
+ */
+function stripImagesFromHistory(history) {
+    let changed = false;
+    const out = history.map((e) => {
+        if (e && e.images && e.images.length) { changed = true; const { images, ...rest } = e; return rest; }
+        return e;
+    });
+    return changed ? out : history;
 }
 
 // Tools that observe state or write only conversation/context/export — NONE of
@@ -165,6 +207,9 @@ function resolveModelConfig() {
     let geminiModel = DEFAULT_GEMINI_MODEL;
     let anthropicModel = DEFAULT_ANTHROPIC_MODEL;
     let openaiModel = DEFAULT_OPENAI_MODEL;
+    let cerebrasModel = DEFAULT_CEREBRAS_MODEL;
+    let nvidiaModel = DEFAULT_NVIDIA_MODEL;
+    let zerogModel = DEFAULT_ZEROG_MODEL;
     let maxTokens = DEFAULT_MAX_TOKENS;
     let escalationModel = '';
     let ai = {};
@@ -175,6 +220,9 @@ function resolveModelConfig() {
         if (typeof ai.geminiModel === 'string' && ai.geminiModel.trim()) geminiModel = ai.geminiModel.trim();
         if (typeof ai.anthropicModel === 'string' && ai.anthropicModel.trim()) anthropicModel = ai.anthropicModel.trim();
         if (typeof ai.openaiModel === 'string' && ai.openaiModel.trim()) openaiModel = ai.openaiModel.trim();
+        if (typeof ai.cerebrasModel === 'string' && ai.cerebrasModel.trim()) cerebrasModel = ai.cerebrasModel.trim();
+        if (typeof ai.nvidiaModel === 'string' && ai.nvidiaModel.trim()) nvidiaModel = ai.nvidiaModel.trim();
+        if (typeof ai.zerogModel === 'string' && ai.zerogModel.trim()) zerogModel = ai.zerogModel.trim();
         // Opt-in stronger model for HARD steps (self-repair / repeated-failure).
         // Empty = disabled (default), so the deliberate free-model lock stands
         // until the user sets one; it then drives only the difficulty-escalated
@@ -192,14 +240,20 @@ function resolveModelConfig() {
     // 'mock' / 'anthropic' / unknown provider falls back to the default real
     // provider here; the chat surface always wants a real, supported backend.
     // (Claude was removed as a selectable chat provider — see settings/schema.js.)
-    if (!['gemini', 'openai'].includes(providerName)) providerName = DEFAULT_PROVIDER;
+    if (!['gemini', 'openai', 'cerebras', 'nvidia', 'zerog'].includes(providerName)) providerName = DEFAULT_PROVIDER;
     const model = providerName === 'anthropic' ? anthropicModel
         : providerName === 'openai' ? openaiModel
+        : providerName === 'cerebras' ? cerebrasModel
+        : providerName === 'nvidia' ? nvidiaModel
+        : providerName === 'zerog' ? zerogModel
         : geminiModel;
     // Optional bring-your-own key for the selected provider, stored in the
     // browser and forwarded to the user's own proxy (see provider.js headers).
     const keyField = providerName === 'anthropic' ? 'anthropicApiKey'
         : providerName === 'openai' ? 'openaiApiKey'
+        : providerName === 'cerebras' ? 'cerebrasApiKey'
+        : providerName === 'nvidia' ? 'nvidiaApiKey'
+        : providerName === 'zerog' ? 'zerogApiKey'
         : 'geminiApiKey';
     const apiKey = (typeof ai[keyField] === 'string' && ai[keyField].trim()) ? ai[keyField].trim() : null;
     const baseUrl = (providerName === 'openai' && typeof ai.openaiBaseUrl === 'string' && ai.openaiBaseUrl.trim())
@@ -225,7 +279,9 @@ function modelSupportsVision(providerName, model) {
     const m = String(model || '').toLowerCase();
     if (!m) return false;
     if (m.includes('gpt-oss')) return false;   // open-weight gpt-oss: text-only
-    return /vision|4o|gpt-4\.1|gpt-5|[^a-z]o3|[^a-z]o4|llava|pixtral|-vl|internvl|gemini|claude/.test(m);
+    // minimax-m3 (0G router) is natively multimodal (text+image+video→text) and
+    // accepts OpenAI image_url content blocks — give that builder real eyes.
+    return /vision|4o|gpt-4\.1|gpt-5|[^a-z]o3|[^a-z]o4|llava|pixtral|-vl|internvl|gemini|claude|minimax-m3/.test(m);
 }
 
 // Tools that observe but don't mutate the document — used to distinguish a
@@ -300,6 +356,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     // a render is never sent to a text-only model (which errors the request).
     const baseVision = modelSupportsVision(providerName, model);
     const escVision = escalationModel ? modelSupportsVision(providerName, escalationModel) : false;
+    // Vision critic: a multimodal reviewer (Gemma via AI Studio) that LOOKS at
+    // capture_views renders on behalf of a blind builder and feeds back a text
+    // critique. Only meaningful when the builder can't already see; resolved once.
+    const criticOn = (() => { try { return visionCriticActive(); } catch { return false; } })();
 
     // Copy so we don't mutate the caller's history.
     const messages = history.slice();
@@ -327,6 +387,31 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     let visualGateNudges = 0;           // bound the "look before you finish" gate per turn
     let escalated = false;              // a hard step escalated us to the stronger model this turn
 
+    // Send a set of renders to the vision critic (Gemma) and inject its TEXT
+    // verdict as the next builder turn. Returns true if a critique was injected.
+    // Used both when the model calls capture_views itself AND when the loop
+    // captures on its behalf (a blind builder can't be trusted to look).
+    async function critiqueRenders(frames) {
+        const views = [...new Set(frames.map((c) => c.view).filter(Boolean))];
+        emit({ type: 'tool_call', name: 'vision_critique', input: { views, images: frames.length } });
+        let critique = null;
+        try { critique = await runVisionCritique({ images: frames, goal: userMessage, signal, endpoint }); }
+        catch (e) { critique = { ok: false, error: (e && e.message) || String(e) }; }
+        emit({ type: 'tool_result', name: 'vision_critique',
+            result: (critique && critique.ok)
+                ? { ok: true, model: critique.model, critique: critique.critique }
+                : { ok: false, error: (critique && critique.error) || 'vision critic unavailable' } });
+        if (critique && critique.ok && critique.critique) {
+            const lead = `[vision reviewer · ${critique.model}] I looked at the render${frames.length === 1 ? '' : 's'}${views.length ? ` (${views.join(', ')})` : ''} of what you built:\n\n${critique.critique}\n\n`;
+            const tail = critique.looksGood
+                ? 'If you agree it matches the request, verify the key dimensions with measure and then finish with your summary.'
+                : 'These are concrete visual problems you cannot see yourself — treat them as authoritative. Fix them now (reshape bare primitives into real parts, add the missing features, correct any clipping / proportions / orientation), confirm fit with measure, then I will look again.';
+            messages.push({ role: 'user', text: lead + tail });
+            return true;
+        }
+        return false;
+    }
+
     try {
         for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
             if (signal && signal.aborted) {
@@ -340,10 +425,19 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             // majority of steps; the strong model is spent only where it pays.
             const activeModel = (escalated && escalationModel) ? escalationModel : model;
             const activeVision = (escalated && escalationModel) ? escVision : baseVision;
+            // The critic only does work when the ACTIVE model is blind (a
+            // vision-capable model looks for itself; escalating to one disables it).
+            const criticForBlind = criticOn && !activeVision;
 
+            // A text-only model must NOT receive image parts (user-attached refs
+            // or captured renders) — the provider rejects the whole request
+            // ("No endpoints found that support image input"). Send it a
+            // stripped history; the full `messages` keeps images for the critic
+            // and any vision-capable escalation.
+            const bodyHistory = activeVision ? messages : stripImagesFromHistory(messages);
             const { body } = provider.buildBody({
-                system: buildSystem(activeVision),
-                history: messages,
+                system: buildSystem(activeVision, criticForBlind),
+                history: bodyHistory,
                 tools,
                 model: activeModel,
                 maxTokens,
@@ -368,13 +462,41 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             if (result.stop || !result.toolCalls || result.toolCalls.length === 0) {
                 // Visual-verify gate (independent of auto mode): don't accept
                 // "done" when geometry was built this turn but never looked at.
-                // One forced reminder per turn; bounded so it can't loop. Only
-                // for a model that can actually SEE — forcing a text-only model
-                // to capture renders it can't view just wastes a step.
-                if (builtGeometryThisTurn && !capturedAfterBuild && activeVision && visualGateNudges < MAX_VISUAL_NUDGES && !(signal && signal.aborted)) {
-                    visualGateNudges++;
-                    messages.push({ role: 'user', text: VISUAL_GATE_NUDGE });
-                    continue;
+                if (builtGeometryThisTurn && !capturedAfterBuild && !(signal && signal.aborted)) {
+                    // Blind builder + critic: DON'T trust a weak model to call
+                    // capture_views. Capture the renders ourselves and run the
+                    // critic, then feed its verdict back. Bounded by visionInjections.
+                    if (criticForBlind && visionInjections < 4) {
+                        emit({ type: 'tool_call', name: 'capture_views', input: {} });
+                        const cap = await dispatchTool('capture_views', {});
+                        const imgs = (cap && Array.isArray(cap._images)) ? cap._images : [];
+                        emit({ type: 'tool_result', name: 'capture_views',
+                            result: cap && cap.ok ? { ok: true, views: cap.views, note: cap.note } : cap });
+                        capturedAfterBuild = true;   // we've looked; don't re-trigger forever
+                        if (imgs.length) {
+                            visionInjections++;
+                            if (await critiqueRenders(imgs)) continue;
+                        }
+                        // No viewport / critic unavailable → fall through, accept "done".
+                    } else if (activeVision && visualGateNudges < MAX_VISUAL_NUDGES) {
+                        // Vision-capable model: nudge IT to look (it can see).
+                        visualGateNudges++;
+                        messages.push({ role: 'user', text: VISUAL_GATE_NUDGE });
+                        continue;
+                    }
+                }
+                // Seed the design-intent map from the goal for a build that never
+                // used the plan_* tools (weak builders rarely do) — so the Plan
+                // map reflects what was built even without the model driving it.
+                // Empty-graph-only (never clobbers an AI/user plan); best-effort.
+                if (builtGeometryThisTurn) {
+                    try {
+                        const pg = getPlanGraph();
+                        if (pg && typeof pg.allNodes === 'function' && pg.allNodes().length === 0) {
+                            seedPlanGraph(pg, String(userMessage || '').trim() || 'Design');
+                            try { syncPlanGraphToDoc(); } catch { /* doc sync optional */ }
+                        }
+                    } catch { /* plan seed is best-effort, never breaks the turn */ }
                 }
                 // Auto / focus mode: don't accept the first "I'm done". Nudge the
                 // model to keep going until the goal is genuinely complete. One
@@ -471,6 +593,17 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                     images: capturedImages.map((c) => ({ mediaType: c.mediaType, dataBase64: c.dataBase64 })),
                 });
                 continue; // next iteration: the model sees the images
+            }
+            // ── Vision CRITIC (blind builder) ────────────────────────────────
+            // The active model can't see, but a critic is configured: hand the
+            // renders to the multimodal reviewer (Gemma) and inject its text
+            // critique as the next user turn, so the blind builder can act on
+            // what it cannot see. Bounded by the same visionInjections budget.
+            else if (capturedImages.length && criticForBlind && visionInjections < 4) {
+                visionInjections++;
+                if (await critiqueRenders(capturedImages)) continue; // builder acts on the critique
+                // Critic unavailable/failed → don't block the build; fall through
+                // to the numeric self-repair net below.
             }
 
             // ── Self-repair safety net ───────────────────────────────────────

@@ -55,6 +55,9 @@
 import { anthropicProvider } from './anthropic.js';
 import { geminiProvider } from './gemini.js';
 import { openaiProvider } from './openai.js';
+import { cerebrasProvider } from './cerebras.js';
+import { nvidiaProvider } from './nvidia.js';
+import { zerogProvider } from './zerog.js';
 
 /**
  * Default provider id — OpenAI-compatible GPT-OSS is the core path (open-weight,
@@ -66,6 +69,9 @@ const _byName = new Map([
     [anthropicProvider.name, anthropicProvider],
     [geminiProvider.name, geminiProvider],
     [openaiProvider.name, openaiProvider],
+    [cerebrasProvider.name, cerebrasProvider],
+    [nvidiaProvider.name, nvidiaProvider],
+    [zerogProvider.name, zerogProvider],
 ]);
 
 /**
@@ -80,4 +86,4 @@ export function getProvider(name) {
     return _byName.get(key) || _byName.get(DEFAULT_PROVIDER);
 }
 
-export { anthropicProvider, geminiProvider, openaiProvider };
+export { anthropicProvider, geminiProvider, openaiProvider, cerebrasProvider, nvidiaProvider, zerogProvider };

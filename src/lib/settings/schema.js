@@ -227,7 +227,10 @@ const FULL_SETTINGS_SCHEMA = [
     icon: 'Sparkles',
     defaults: {
       provider: 'openai',
-      openaiModel: 'openai/gpt-oss-120b:free',
+      openaiModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+      cerebrasModel: 'gpt-oss-120b',
+      nvidiaModel: 'meta/llama-3.3-70b-instruct',
+      zerogModel: 'minimax-m3',
       geminiModel: 'gemini-2.5-flash',
       maxTokens: 32768,
       // Bring-your-own keys. Stored locally in this browser and sent to YOUR
@@ -235,7 +238,16 @@ const FULL_SETTINGS_SCHEMA = [
       // blank to fall back to the server-configured key.
       openaiApiKey: '',
       openaiBaseUrl: '',
+      cerebrasApiKey: '',
+      nvidiaApiKey: '',
+      zerogApiKey: '',
       geminiApiKey: '',
+      // Vision critic — a multimodal reviewer (Gemma via Google AI Studio) that
+      // LOOKS at renders on behalf of a text-only builder and feeds back a text
+      // critique. Off by default; the key falls back to geminiApiKey when blank.
+      visionCritic: false,
+      visionCriticModel: 'gemma-4-31b-it',
+      visionCriticApiKey: '',
     },
     fields: [
       {
@@ -244,6 +256,9 @@ const FULL_SETTINGS_SCHEMA = [
         kind: 'select',
         options: [
           { value: 'openai', label: 'OpenRouter / OpenAI-compatible (default)' },
+          { value: 'cerebras', label: 'Cerebras (fast, free tier)' },
+          { value: 'nvidia', label: 'NVIDIA NIM' },
+          { value: 'zerog', label: '0G Compute (router)' },
           { value: 'gemini', label: 'Google Gemini direct' },
         ],
       },
@@ -252,11 +267,51 @@ const FULL_SETTINGS_SCHEMA = [
         label: 'Model',
         kind: 'select',
         options: [
+          { value: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'nvidia/nemotron-3-ultra-550b-a55b:free' },
+          { value: 'nex-agi/nex-n2-pro:free', label: 'nex-agi/nex-n2-pro:free' },
+          { value: 'qwen/qwen3-coder:free', label: 'qwen/qwen3-coder:free' },
           { value: 'openai/gpt-oss-120b:free', label: 'openai/gpt-oss-120b:free' },
         ],
       },
       { key: 'openaiApiKey', label: 'OpenRouter API key', kind: 'secret', placeholder: 'sk-or-v1-… (paste from openrouter.ai/keys)' },
       { key: 'openaiBaseUrl', label: 'Host base URL (advanced)', kind: 'text', placeholder: 'leave blank for OpenRouter — e.g. https://api.groq.com/openai/v1' },
+      {
+        // Cerebras' public free-tier models (both do native tool calling).
+        // gpt-oss-120b = production; zai-glm-4.7 = preview/evaluation.
+        key: 'cerebrasModel',
+        label: 'Cerebras model',
+        kind: 'select',
+        options: [
+          { value: 'gpt-oss-120b', label: 'gpt-oss-120b (production)' },
+          { value: 'zai-glm-4.7', label: 'zai-glm-4.7 (preview)' },
+        ],
+      },
+      { key: 'cerebrasApiKey', label: 'Cerebras API key', kind: 'secret', placeholder: 'csk-… (paste from cloud.cerebras.ai)' },
+      // NVIDIA NIM: model id is free-text so you can test any catalog model
+      // (e.g. meta/llama-3.3-70b-instruct, nvidia/llama-3.1-nemotron-70b-instruct,
+      // deepseek-ai/deepseek-r1, moonshotai/kimi-k2-instruct).
+      { key: 'nvidiaModel', label: 'NVIDIA model', kind: 'text', placeholder: 'e.g. meta/llama-3.3-70b-instruct' },
+      { key: 'nvidiaApiKey', label: 'NVIDIA API key', kind: 'secret', placeholder: 'nvapi-… (paste from build.nvidia.com)' },
+      // 0G Compute Router: tool-calling chat models from GET /v1/models. The
+      // router returns "upstream provider request failed" for an unknown id and
+      // 400 if `tools` go to a model that lacks them, so we offer the known
+      // tool-capable set (vision/audio/image-gen models are omitted).
+      {
+        key: 'zerogModel',
+        label: '0G model',
+        kind: 'select',
+        options: [
+          { value: 'minimax-m3', label: 'minimax-m3 (free, multimodal)' },
+          { value: 'glm-5', label: 'glm-5 (2 nodes, resilient)' },
+          { value: 'glm-5.1', label: 'glm-5.1' },
+          { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro' },
+          { value: 'deepseek-v4-flash', label: 'deepseek-v4-flash' },
+          { value: 'deepseek-v3', label: 'deepseek-v3' },
+          { value: 'qwen3.7-max', label: 'qwen3.7-max' },
+          { value: 'qwen3.6-plus', label: 'qwen3.6-plus' },
+        ],
+      },
+      { key: 'zerogApiKey', label: '0G API key', kind: 'secret', placeholder: 'sk-… (paste from pc.0g.ai)' },
       {
         key: 'geminiModel',
         label: 'Gemini model',
@@ -265,10 +320,25 @@ const FULL_SETTINGS_SCHEMA = [
           { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
           { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
           { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+          { value: 'gemma-4-31b-it', label: 'Gemma 4 31B IT' },
         ],
       },
       { key: 'geminiApiKey', label: 'Gemini API key', kind: 'secret', placeholder: 'AIza… (stored in this browser)' },
       { key: 'maxTokens', label: 'Max output tokens', kind: 'number', min: 256, max: 500000, step: 256 },
+      // Vision critic — shown only for the text-only providers (a Gemini builder
+      // already sees for itself). Gives a blind builder a pair of eyes.
+      { key: 'visionCritic', label: 'Vision critic (give the model eyes)', kind: 'boolean' },
+      {
+        key: 'visionCriticModel',
+        label: 'Vision critic model',
+        kind: 'select',
+        options: [
+          { value: 'gemma-4-31b-it', label: 'Gemma 4 31B IT (vision, free)' },
+          { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (vision)' },
+          { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (vision)' },
+        ],
+      },
+      { key: 'visionCriticApiKey', label: 'AI Studio key (critic)', kind: 'secret', placeholder: 'AIza… — blank = reuse Gemini key' },
     ],
   },
   {

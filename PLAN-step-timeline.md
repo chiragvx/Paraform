@@ -5,6 +5,40 @@
 clusters (on-ramp, timeline-feel, AI-granularity) in phases; defer incremental
 compile (G4) until model sizes justify it.*
 
+## STATUS — shipped on branch `step-timeline-upgrade` (2026-06-15)
+
+All three phases implemented; node suite + Vite build green. Browser
+interaction is **not** hands-verified (no browser run) — the usual cost of the
+single-shot delivery.
+
+- **A1 reference-image canvas** ✅ — `ReferenceImage` feature (data model +
+  emit-exclusion, tested), `conventions.createReferenceImagePlane` (Z-up),
+  `src/lib/reference/image_canvas.js` loader + scene sync, Viewport mount,
+  Sidebar add button, Inspector controls.
+- **A2 sketcher in the live studio** ✅ — found ALREADY wired end-to-end (the
+  Svelte studio drives `app/sketch_3d/`); PLAN.md's "routes through legacy" note
+  was stale. No change needed.
+- **B1 edit-in-the-past** ✅ — TimelineScrub banner; downstream regenerates via
+  the existing whole-doc re-emit.
+- **B2 insert-at-marker** ✅ — store insert-index resolver + runtime wiring
+  (tested).
+- **B3 horizontal timeline strip** ✅ — `TimelineStrip.svelte`.
+- **C1 typed-first + `# param`** ✅ — prompt directives.
+- **C2 BuildScript param hoisting** ✅ — `lib/document/script_params.js`
+  (tested) + Inspector sliders.
+- **C3 AI step-editing** ✅ — `get_timeline` tool + prompt; edit-the-earlier-
+  step-in-place verified by test.
+- **G4 incremental compile** ✅ — `dep_hash.js` engine (per-feature dependency
+  hashing, reuse/recompute plan), opt-in `emit({incremental:true})` checkpoint
+  mode (byte-identical when off), fail-safe kernel body cache (`_ckpt_*` in
+  harness.py). DEFAULT OFF + fail-safe → the production compile path is
+  unchanged. Kernel runtime behaviour of the body cache is not hands-verified
+  (no running kernel here); flip the emit flag on after a kernel smoke test.
+
+Commits: `835d67d` (foundation), `9cb9345` (A/B/C), `bf91bb7` (G4). Tests:
+`reference_image.mjs`, `script_params.mjs`, `timeline_tool.test.mjs`,
+`incremental.mjs` (all in `npm test`).
+
 ## Guiding principles (from the research)
 
 - **The script is the timeline.** The document's DAG + deterministic fold +
