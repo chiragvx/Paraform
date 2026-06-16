@@ -17,11 +17,11 @@ Stronger than expected — most scaffolding exists and has compiled here.
 | Tauri shell + window config | ✅ | `src-tauri/tauri.conf.json` (productName **ParaForm**) |
 | Sidecar spawn/kill lifecycle | ✅ | `src-tauri/src/lib.rs`, target triple via `build.rs` |
 | Capabilities (sidecar spawn/kill, dialog, fs) | ✅ | `src-tauri/capabilities/default.json` |
-| Windows sidecar binary | ⚠️ **stale** | `binaries/b123d_server-x86_64-pc-windows-msvc.exe`, **577 MB, built May 29** — predates the AI-editor/plan kernel changes. Gitignored (`.gitignore:45`) ✅ |
+| Windows sidecar binary | ✅ **fresh, lean, compile-verified** | rebuilt 2026-06-17 from current kernel, **159 MB** (was 577 MB); produces a GLB. Gitignored (`.gitignore:45`) ✅ |
 | Full Windows icon set | ✅ | `src-tauri/icons/` (`.ico` + all Square logos) |
 | Self-bootstrap build | ✅ | `scripts/ensure-sidecar.js`, npm `tauri:build` |
 | Dev build compiled | ✅ | `src-tauri/target/debug/` |
-| **Release bundle / installer** | ❌ | none yet — only the dev build exists |
+| **Release installer** | ✅ **built 2026-06-17** | `ParaForm_0.1.0_x64-setup.exe` (161 MB), NSIS; packaged app auto-spawns sidecar + compiles |
 | **Code signing** | ❌ | no cert, no sign step |
 | **Auto-update** | ❌ | no updater plugin / feed |
 | **Desktop-shaped mandatory auth** | ❌ | Supabase redirect is web-origin today |
@@ -42,18 +42,27 @@ Stronger than expected — most scaffolding exists and has compiled here.
 
 ## 2. Phases (ordered to reach a working .exe fast, then harden)
 
-### Phase W0 — Produce a working release `.exe` NOW (prove the chain) · ~1 day
-The fastest way to surface real problems is to build the thing.
-- [ ] **Rebuild the sidecar from current kernel:** `npm run sidecar:build`. The
-  on-disk 577 MB binary is from May 29 and predates the current `b123d_server`
-  (AI editor, plan tools) — shipping it would ship a stale kernel.
-- [ ] `npm run tauri:build` → NSIS `setup.exe` + `.msi` in
-  `src-tauri/target/release/bundle/`.
-- [ ] Install on this machine; launch; confirm `lib.rs` spawns the sidecar
-  (`GET 127.0.0.1:7823/health`), then run one full design→compile end-to-end.
-- [ ] Record: install size, cold-start time, first-compile time, any mock-mode
-  fallthrough.
-- **Exit:** a locally-built installer that designs a part. Everything else hardens this.
+### Phase W0 — Produce a working release `.exe` NOW (prove the chain) · ✅ DONE 2026-06-17
+The fastest way to surface real problems is to build the thing. It surfaced several.
+- [x] **Rebuilt the sidecar from current kernel** (`npm run sidecar:build`).
+- [x] `npm run tauri:build` → **`ParaForm_0.1.0_x64-setup.exe` (161 MB)** at
+  `src-tauri/target/release/bundle/nsis/`.
+- [x] Launched the built `app.exe`; confirmed `lib.rs` auto-spawns the bundled
+  sidecar (`GET 127.0.0.1:7823/health` → `build123d 0.10.0`) and a real
+  `Box → GLB` compile returns `ok=True` (4600 bytes). End-to-end chain works.
+
+**W0 findings (the May-29 freeze would have failed on first compile):**
+- Dual Qt bindings (PyQt5 + PySide6) aborted PyInstaller → exclude all Qt/VTK.
+- torch + ML stacks bundled but unused → excluded. **Sidecar 577 MB → 159 MB.**
+- `lib3mf.dll` (separate package, loaded by build123d's mesher) wasn't bundled →
+  added `--collect-all lib3mf`. Was a latent crash-on-first-compile bug.
+- `build123d.__version__` came back "unknown" → `--copy-metadata build123d`
+  restored the version-drift handshake (now reports 0.10.0).
+- Fixed `index.html` dead-tunnel desktop mis-route (gated to web-only).
+- Narrowed bundle to NSIS.
+- All committed in `444d69a`. A post-build geometry probe is now the validation
+  gate before any installer build (kernel must produce a GLB).
+- **Cold-start / install-size measurement still TODO** (rolls into W6).
 
 ### Phase W1 — Production build config + the dead-tunnel fix · ~1-2 days
 - [ ] **FIX (blocker): `index.html:33` hardcodes a dead cloudflare tunnel** as
@@ -130,12 +139,13 @@ The fastest way to surface real problems is to build the thing.
 ## 3. Windows-specific risks
 
 1. **Stale frozen-kernel drift (HIGH, easy to miss).** The committed workflow
-   must always rebuild the sidecar; the local 577 MB May-29 copy is stale. CI
-   gate in W5.
-2. **`index.html` dead-tunnel mis-route (HIGH, found).** Fixed in W1 — without
-   it the packaged app talks to a dead URL, not its own kernel.
-3. **Sidecar size / cold start (MED).** 577 MB onefile re-extracts each launch →
-   slow first compile; `--onedir` mitigates (W6).
+   must always rebuild the sidecar. ✅ Mitigated for now (rebuilt 2026-06-17);
+   CI must enforce per-release rebuild in W5.
+2. **`index.html` dead-tunnel mis-route (HIGH, found).** ✅ FIXED in `444d69a`
+   (gated to web-only) — packaged app routes to its own sidecar.
+3. **Sidecar size / cold start (MED).** ✅ Size largely handled: 577 → 159 MB by
+   excluding Qt/VTK/torch. Onefile still re-extracts on launch → cold-start
+   measurement + optional `--onedir` remains in W6.
 4. **SmartScreen reputation (MED).** New OV cert still warns until reputation
    builds; EV avoids it. Budget decision in W3.
 5. **WebView2 dependency (MED).** Tauri needs Edge WebView2; choose bootstrapper
@@ -156,8 +166,12 @@ The fastest way to surface real problems is to build the thing.
 
 ## 5. Immediate next step
 
-**Phase W0** — rebuild the current-kernel sidecar and run `npm run tauri:build`
-to get a real `setup.exe`, then launch it and design one part. That single pass
-validates the whole chain and turns the rest of this plan from estimate into
-checklist. (Needs your go-ahead — building/installing is a local action with
-real output, and W0 also flushes out the W1 dead-tunnel fix in practice.)
+**W0 is done** — `ParaForm_0.1.0_x64-setup.exe` exists and the packaged app
+compiles geometry. Next, in order:
+- **W2 — mandatory sign-in in the native shell** (desktop deep-link OAuth +
+  prod Supabase env). This is the biggest remaining functional gap before the
+  app is shippable per the cloud-primary decision.
+- **W3 — Windows code signing** (so the downloaded `setup.exe` doesn't trip
+  SmartScreen) — needs a cert decision (Azure Trusted Signing recommended).
+- W1 leftovers (prod env bake, WebView2 install mode), then W4 auto-update,
+  W5 release CI, W6 cold-start/onedir + clean-VM QA.
