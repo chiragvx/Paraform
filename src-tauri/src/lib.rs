@@ -13,10 +13,29 @@ struct SidecarChild(Mutex<Option<CommandChild>>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    // Single-instance MUST be registered first (desktop only). When an OAuth
+    // deep-link (paraform://auth-callback) arrives while the app is running,
+    // Windows/Linux launch a second process with the URL in argv; this forwards
+    // it to the running instance (and the "deep-link" cargo feature routes the
+    // URL into the deep-link plugin's on_open_url) instead of opening a 2nd
+    // window. We just focus the existing window here.
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_focus();
+            }
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_deep_link::init())
         .manage(SidecarChild(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -25,6 +44,18 @@ pub fn run() {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+            }
+
+            // Register the paraform:// URL scheme at runtime so a directly-run
+            // (non-installed) app.exe still receives OAuth callbacks during dev.
+            // The NSIS installer also registers it from tauri.conf.json, so this
+            // is a harmless idempotent belt-and-suspenders for the dev path.
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register_all() {
+                    log::warn!("[paraform] deep-link scheme registration failed: {e}");
+                }
             }
             // Best-effort sidecar boot. If the PyInstaller binary isn't
             // present yet (fresh checkout, dev iteration before phase 2 was
@@ -44,6 +75,9 @@ pub fn run() {
         });
 }
 
+// We intentionally keep only the most-recent spawn error (path 2 overwrites
+// path 1's) and return it if every path fails — hence the reassignments.
+#[allow(unused_assignments)]
 fn spawn_b123d_sidecar(app: &tauri::AppHandle) -> Result<(), String> {
     // Try the bundled sidecar first (tauri-plugin-shell knows where it
     // landed for the current target). If that fails, fall back to a

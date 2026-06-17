@@ -23,6 +23,8 @@
 import { supabase } from '../../../lib/supabase.js';
 import { isCloudEnabled } from '../../../lib/cloud.js';
 import { setAuthTokenProvider, getAuthToken } from '../../../lib/auth_token.js';
+import { isDesktop } from '../../../lib/platform/runtime.js';
+import { DESKTOP_REDIRECT, startDesktopOAuthListener, openInSystemBrowser } from './desktop_oauth.js';
 
 export const session = $state({
   user: null,
@@ -106,6 +108,11 @@ export function initSession() {
     return;
   }
 
+  // Desktop: begin listening for the paraform://auth-callback deep-link so an
+  // OAuth / magic-link round-trip completed in the system browser lands back
+  // in the app. No-op in the browser build.
+  if (isDesktop()) { startDesktopOAuthListener().catch(() => {}); }
+
   // Token provider for lib/ clients: always read the latest session so
   // supabase-js's internal refresh keeps the token fresh for us.
   setAuthTokenProvider(async () => {
@@ -142,12 +149,11 @@ export function initSession() {
 export async function signInWithOtp(email) {
   if (!isAuthConfigured()) return { error: 'Sign-in is not configured on this deployment.' };
   try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
-      },
-    });
+    // Desktop redirects to the custom scheme; the browser to its own origin.
+    const emailRedirectTo = isDesktop()
+      ? DESKTOP_REDIRECT
+      : (typeof window !== 'undefined' ? window.location.origin : undefined);
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } });
     return { error: error ? error.message : null };
   } catch (e) {
     return { error: e?.message || String(e) };
@@ -161,6 +167,18 @@ export async function signInWithOtp(email) {
 export async function signInWithGithub() {
   if (!isAuthConfigured()) return { error: 'Sign-in is not configured on this deployment.' };
   try {
+    if (isDesktop()) {
+      // Get the authorize URL WITHOUT navigating the WebView, then open it in
+      // the system browser. The provider redirects to paraform://auth-callback,
+      // which the deep-link listener (startDesktopOAuthListener) completes.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: DESKTOP_REDIRECT, skipBrowserRedirect: true },
+      });
+      if (error) return { error: error.message };
+      if (data?.url) await openInSystemBrowser(data.url);
+      return { error: null };
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
