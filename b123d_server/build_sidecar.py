@@ -101,6 +101,14 @@ def main() -> None:
         # with "lib3mf.dll could not be found". --collect-all bundles the DLL
         # alongside the module so the wrapper's relative path resolves.
         "--collect-all", "lib3mf",
+        # Runtime DATA files PyInstaller won't auto-discover (they're read by
+        # path, not imported). Without these the frozen kernel boots but the
+        # parts library is empty ("missing iso_metric_screws.json" etc.) and the
+        # version contract can't load VERSIONS.json:
+        #   - standard_parts/*.json — catalog.py loads them from its own dir.
+        #   - VERSIONS.json — server.py reads it next to its own __file__ (root).
+        "--collect-data", "standard_parts",
+        "--add-data", f"{here / 'VERSIONS.json'}{os.pathsep}.",
         "--collect-submodules", "flask",
         "--collect-submodules", "flask_cors",
         # build123d derives __version__ from importlib.metadata, which needs the
