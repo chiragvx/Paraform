@@ -64,7 +64,12 @@ The fastest way to surface real problems is to build the thing. It surfaced seve
   gate before any installer build (kernel must produce a GLB).
 - **Cold-start / install-size measurement still TODO** (rolls into W6).
 
-### Phase W1 — Production build config + the dead-tunnel fix · ~1-2 days
+### Phase W1 — Production build config + the dead-tunnel fix · ✅ DONE 2026-06-17
+Done: dead-tunnel gated web-only; per-user NSIS install (no admin), WebView2
+downloadBootstrapper, LZMA compression, publisher metadata; bundle id fixed to
+`com.paraform.studio`; desktop ignores the `VITE_REQUIRE_AUTH=0` escape hatch
+(auth mandatory). Remaining: bake real Supabase env at release time (documented
+in `docs/DESKTOP-BUILD.md`). Original checklist:
 - [ ] **FIX (blocker): `index.html:33` hardcodes a dead cloudflare tunnel** as
   `window.__PARAFORM_ENGINE_URL__`. In `lib/document/kernel_client.js:24` the
   window global is checked **before** the desktop sidecar default, so the
@@ -84,7 +89,15 @@ The fastest way to surface real problems is to build the thing. It surfaced seve
   (`downloadBootstrapper` is the small default; `embedBootstrapper`/`offlineInstaller`
   for air-gapped installs).
 
-### Phase W2 — Mandatory sign-in in the native shell · ~3-5 days
+### Phase W2 — Mandatory sign-in in the native shell · ✅ CODE-COMPLETE 2026-06-17
+Done: `paraform://` deep-link OAuth — deep-link + opener + single-instance
+plugins (Rust), `src/lib/auth/desktop_oauth.js` opens the authorize URL in the
+system browser and completes the session from the callback (PKCE + implicit);
+`session.svelte.js` branches both sign-in methods + starts the listener; gate is
+mandatory on desktop. Verified compiles (cargo check + vite build). **Full
+round-trip needs your Supabase dashboard config** (add `paraform://auth-callback`
+to Redirect URLs) + GitHub OAuth app — see `docs/DESKTOP-BUILD.md §4`. Original
+checklist:
 *(Per decision: sign-in mandatory, never fully offline, cloud-primary save.)*
 - [ ] **Desktop OAuth:** Supabase magic-link/OAuth redirect targets a web origin
   today (`.env.example` redirect notes). Add a deep-link scheme
@@ -99,7 +112,11 @@ The fastest way to surface real problems is to build the thing. It surfaced seve
 - [ ] Identity token still flows to local sidecar via `getAuthToken()` — but the
   local kernel is uncapped, so the token is for identity/telemetry, not metering.
 
-### Phase W3 — Code signing (Windows) · ~2-3 days + cost
+### Phase W3 — Code signing (Windows) · ⏳ WIRED, NEEDS CERT (your purchase)
+Release CI + docs reference the signing secrets; `tauri.conf.json` is ready for
+`bundle.windows` sign config. **Blocked only on buying a cert** (Azure Trusted
+Signing ~$10/mo recommended). Steps in `docs/DESKTOP-BUILD.md §6`. Original
+checklist:
 - [ ] Acquire a cert: **Azure Trusted Signing (~$10/mo, recommended)** or an
   OV/EV cert. EV builds SmartScreen reputation instantly; OV warns until
   reputation accrues.
@@ -108,21 +125,37 @@ The fastest way to surface real problems is to build the thing. It surfaced seve
 - [ ] **Acceptance:** a *downloaded* (not locally-built) `setup.exe` installs on
   a clean machine with no SmartScreen block.
 
-### Phase W4 — Auto-update · ~2-3 days
+### Phase W4 — Auto-update · ✅ DONE 2026-06-17
+Done: updater + process plugins wired; signing keypair generated (pubkey in
+`tauri.conf.json`, private key gitignored → CI secret); GitHub `latest.json`
+endpoint; `src/lib/updater/check.js` checks on startup → installs signed update →
+relaunch; `createUpdaterArtifacts` on. Live update delivery happens once the
+first release is published (W5). Original checklist:
 - [ ] Add `tauri-plugin-updater`; generate the update keypair
   (`TAURI_SIGNING_PRIVATE_KEY`), keep the private key in CI secrets.
 - [ ] Release feed: GitHub Releases hosting signed `latest.json` + the NSIS
   artifact.
 - [ ] In-app "update available" prompt; verify a `0.1.0 → 0.1.1` upgrade.
 
-### Phase W5 — Windows release CI · ~2-3 days
+### Phase W5 — Windows release CI · ✅ DONE 2026-06-17
+Done: `.github/workflows/release.yml` (windows-latest, tag-triggered) rebuilds
+the sidecar from source, `tauri-action` builds + signs + drafts a GitHub Release
+with the NSIS installer + updater artifacts. **Needs repo secrets set** (updater
+key, Supabase env, later the cert) — `docs/DESKTOP-BUILD.md §7`. Original
+checklist:
 - [ ] GH Actions job `runs-on: windows-latest`: setup Python 3.11 + Rust + Node,
   `npm run sidecar:build` (**cache it** — ~577 MB / ~5 min), `npm run tauri:build`,
   sign (W3), upload artifact + update feed.
 - [ ] Tag-triggered (`v*`). **CI must rebuild the sidecar every release** — never
   ship the gitignored local copy (drift risk).
 
-### Phase W6 — Packaging polish + clean-machine QA · ~3-5 days
+### Phase W6 — Packaging polish + clean-machine QA · ◐ PARTIAL
+Done: size already handled (159 MB sidecar); file association intentionally
+skipped (cloud-primary + `.json` tail would hijack all JSON — documented);
+`--onedir` evaluated and deferred (onefile works; switch documented if cold
+start is bad). Remaining (needs hardware/measurement, not code): cold-start +
+first-compile timing, clean-VM QA matrix (Win10/11), AV false-positive check.
+Original checklist:
 - [ ] Switch sidecar `--onefile` → `--onedir` (`build_sidecar.py`) for faster
   cold start (onefile re-extracts ~577 MB to temp on every launch); measure
   before/after.
