@@ -36,6 +36,7 @@
   import { isSketchActive } from '$lib/sketch/boot.js';
   import { router, navigate } from '$lib/router.svelte.js';
   import { session, isAuthConfigured, refreshAccount } from '$lib/auth/session.svelte.js';
+  import { isDesktop } from '../lib/platform/runtime.js';
 
   // Route gating. Login is mandatory in any real (Supabase-configured)
   // deployment. Set VITE_REQUIRE_AUTH=0 to force it off (e.g. a local
@@ -43,8 +44,12 @@
   // naturally inert. When on, the studio route requires a signed-in session:
   // while the session is still loading we render nothing for that route (no
   // flash-of-studio), and once it resolves signed-out we bounce to #/auth.
+  // The desktop (Tauri) build is cloud-primary by product decision: sign-in is
+  // mandatory and the VITE_REQUIRE_AUTH=0 escape hatch is NOT honored there —
+  // it exists only for web/dev kernel-only demos. On desktop, auth is required
+  // whenever Supabase is configured (the shipping build always configures it).
   const _authFlag = String(import.meta.env.VITE_REQUIRE_AUTH ?? '').toLowerCase();
-  const _authDisabled = _authFlag === '0' || _authFlag === 'false';
+  const _authDisabled = (_authFlag === '0' || _authFlag === 'false') && !isDesktop();
   const REQUIRE_AUTH = isAuthConfigured() && !_authDisabled;
   const studioAllowed = $derived(!REQUIRE_AUTH || !!session.user);
 
