@@ -150,12 +150,15 @@ checklist:
   ship the gitignored local copy (drift risk).
 
 ### Phase W6 — Packaging polish + clean-machine QA · ◐ PARTIAL
-Done: size already handled (159 MB sidecar); file association intentionally
-skipped (cloud-primary + `.json` tail would hijack all JSON — documented);
-`--onedir` evaluated and deferred (onefile works; switch documented if cold
-start is bad). Remaining (needs hardware/measurement, not code): cold-start +
-first-compile timing, clean-VM QA matrix (Win10/11), AV false-positive check.
-Original checklist:
+Done: **bundled the standard_parts catalog (204 parts) + VERSIONS.json** that
+the freeze was silently dropping (parts library was empty — real functional bug
+caught from the cold-start boot log); size handled (159 MB sidecar); file
+association intentionally skipped (cloud-primary + `.json` tail would hijack all
+JSON — documented); `--onedir` evaluated and deferred (onefile works; switch
+documented if cold start is bad). **Cold-start measured ≈ 15 s** (onefile
+extract + OCP import) — acceptable but the main candidate for `--onedir` later.
+Remaining (needs hardware, not code): clean-VM QA matrix (Win10/11), AV
+false-positive check. Original checklist:
 - [ ] Switch sidecar `--onefile` → `--onedir` (`build_sidecar.py`) for faster
   cold start (onefile re-extracts ~577 MB to temp on every launch); measure
   before/after.
