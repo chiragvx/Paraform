@@ -31,6 +31,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "publisher": "ParaForm",
     "copyright": "© 2026 ParaForm",
     "shortDescription": "AI-native parametric CAD for functional machines",
@@ -63,6 +64,12 @@
       "desktop": {
         "schemes": ["paraform"]
       }
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/chiragvx/Paraform/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2RUM4RjBBRkRBODBGNjAKUldSZ0Q2ajlDby9zTnNaRDhoR21oTTB1VFNjZmh1YmQyV3k1ZnZ1NEJrV1NyT25hZVdTckRaT1MK"
     }
   }
 }

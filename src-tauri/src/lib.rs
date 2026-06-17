@@ -36,6 +36,8 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(SidecarChild(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {

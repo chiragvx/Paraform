@@ -68,6 +68,12 @@ const app = mount(App, {
   target: document.getElementById('app'),
 });
 
+// Desktop only: check the release feed for a newer signed build and
+// self-update. Non-blocking and a no-op in the browser.
+import('./lib/updater/check.js')
+  .then((m) => m.checkForUpdatesAndInstall({ onStatus: (s) => console.info('[updater]', s) }))
+  .catch((e) => console.warn('[main] updater init failed:', e));
+
 // Test hook — exposes the studio runtime + document store + command registry
 // to the smoke harness (tests/smoke/). Always on for now (the surface is
 // read-mostly + the same things power the dev console anyway); flip behind
