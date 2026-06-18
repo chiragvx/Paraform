@@ -41,7 +41,7 @@ const BODY_EMITTING = new Set([
     'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
     'Foot', 'Gusset', 'Handle', 'ShaftHub', 'Lid', 'RackGear', 'BatteryHolder',
     'DINRailClip', 'CableClip', 'GridfinityBin', 'TSlotBracket',
-    'Impeller', 'Auger', 'BlowerWheel', 'PaddleWheel',
+    'Impeller', 'Auger', 'BlowerWheel', 'PaddleWheel', 'PiCase',
 ]);
 
 /** Live document, or an empty stand-in so callers never see `undefined`. */

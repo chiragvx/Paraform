@@ -21,7 +21,7 @@ import {
     addHinge, addProjectBox, addPCBTray, addKnob,
     addFoot, addGusset, addHandle, addShaftHub, addLid, addRackGear,
     addBatteryHolder, addDINRailClip, addCableClip, addGridfinityBin, addTSlotBracket,
-    addImpeller, addAuger, addBlowerWheel, addPaddleWheel,
+    addImpeller, addAuger, addBlowerWheel, addPaddleWheel, addPiCase,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
 
@@ -428,5 +428,28 @@ export const GENERATOR_TOOLS = [
             paddleThickness: N('Paddle thickness (mm)'), hubDiameter: N('Hub Ø (mm)'), bore: N('Shaft bore Ø (mm, default 6)'), componentId: S('Target component id'),
         }, required: ['diameter'] },
         handler: (i) => { try { return feat(addPaddleWheel(i), `Paddle wheel Ø${i.diameter} ${i.paddleCount ?? 8} paddles`); } catch (e) { return fail(e); } },
+    },
+
+    // ── Raspberry Pi case (model-parametric) ────────────────────────────────────
+    {
+        name: 'addPiCase',
+        description: 'Create a fully parametric RASPBERRY PI CASE in ONE call. The `model` field is the SINGLE DROPDOWN that reflows EVERYTHING — board outline, the four M2.5 mounting-hole standoffs, and every port cutout (USB / HDMI / Ethernet / USB-C / power) — to match that exact board. Changing model from "zero" to "5" instantly resizes the case and moves all the holes/ports (board + mounting holes use the official Raspberry Pi mechanical dimensions; Pi 4/5 port positions follow the datasheet drawings). Also adds VENTILATION (slots/grid on the lid + side walls + floor), BRANDING TEXT (engraved or embossed on the lid), a CAMERA HOLE, GPIO access, microSD access, and all the I/O cutouts. part="both" gives the base+lid assembled (default), or "base"/"lid" to print each separately. To re-target a different Pi, just setFeatureParams { model } on the existing case — never make a second one. Dimensions mm; sits on Z=0. After building, capture_views + measure to confirm the ports line up.',
+        input_schema: { type: 'object', properties: {
+            model: S('Raspberry Pi model — the dropdown that resizes the whole case', { enum: ['zero', 'zero2w', '3a+', '3b', '3b+', '4b', '5'] }),
+            part: S('What to generate', { enum: ['both', 'base', 'lid'] }),
+            wall: N('Wall thickness (mm, default 2)'), clearance: N('Gap around the board (mm, default 0.6)'),
+            standoffHeight: N('Mounting-standoff height under the board (mm, default 4)'),
+            headroom: N('Extra height above the board for components (mm; default auto from the tallest port)'),
+            ventilation: S('Ventilation style', { enum: ['slots', 'grid', 'none'] }),
+            brandingText: S('Text engraved/embossed on the lid (default the model name; "" for none)'),
+            brandingEngrave: B('Engrave the text (true, default) vs emboss raised (false)'),
+            cameraHole: B('Add a camera-module hole in the lid (default false)'), cameraDiameter: N('Camera hole Ø (mm, default 8)'),
+            gpioAccess: B('Cut a slot in the lid over the 40-pin GPIO header (default false)'),
+            microSDAccess: B('Cut the microSD access slot (default true)'),
+            ioCutouts: B('Cut all the port/IO openings (default true)'),
+            lidScrews: B('Add lid screw holes over the mounting posts (default false)'),
+            componentId: S('Target component id'),
+        }, required: [] },
+        handler: (i) => { try { return feat(addPiCase(i), `Raspberry Pi ${i.model || '5'} case (${i.part || 'both'})`); } catch (e) { return fail(e); } },
     },
 ];

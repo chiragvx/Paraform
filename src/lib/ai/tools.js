@@ -694,7 +694,7 @@ const BODY_EMITTING = new Set([
     'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
     'Foot', 'Gusset', 'Handle', 'ShaftHub', 'Lid', 'RackGear', 'BatteryHolder',
     'DINRailClip', 'CableClip', 'GridfinityBin', 'TSlotBracket',
-    'Impeller', 'Auger', 'BlowerWheel', 'PaddleWheel',
+    'Impeller', 'Auger', 'BlowerWheel', 'PaddleWheel', 'PiCase',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -897,6 +897,8 @@ function _extentHint(f) {
             return `blower wheel Ø${n(p.diameter, 50)}×${n(p.length, 40)}, ${n(p.bladeCount, 24)} blades — change with setFeatureParams (diameter/length/bladeCount/…)`;
         case 'PaddleWheel':
             return `paddle wheel Ø${n(p.diameter, 60)}, ${n(p.paddleCount, 8)} paddles — change with setFeatureParams (diameter/width/paddleCount/…)`;
+        case 'PiCase':
+            return `Raspberry Pi ${p.model || '5'} case (${p.part || 'both'}) — change the BOARD with setFeatureParams { model: "zero"|"3b+"|"4b"|"5"|… } (reflows size + holes + ports); also part/ventilation/brandingText/cameraHole/gpioAccess`;
         default:
             return 'measure bbox for exact placement';
     }
