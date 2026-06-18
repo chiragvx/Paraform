@@ -36,6 +36,9 @@ const BODY_EMITTING = new Set([
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
     'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff', 'Fan',
+    'MountingPlate', 'Bracket', 'ThreadedInsertBoss', 'NutTrap', 'SnapHook',
+    'BearingPocket', 'MotorMount', 'ShaftCoupler', 'Wheel', 'TimingPulley',
+    'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
 ]);
 
 /** Live document, or an empty stand-in so callers never see `undefined`. */

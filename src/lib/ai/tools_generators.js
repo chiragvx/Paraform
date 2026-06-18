@@ -16,6 +16,9 @@
 
 import {
     addPulley, addSprocket, addTSlotExtrusion, addScrewBoss, addStandoff, addFan,
+    addMountingPlate, addBracket, addThreadedInsertBoss, addNutTrap, addSnapHook,
+    addBearingPocket, addMotorMount, addShaftCoupler, addWheel, addTimingPulley,
+    addHinge, addProjectBox, addPCBTray, addKnob,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
 
@@ -166,5 +169,149 @@ export const GENERATOR_TOOLS = [
             try { return feat(addFan({ ...i, bladeCount: 1 }), `Fan blade Ø${i.diameter}, NACA ${i.airfoil || '4412'}`); }
             catch (e) { return fail(e); }
         },
+    },
+
+    // ── P0 foundation generators ────────────────────────────────────────────────
+    {
+        name: 'addMountingPlate',
+        description: 'Create a flat MOUNTING PLATE / base plate in ONE call: a rectangular plate with a centred rows×cols grid of through-holes, optional countersinks and rounded corners. Use this for any baseplate, adapter plate, or bolt-down base instead of stacking a box + hand-placed holes. Set rows/cols/pitchX/pitchY for the hole grid (the bolt pattern parts mount on). Sits on Z=0. mm. Verify with measure {type:"bbox"} after.',
+        input_schema: { type: 'object', properties: {
+            length: N('Plate length, X (mm)'), width: N('Plate width, Y (mm)'), thickness: N('Plate thickness, Z (mm, default 4)'),
+            holeDia: N('Through-hole diameter (mm; 0 = no holes)'), rows: N('Hole rows along Y (default 1)'), cols: N('Hole columns along X (default 1)'),
+            pitchX: N('Column spacing (mm)'), pitchY: N('Row spacing (mm)'),
+            cornerRadius: N('Round the vertical corners (mm, 0 = sharp)'),
+            countersinkDia: N('Countersink top diameter (mm, 0 = none)'), countersinkDepth: N('Countersink depth (mm)'),
+            componentId: S('Target component id'),
+        }, required: ['length', 'width'] },
+        handler: (i) => { try { return feat(addMountingPlate(i), `Plate ${i.length}×${i.width}${i.holeDia ? `, ${i.rows ?? 1}×${i.cols ?? 1} holes` : ''}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addBracket',
+        description: 'Create an L / right-angle BRACKET in ONE call: a horizontal arm + a vertical arm meeting at a corner, each with a row of bolt holes, plus an optional triangular gusset for strength. Use this for any angle bracket / corner brace / shelf bracket instead of unioning two boxes by hand. angle defaults to 90°. Sits on Z=0 (corner at the origin). mm.',
+        input_schema: { type: 'object', properties: {
+            armA: N('Horizontal arm length, X (mm)'), armB: N('Vertical arm length, Z (mm)'), width: N('Bracket width, Y (mm)'),
+            thickness: N('Material thickness (mm, default 4)'), holeDia: N('Bolt-hole diameter (mm, default 4)'),
+            holesPerArm: N('Holes per arm (default 1)'), angle: N('Angle between arms (deg, default 90)'), gusset: B('Add a corner gusset rib (default false)'),
+            componentId: S('Target component id'),
+        }, required: ['armA', 'armB'] },
+        handler: (i) => { try { return feat(addBracket(i), `Bracket ${i.armA}×${i.armB}mm${i.gusset ? ' gusseted' : ''}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addThreadedInsertBoss',
+        description: 'Create a HEAT-SET THREADED-INSERT boss in ONE call: a post with a straight counterbore sized so a brass heat-set insert melts/presses in (the pro way to put screw threads in a 3D print). Pick insertSize M2–M6 and the pilot hole is sized automatically. Optional support ribs + base fillet. Use this (NOT addScrewBoss) when the user wants a metal threaded insert. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            insertSize: S('Insert thread size', { enum: ['M2', 'M2.5', 'M3', 'M4', 'M5', 'M6'] }), height: N('Boss height (mm, default 8)'),
+            outerDiameter: N('Outer Ø (mm; default from size)'), holeDiameter: N('Insert pilot Ø (mm; default from size)'), holeDepth: N('Pocket depth (mm)'),
+            ribs: N('Support ribs (0 = none)'), ribThickness: N('Rib thickness (mm)'), baseFillet: N('Base fillet radius (mm)'), componentId: S('Target component id'),
+        }, required: ['height'] },
+        handler: (i) => { try { return feat(addThreadedInsertBoss(i), `Insert boss ${i.insertSize || 'M3'} h${i.height}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addNutTrap',
+        description: 'Create a captive hex-NUT TRAP in ONE call: a block with a coaxial bolt clearance hole and a hex pocket sized to a standard nut, entered from the bottom or a side, so a nut is held captive for a bolted printed joint. Pick nutSize M2–M6 (across-flats + thickness auto). Use this for any captive-nut fastening instead of carving a hex by hand. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            nutSize: S('Nut size', { enum: ['M2', 'M2.5', 'M3', 'M4', 'M5', 'M6'] }), entry: S('Pocket entry', { enum: ['bottom', 'side'] }),
+            block: N('Block size (mm; default from nut)'), height: N('Block height (mm)'), boltClear: N('Bolt clearance Ø (mm; default from size)'), componentId: S('Target component id'),
+        }, required: ['nutSize'] },
+        handler: (i) => { try { return feat(addNutTrap(i), `Nut trap ${i.nutSize} ${i.entry || 'bottom'}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addSnapHook',
+        description: 'Create a cantilever SNAP-FIT HOOK in ONE call: a flexible arm with a hook (catch face + lead-in ramp) at the tip — the standard hardware-free way to clip enclosures/lids together. The deflecting hook geometry is not hand-modelable; use this. Tune armLength/armThickness for stiffness, hookDepth for grip, leadAngle for insertion force. Sits on Z=0 (arm rises +Z). mm.',
+        input_schema: { type: 'object', properties: {
+            armLength: N('Arm length, Z (mm, default 16)'), armThickness: N('Arm thickness, X (mm, default 2)'), width: N('Arm width, Y (mm, default 8)'),
+            hookDepth: N('Hook protrusion (mm, default 1.5)'), leadAngle: N('Lead-in ramp angle (deg, default 45)'), componentId: S('Target component id'),
+        }, required: ['armLength'] },
+        handler: (i) => { try { return feat(addSnapHook(i), `Snap hook ${i.armLength}mm`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addBearingPocket',
+        description: 'Create a press-fit BEARING POCKET / housing in ONE call: a collar with a recess sized to a standard ball bearing (name it: 608, 623, 625, 626, 688, 6800, 6900, lm8uu…) plus a retaining shoulder and a shaft clearance hole. The exact OD + shoulder are what hand-modelling gets wrong; use this so the COTS bearing actually press-fits. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            bearing: S('Standard bearing designation (e.g. "608", "623", "6800", "lm8uu")'),
+            od: N('Bearing outer Ø (mm; if not a named bearing)'), id: N('Bearing bore Ø (mm)'), width: N('Bearing width (mm)'),
+            wall: N('Wall around the bearing (mm)'), shoulder: N('Retaining shoulder thickness (mm)'), throughHole: N('Shaft clearance Ø through the shoulder (mm)'), componentId: S('Target component id'),
+        }, required: [] },
+        handler: (i) => { try { return feat(addBearingPocket(i), `Bearing pocket ${i.bearing || `Ø${i.od}`}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addMotorMount',
+        description: 'Create a MOTOR MOUNT faceplate in ONE call: a plate with the correct bolt pattern + centre shaft/pilot clearance hole for a motor. Name motorType (nema17, nema23, nema14, n20, 2208, 775) and the bolt circle/square + pilot are set automatically; or pass body/boltPattern/screw/pilot/kind for a custom motor. The bolt pattern is exactly what a model gets wrong from primitives. (For a hobby SERVO use the servoMount recipe instead.) Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            motorType: S('Motor', { enum: ['nema17', 'nema23', 'nema14', 'n20', '2208', '775'] }),
+            body: N('Motor body size (mm; custom)'), boltPattern: N('Bolt square/circle size (mm; custom)'), screw: N('Bolt-hole Ø (mm; custom)'),
+            pilot: N('Centre pilot/shaft clearance Ø (mm; custom)'), kind: S('Pattern', { enum: ['square', 'twohole', 'circle3'] }),
+            thickness: N('Plate thickness (mm, default 4)'), plate: N('Plate size (mm; default from body)'), componentId: S('Target component id'),
+        }, required: [] },
+        handler: (i) => { try { return feat(addMotorMount(i), `Motor mount ${i.motorType || 'custom'}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addShaftCoupler',
+        description: 'Create a rigid SHAFT COUPLER in ONE call: a cylinder with a bore from each end (bore1, bore2 — can differ) joining two shafts, with radial set-screw holes. Use this to connect a motor shaft to a driven shaft instead of hand-boring a cylinder. Sits on Z=0 (axis +Z). mm.',
+        input_schema: { type: 'object', properties: {
+            bore1: N('Bore at one end (motor shaft Ø, mm)'), bore2: N('Bore at the other end (driven shaft Ø, mm; default = bore1)'),
+            outerDiameter: N('Coupler outer Ø (mm; default from bores)'), length: N('Coupler length (mm)'),
+            setScrew: N('Set-screw hole Ø (mm)'), screwsPerSide: N('Set-screws per side (default 1)'), componentId: S('Target component id'),
+        }, required: ['bore1'] },
+        handler: (i) => { try { return feat(addShaftCoupler(i), `Coupler Ø${i.bore1}/${i.bore2 ?? i.bore1}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addWheel',
+        description: 'Create a WHEEL in ONE call: a disk with a shaft bore (round / D-flat / hex), an optional tire groove around the rim, optional lightening holes (spokes), and a radial set-screw. Use this for any robot/cart wheel or pulley-disk instead of composing cylinders. Size by diameter + width. Sits on Z=0 (axis +Z). mm.',
+        input_schema: { type: 'object', properties: {
+            diameter: N('Wheel outer Ø (mm)'), width: N('Wheel width / tread (mm, default 10)'), bore: N('Shaft bore Ø (mm, default 5)'),
+            shaftType: S('Bore type', { enum: ['round', 'D', 'hex'] }), setScrew: N('Radial set-screw Ø (mm, 0 = none)'),
+            spokes: N('Lightening holes / spokes (0 = solid)'), tireGroove: B('Cut a tire groove around the rim (default true)'), componentId: S('Target component id'),
+        }, required: ['diameter'] },
+        handler: (i) => { try { return feat(addWheel(i), `Wheel Ø${i.diameter}×${i.width ?? 10}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addTimingPulley',
+        description: 'Create a toothed TIMING-BELT PULLEY (GT2 / GT3 / HTD) in ONE call: pitch diameter from teeth × belt pitch, belt teeth as grooves, optional flanges, centre bore, set-screw. This is the 3D-printer/CNC belt-drive standard — distinct from addPulley (which is a friction/V-belt pulley). Size by teeth + beltType. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            teeth: N('Number of teeth'), beltType: S('Belt profile', { enum: ['GT2', 'GT3', 'HTD5', 'HTD3'] }),
+            width: N('Pulley width (mm, default 7)'), bore: N('Centre bore Ø (mm, default 5)'), flanges: B('Add belt-retaining flanges (default true)'),
+            setScrew: N('Radial set-screw Ø (mm, 0 = none)'), componentId: S('Target component id'),
+        }, required: ['teeth'] },
+        handler: (i) => { try { return feat(addTimingPulley(i), `${i.teeth}T ${i.beltType || 'GT2'} pulley`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addHinge',
+        description: 'Create a pinned HINGE form in ONE call: two coplanar leaves joined by a knuckle barrel along the pin axis, with a through pin-bore. Use this for any hinge/pivot mount instead of hand-building knuckles. (A fully articulating hinge is a 2-part assembly — print/split the leaves; this is the single-body form for layout + the mounting interface.) Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            length: N('Hinge length along the pin (mm)'), leafWidth: N('Each leaf width (mm, default 20)'), thickness: N('Leaf thickness (mm, default 3)'),
+            knuckles: N('Knuckle segments (visual, default 5)'), pinDia: N('Pin bore Ø (mm, default 3)'), gap: N('Knuckle clearance gap (mm)'), componentId: S('Target component id'),
+        }, required: ['length'] },
+        handler: (i) => { try { return feat(addHinge(i), `Hinge ${i.length}mm pin Ø${i.pinDia ?? 3}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addProjectBox',
+        description: 'Create an enclosure / PROJECT BOX base in ONE call: an open-top box with a usable inner cavity (innerLength/Width/Height) plus `wall` all round and a floor, with optional internal corner screw bosses and a lid lip. Use this for a standalone electronics enclosure (vs add_casing, which wraps EXISTING placed components). Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            innerLength: N('Inner cavity length (mm)'), innerWidth: N('Inner cavity width (mm)'), innerHeight: N('Inner cavity height (mm)'),
+            wall: N('Wall + floor thickness (mm, default 2)'), bosses: B('Add internal corner screw bosses (default false)'),
+            screwSize: S('Boss screw size', { enum: ['M2', 'M2.5', 'M3', 'M4'] }), lip: B('Add a top lip for a lid (default false)'), componentId: S('Target component id'),
+        }, required: ['innerLength', 'innerWidth', 'innerHeight'] },
+        handler: (i) => { try { return feat(addProjectBox(i), `Box ${i.innerLength}×${i.innerWidth}×${i.innerHeight} inner`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addPCBTray',
+        description: 'Create a PCB TRAY in ONE call: a base plate with four standoff posts placed to a board\'s mounting-hole pattern (inset from the PCB corners), each with a pilot hole for a self-tapping screw. Give the PCB size + hole inset and the posts land correctly — what a model fumbles by hand. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            pcbLength: N('PCB length (mm)'), pcbWidth: N('PCB width (mm)'), holeInset: N('Mounting-hole inset from PCB edge (mm, default 3.5)'),
+            standoffHeight: N('Standoff height (mm, default 6)'), standoffDia: N('Standoff Ø (mm; default from screw)'), screwDia: N('Screw Ø (mm, default 2.5)'),
+            margin: N('Base plate margin around the PCB (mm)'), baseThickness: N('Base plate thickness (mm)'), componentId: S('Target component id'),
+        }, required: ['pcbLength', 'pcbWidth'] },
+        handler: (i) => { try { return feat(addPCBTray(i), `PCB tray ${i.pcbLength}×${i.pcbWidth}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addKnob',
+        description: 'Create a control KNOB in ONE call: a cylinder with a gripped rim (knurl ≈ fine flutes / flute ≈ finger scallops / smooth), a shaft bore (round or D-flat), and an optional set-screw + pointer. Knurling is not hand-modelable — use this for any dial/knob. Size by diameter + height. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            diameter: N('Knob Ø (mm)'), height: N('Knob height (mm, default 16)'), gripType: S('Rim grip', { enum: ['knurl', 'flute', 'smooth'] }),
+            flutes: N('Number of flutes/knurls (default auto)'), shaftBore: N('Shaft bore Ø (mm, default 6)'), shaftType: S('Bore type', { enum: ['round', 'D'] }),
+            setScrew: N('Set-screw Ø (mm, 0 = none)'), pointer: B('Add a pointer/indicator (default false)'), componentId: S('Target component id'),
+        }, required: ['diameter'] },
+        handler: (i) => { try { return feat(addKnob(i), `Knob Ø${i.diameter} ${i.gripType || 'knurl'}`); } catch (e) { return fail(e); } },
     },
 ];

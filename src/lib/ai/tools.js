@@ -689,6 +689,9 @@ const BODY_EMITTING = new Set([
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
     'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff', 'Fan',
+    'MountingPlate', 'Bracket', 'ThreadedInsertBoss', 'NutTrap', 'SnapHook',
+    'BearingPocket', 'MotorMount', 'ShaftCoupler', 'Wheel', 'TimingPulley',
+    'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -833,6 +836,34 @@ function _extentHint(f) {
             return `boss ${p.screwSize || ''} h${n(p.height, 8)} — change with setFeatureParams (screwSize/height/ribs/…)`;
         case 'Standoff':
             return `${p.shape || 'hex'} standoff ${n(p.size, 6)}×${n(p.height, 10)} — change with setFeatureParams (size/height/bore)`;
+        case 'MountingPlate':
+            return `plate ${n(p.length, 60)}×${n(p.width, 40)}×${n(p.thickness, 4)}, ${n(p.rows, 1)}×${n(p.cols, 1)} holes — change with setFeatureParams (length/width/rows/cols/holeDia/…)`;
+        case 'Bracket':
+            return `bracket ${n(p.armA, 40)}×${n(p.armB, 40)} arms, ${n(p.width, 30)} wide, ${n(p.angle, 90)}° — change with setFeatureParams (armA/armB/holesPerArm/gusset/…)`;
+        case 'ThreadedInsertBoss':
+            return `insert boss ${p.insertSize || 'M3'} h${n(p.height, 8)} — change with setFeatureParams (insertSize/height/ribs/…)`;
+        case 'NutTrap':
+            return `${p.nutSize || 'M3'} nut trap (${p.entry || 'bottom'}) — change with setFeatureParams (nutSize/entry/…)`;
+        case 'SnapHook':
+            return `snap hook arm ${n(p.armLength, 16)}×${n(p.armThickness, 2)} — change with setFeatureParams (armLength/hookDepth/…)`;
+        case 'BearingPocket':
+            return `bearing pocket ${p.bearing || `Ø${n(p.od, 22)}`} — change with setFeatureParams (bearing/wall/shoulder/…)`;
+        case 'MotorMount':
+            return `motor mount ${p.motorType || 'custom'} — change with setFeatureParams (motorType/thickness/…)`;
+        case 'ShaftCoupler':
+            return `coupler Ø${n(p.bore1, 5)}/${n(p.bore2, n(p.bore1, 5))} — change with setFeatureParams (bore1/bore2/length/…)`;
+        case 'Wheel':
+            return `wheel Ø${n(p.diameter, 60)}×${n(p.width, 10)}, ${p.shaftType || 'round'} bore — change with setFeatureParams (diameter/width/bore/spokes/…)`;
+        case 'TimingPulley':
+            return `${n(p.teeth, 20)}T ${p.beltType || 'GT2'} pulley — change with setFeatureParams (teeth/beltType/bore/…)`;
+        case 'Hinge':
+            return `hinge ${n(p.length, 40)}mm, pin Ø${n(p.pinDia, 3)} — change with setFeatureParams (length/leafWidth/pinDia/…)`;
+        case 'ProjectBox':
+            return `box inner ${n(p.innerLength, 60)}×${n(p.innerWidth, 40)}×${n(p.innerHeight, 25)}, wall ${n(p.wall, 2)} — change with setFeatureParams (inner*/wall/bosses/…)`;
+        case 'PCBTray':
+            return `PCB tray ${n(p.pcbLength, 50)}×${n(p.pcbWidth, 30)} — change with setFeatureParams (pcbLength/pcbWidth/standoffHeight/…)`;
+        case 'Knob':
+            return `knob Ø${n(p.diameter, 24)}×${n(p.height, 16)} ${p.gripType || 'knurl'} — change with setFeatureParams (diameter/height/gripType/…)`;
         default:
             return 'measure bbox for exact placement';
     }
