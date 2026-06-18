@@ -58,6 +58,7 @@ import { MECHANISM_TOOLS } from './tools_mechanism.js';
 import { RECIPE_TOOLS } from './tools_recipes.js';
 import { PLAN_TOOLS } from './tools_plan.js';
 import { PATTERN_TOOLS } from './tools_patterns.js';
+import { GENERATOR_TOOLS } from './tools_generators.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -686,6 +687,7 @@ const BODY_EMITTING = new Set([
     'PathPattern', 'Mirror', 'StandardPart', 'ImportedMesh',
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
+    'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -861,6 +863,7 @@ function _collectTools() {
         ASSEMBLY_CHECK_TOOLS, PLANNER_TOOLS,
         VISION_TOOLS, WEB_TOOLS, CODE_TOOLS,
         MECHANISM_TOOLS, RECIPE_TOOLS, PLAN_TOOLS, PATTERN_TOOLS,
+        GENERATOR_TOOLS,
     ];
     const out = [];
     const seen = new Set();

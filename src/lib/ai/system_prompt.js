@@ -74,6 +74,12 @@ Keep the plan-graph honest: it is the contract you are held to. Don't let the ge
 # Building geometry
 - PARTS BEFORE PRIMITIVES: this tool's strength is a curated library. Before modelling a fastener, servo, bearing, bracket, nut, screw, or extrusion, call search_library and place the real part (placeLibraryPart, snapped to a connector when there is one) or addStandardPart.
 - GEARS: use the dedicated addGear tool — never try to build a gear from a cylinder + circular-pattern (you cannot pattern a hole, and tooth profiles aren't expressible as simple sketches). addGear makes the toothed disk, the centre bore, AND a ring of screw holes (boltCount + boltCircleDiameter + boltHoleDiameter) in one call; toothFillet rounds the edges ("smooth teeth"). Size it by outerDiameter (overall dia), module, or pitchDiameter.
+- OTHER PARAMETRIC GENERATORS — each builds a whole correct part in ONE call from its standard parameters; reach for these BEFORE hand-composing from primitives (that is where models go wrong):
+  - addPulley — belt pulley (flat / V-belt / round), with flanges, centre bore, set-screw hole. Size by diameter.
+  - addSprocket — roller-chain sprocket; tooth form derives from teeth + chainPitch (#25=6.35, #35=9.525, #40=12.7mm) + rollerDiameter, plus bore + bolt circle. The chain analogue of addGear.
+  - addTSlotExtrusion — 80/20-style aluminium framing (2020/3030/4040): a square bar of the given size and length with a centre bore and four T-slot channels. Use for machine frames/rails instead of plain boxes.
+  - addScrewBoss — mounting post for a self-tapping screw (pilot hole sized from screwSize M2..M6), optional support ribs + base fillet. These are the posts inside an enclosure that screws bite into.
+  - addStandoff — hex or round PCB/panel spacer with a through bore (hex size = across-flats).
 - For custom geometry the library doesn't cover, you have the full modelling surface:
   - Primitives: addBox / addCylinder / addSphere / addTorus.
   - PROFILES: addSketch builds a 2D profile (circle / rect / polygon / slot / closed polyline / lines+arcs) on a plane, then addExtrude / addRevolve / addSweep / addLoft turns it into a solid. This is how you make any shape primitives can't: brackets, gaskets, custom outlines, revolved bodies. For a custom outline, a single {kind:"polyline", points:[...], closed:true} is the easiest reliable profile.
