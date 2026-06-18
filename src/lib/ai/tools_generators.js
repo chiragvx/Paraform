@@ -21,6 +21,7 @@ import {
     addHinge, addProjectBox, addPCBTray, addKnob,
     addFoot, addGusset, addHandle, addShaftHub, addLid, addRackGear,
     addBatteryHolder, addDINRailClip, addCableClip, addGridfinityBin, addTSlotBracket,
+    addImpeller, addAuger, addBlowerWheel, addPaddleWheel,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
 
@@ -383,5 +384,49 @@ export const GENERATOR_TOOLS = [
         description: 'Create a T-SLOT corner BRACKET in ONE call: an inside-corner L sized to the extrusion series (20/30/40) with a bolt hole on each arm for a T-nut, plus a gusset — to join two pieces of aluminium framing. Pairs with addTSlotExtrusion. Sits on Z=0. mm.',
         input_schema: { type: 'object', properties: { size: N('Extrusion series (20/30/40 mm, default 20)'), thickness: N('Bracket thickness (mm)'), armLength: N('Arm length (mm)'), holeDia: N('Bolt-hole Ø (mm; default from series)'), componentId: S('Target component id') }, required: [] },
         handler: (i) => { try { return feat(addTSlotBracket(i), `T-slot bracket ${i.size ?? 20}`); } catch (e) { return fail(e); } },
+    },
+
+    // ── Rotor / fluid-mover family (the addFan family) ──────────────────────────
+    {
+        name: 'addImpeller',
+        description: 'Create a centrifugal / radial IMPELLER (pump or blower rotor) in ONE call: a backplate disc carrying N curved vanes swept from the eye (inlet) to the rim, with an optional front shroud (open/semi/closed), centre bore + set-screw. This is the RADIAL cousin of addFan — do NOT hand-build curved vanes. `curve` sets the vane sweep: backward (efficient), radial, or forward (high flow). Sits on Z=0 (axis +Z, inlet up). Verify with measure + capture_views. mm.',
+        input_schema: { type: 'object', properties: {
+            outerDiameter: N('Impeller outer Ø (mm)'), eyeDiameter: N('Inlet/eye Ø (mm; default ~35% of outer)'),
+            bladeCount: N('Number of vanes (default 7)'), bladeHeight: N('Vane height / passage width (mm)'),
+            curve: S('Vane sweep', { enum: ['backward', 'radial', 'forward'] }), wrapAngle: N('Explicit vane wrap angle (deg; overrides curve)'),
+            shroud: S('Front cover', { enum: ['open', 'semi', 'closed'] }), backplate: N('Backplate thickness (mm)'),
+            bladeThickness: N('Vane thickness (mm)'), bore: N('Shaft bore Ø (mm, 0 = none)'), setScrew: N('Set-screw Ø (mm, 0 = none)'),
+            hubHeight: N('Raised centre hub height (mm, 0 = none)'), componentId: S('Target component id'),
+        }, required: ['outerDiameter'] },
+        handler: (i) => { try { return feat(addImpeller(i), `Impeller Ø${i.outerDiameter} ${i.bladeCount ?? 7} ${i.curve || 'backward'} vanes`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addAuger',
+        description: 'Create an AUGER / Archimedes screw / screw conveyor in ONE call: a central shaft with a continuous helical flight (real helix). Use for conveyors, extruders, augers, screw pumps — the helical flight is not hand-modelable. Size by shaftDiameter, flightDiameter, length, pitch (axial advance per turn). Sits on Z=0 (axis +Z). mm.',
+        input_schema: { type: 'object', properties: {
+            shaftDiameter: N('Central shaft Ø (mm)'), flightDiameter: N('Flight outer Ø (mm)'), length: N('Auger length (mm)'),
+            pitch: N('Flight pitch — advance per turn (mm; default = flight Ø)'), flightThickness: N('Flight thickness (mm)'),
+            bore: N('Through-bore Ø (mm, 0 = none)'), handed: S('Helix hand', { enum: ['right', 'left'] }), componentId: S('Target component id'),
+        }, required: ['flightDiameter', 'length'] },
+        handler: (i) => { try { return feat(addAuger(i), `Auger Ø${i.flightDiameter}×${i.length}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addBlowerWheel',
+        description: 'Create a cross-flow / squirrel-cage BLOWER WHEEL in ONE call: a drum cage of N forward-curved blades between a hub disc and an open ring (the rotor inside an HVAC/blower scroll). Size by diameter, length, bladeCount. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: {
+            diameter: N('Wheel Ø (mm)'), length: N('Wheel length / axial width (mm)'), bladeCount: N('Number of blades (default 24)'),
+            bladeThickness: N('Blade thickness (mm)'), bore: N('Shaft bore Ø (mm, default 5)'), curve: N('Blade forward-lean angle (deg, default 30)'),
+            ringWidth: N('End-ring radial width (mm)'), componentId: S('Target component id'),
+        }, required: ['diameter'] },
+        handler: (i) => { try { return feat(addBlowerWheel(i), `Blower wheel Ø${i.diameter}×${i.length ?? 40}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addPaddleWheel',
+        description: 'Create a PADDLE / water wheel in ONE call: a hub with N flat radial paddles spanning the axial width. Use for water wheels, paddle mixers, agitators. Size by diameter, width, paddleCount. Sits on Z=0 (axis +Z). mm.',
+        input_schema: { type: 'object', properties: {
+            diameter: N('Wheel Ø (mm)'), width: N('Axial width (mm)'), paddleCount: N('Number of paddles (default 8)'),
+            paddleThickness: N('Paddle thickness (mm)'), hubDiameter: N('Hub Ø (mm)'), bore: N('Shaft bore Ø (mm, default 6)'), componentId: S('Target component id'),
+        }, required: ['diameter'] },
+        handler: (i) => { try { return feat(addPaddleWheel(i), `Paddle wheel Ø${i.diameter} ${i.paddleCount ?? 8} paddles`); } catch (e) { return fail(e); } },
     },
 ];

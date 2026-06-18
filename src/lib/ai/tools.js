@@ -694,6 +694,7 @@ const BODY_EMITTING = new Set([
     'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
     'Foot', 'Gusset', 'Handle', 'ShaftHub', 'Lid', 'RackGear', 'BatteryHolder',
     'DINRailClip', 'CableClip', 'GridfinityBin', 'TSlotBracket',
+    'Impeller', 'Auger', 'BlowerWheel', 'PaddleWheel',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -888,6 +889,14 @@ function _extentHint(f) {
             return `gridfinity ${n(p.gridX, 1)}×${n(p.gridY, 1)}×${n(p.heightUnits, 3)}U — change with setFeatureParams (gridX/gridY/heightUnits/…)`;
         case 'TSlotBracket':
             return `T-slot bracket ${n(p.size, 20)}-series — change with setFeatureParams (size/armLength/holeDia)`;
+        case 'Impeller':
+            return `impeller Ø${n(p.outerDiameter, 80)}, ${n(p.bladeCount, 7)} ${p.curve || 'backward'} vanes${p.shroud && p.shroud !== 'open' ? `, ${p.shroud}` : ''} — change with setFeatureParams (outerDiameter/bladeCount/curve/shroud/…)`;
+        case 'Auger':
+            return `auger Ø${n(p.flightDiameter, 30)}×${n(p.length, 80)}, pitch ${n(p.pitch, n(p.flightDiameter, 30))} — change with setFeatureParams (flightDiameter/length/pitch/…)`;
+        case 'BlowerWheel':
+            return `blower wheel Ø${n(p.diameter, 50)}×${n(p.length, 40)}, ${n(p.bladeCount, 24)} blades — change with setFeatureParams (diameter/length/bladeCount/…)`;
+        case 'PaddleWheel':
+            return `paddle wheel Ø${n(p.diameter, 60)}, ${n(p.paddleCount, 8)} paddles — change with setFeatureParams (diameter/width/paddleCount/…)`;
         default:
             return 'measure bbox for exact placement';
     }
