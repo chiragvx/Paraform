@@ -12,6 +12,8 @@ import { COMMANDS } from './lib/commands/registry.js';
 import { palette } from './lib/commands/palette.svelte.js';
 import { dialogs } from './lib/dialogs/dialogs.svelte.js';
 import { initSession } from './lib/auth/session.svelte.js';
+import { getPlanGraph as _planGraph } from './lib/ai/plan/graph.js';
+import { refreshPlan as _refreshPlan, approvePlan as _approvePlan } from './lib/ai/plan/plan_store.svelte.js';
 
 // Boot the Supabase auth session (non-blocking — the network round-trip runs
 // in the background; the store's `loading` flag gates auth-required routes).
@@ -99,6 +101,14 @@ if (typeof window !== 'undefined') {
     },
     getStore() { return v4.getDocumentStore(); },
     getBridge() { return studio.bridge; },
+    // Plan-graph (design-intent) hook for smoke tests. Reaches the SAME module
+    // singleton + reactive store the PlanMap panel renders, so a test can seed a
+    // plan and exercise the approval gate / clickable parts in the real UI.
+    plan: {
+      graph: () => _planGraph(),
+      refresh: () => _refreshPlan(),
+      approve: () => _approvePlan(),
+    },
   };
   queueMicrotask(() => { window.__paraform__.ready = true; });
 }
