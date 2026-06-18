@@ -39,6 +39,8 @@ const BODY_EMITTING = new Set([
     'MountingPlate', 'Bracket', 'ThreadedInsertBoss', 'NutTrap', 'SnapHook',
     'BearingPocket', 'MotorMount', 'ShaftCoupler', 'Wheel', 'TimingPulley',
     'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
+    'Foot', 'Gusset', 'Handle', 'ShaftHub', 'Lid', 'RackGear', 'BatteryHolder',
+    'DINRailClip', 'CableClip', 'GridfinityBin', 'TSlotBracket',
 ]);
 
 /** Live document, or an empty stand-in so callers never see `undefined`. */

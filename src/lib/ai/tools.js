@@ -692,6 +692,8 @@ const BODY_EMITTING = new Set([
     'MountingPlate', 'Bracket', 'ThreadedInsertBoss', 'NutTrap', 'SnapHook',
     'BearingPocket', 'MotorMount', 'ShaftCoupler', 'Wheel', 'TimingPulley',
     'Hinge', 'ProjectBox', 'PCBTray', 'Knob',
+    'Foot', 'Gusset', 'Handle', 'ShaftHub', 'Lid', 'RackGear', 'BatteryHolder',
+    'DINRailClip', 'CableClip', 'GridfinityBin', 'TSlotBracket',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -864,6 +866,28 @@ function _extentHint(f) {
             return `PCB tray ${n(p.pcbLength, 50)}×${n(p.pcbWidth, 30)} — change with setFeatureParams (pcbLength/pcbWidth/standoffHeight/…)`;
         case 'Knob':
             return `knob Ø${n(p.diameter, 24)}×${n(p.height, 16)} ${p.gripType || 'knurl'} — change with setFeatureParams (diameter/height/gripType/…)`;
+        case 'Foot':
+            return `foot Ø${n(p.diameter, 20)}×${n(p.height, 8)} — change with setFeatureParams (diameter/height/screw)`;
+        case 'Gusset':
+            return `gusset ${n(p.legA, 30)}×${n(p.legB, 30)} legs — change with setFeatureParams (legA/legB/thickness/…)`;
+        case 'Handle':
+            return `handle span ${n(p.span, 80)}, h${n(p.height, 30)} — change with setFeatureParams (span/height/gripDia/…)`;
+        case 'ShaftHub':
+            return `shaft hub bore Ø${n(p.bore, 5)} ${p.shaftType || 'round'} — change with setFeatureParams (bore/flangeDiameter/boltCount/…)`;
+        case 'Lid':
+            return `lid ${n(p.length, 64)}×${n(p.width, 44)} — change with setFeatureParams (length/width/lipDepth/…)`;
+        case 'RackGear':
+            return `rack ${n(p.length, 60)}mm module ${n(p.module, 2)} — change with setFeatureParams (length/module/width/…)`;
+        case 'BatteryHolder':
+            return `${n(p.cellCount, 1)}× ${p.cellType || '18650'} holder — change with setFeatureParams (cellType/cellCount/…)`;
+        case 'DINRailClip':
+            return `DIN clip platform ${n(p.platform, 45)}×${n(p.width, 20)} — change with setFeatureParams (width/platform/screw)`;
+        case 'CableClip':
+            return `cable clip Ø${n(p.cableDia, 6)} — change with setFeatureParams (cableDia/screw/width)`;
+        case 'GridfinityBin':
+            return `gridfinity ${n(p.gridX, 1)}×${n(p.gridY, 1)}×${n(p.heightUnits, 3)}U — change with setFeatureParams (gridX/gridY/heightUnits/…)`;
+        case 'TSlotBracket':
+            return `T-slot bracket ${n(p.size, 20)}-series — change with setFeatureParams (size/armLength/holeDia)`;
         default:
             return 'measure bbox for exact placement';
     }

@@ -314,4 +314,72 @@ export const GENERATOR_TOOLS = [
         }, required: ['diameter'] },
         handler: (i) => { try { return feat(addKnob(i), `Knob Ø${i.diameter} ${i.gripType || 'knurl'}`); } catch (e) { return fail(e); } },
     },
+
+    // ── P1 generators ───────────────────────────────────────────────────────────
+    {
+        name: 'addFoot',
+        description: 'Create a FOOT / leveling pad / bumper in ONE call: a puck with a top screw counterbore and a bottom grip recess (for a rubber pad). Use for the feet of any enclosure/stand. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { diameter: N('Foot Ø (mm)'), height: N('Foot height (mm, default 8)'), screw: N('Mounting screw Ø (mm, default 4)'), recessDia: N('Bottom recess Ø (mm)'), recessDepth: N('Bottom recess depth (mm)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addFoot(i), `Foot Ø${i.diameter ?? 20}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addGusset',
+        description: 'Create a standalone triangular GUSSET brace in ONE call: a right triangle with a bolt hole near each leg, to reinforce an L-joint between two panels. Sits on Z=0 (legs along +X and +Z). mm.',
+        input_schema: { type: 'object', properties: { legA: N('Leg along X (mm)'), legB: N('Leg along Z (mm)'), thickness: N('Thickness, Y (mm, default 4)'), holeDia: N('Bolt-hole Ø (mm, default 4)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addGusset(i), `Gusset ${i.legA ?? 30}×${i.legB ?? 30}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addHandle',
+        description: 'Create a pull HANDLE in ONE call: two posts at ±span/2 rising to a grip bar, with a mounting screw hole down each post. Use for drawer/lid/door pulls. span = mounting-hole spacing. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { span: N('Mounting-hole span (mm)'), height: N('Handle height (mm, default 30)'), gripDia: N('Grip bar Ø (mm, default 12)'), postDia: N('Post Ø (mm; default = grip)'), screw: N('Mounting screw Ø (mm, default 4)'), componentId: S('Target component id') }, required: ['span'] },
+        handler: (i) => { try { return feat(addHandle(i), `Handle span ${i.span}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addShaftHub',
+        description: 'Create a SHAFT HUB adapter in ONE call: a flange disk + a raised hub with a centre shaft bore (round/D/hex), a bolt circle, and a set-screw — to mount a wheel/arm/disc onto a shaft. The bolt circle + bore fit are what hand-modelling gets wrong. Sits on Z=0 (axis +Z). mm.',
+        input_schema: { type: 'object', properties: { bore: N('Shaft bore Ø (mm)'), shaftType: S('Bore type', { enum: ['round', 'D', 'hex'] }), flangeDiameter: N('Flange Ø (mm)'), hubDiameter: N('Hub boss Ø (mm)'), hubHeight: N('Hub height (mm)'), boltCount: N('Bolt-circle holes (default 4)'), boltCircle: N('Bolt-circle Ø (mm)'), boltHole: N('Bolt-hole Ø (mm, default 3)'), setScrew: N('Set-screw Ø (mm, default 3)'), componentId: S('Target component id') }, required: ['bore'] },
+        handler: (i) => { try { return feat(addShaftHub(i), `Shaft hub Ø${i.bore}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addLid',
+        description: 'Create a LID / cover in ONE call: a plate with an inner lip that drops into a box opening, plus optional corner screw holes. Pairs with addProjectBox (match its outer length/width). Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { length: N('Lid length (mm)'), width: N('Lid width (mm)'), thickness: N('Lid thickness (mm, default 2)'), wall: N('Box wall thickness it sits over (mm, default 2)'), lipDepth: N('Lip depth into the box (mm, default 4)'), screw: N('Corner screw Ø (mm, 0 = none)'), componentId: S('Target component id') }, required: ['length', 'width'] },
+        handler: (i) => { try { return feat(addLid(i), `Lid ${i.length}×${i.width}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addRackGear',
+        description: 'Create a linear gear RACK in ONE call: a bar with trapezoidal teeth at module pitch, to pair with a spur pinion of the same module (rack-and-pinion linear drive). Use addGear for the pinion. Sits on Z=0 (teeth up). mm.',
+        input_schema: { type: 'object', properties: { length: N('Rack length (mm)'), module: N('Gear module (mm/tooth, must match the pinion)'), width: N('Rack width (mm, default 8)'), baseHeight: N('Bar height below the teeth (mm)'), pressureAngle: N('Pressure angle (deg, default 20)'), componentId: S('Target component id') }, required: ['length', 'module'] },
+        handler: (i) => { try { return feat(addRackGear(i), `Rack ${i.length}mm m${i.module}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addBatteryHolder',
+        description: 'Create a BATTERY HOLDER in ONE call: a cradle with N half-round troughs sized to a cell (18650, 21700, AA, AAA, C, 9V) side by side with end walls. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { cellType: S('Cell', { enum: ['18650', '21700', 'AA', 'AAA', 'C', '9V'] }), cellCount: N('Number of cells (default 1)'), wall: N('Wall thickness (mm, default 2)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addBatteryHolder(i), `Battery holder ${i.cellCount ?? 1}× ${i.cellType || '18650'}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addDINRailClip',
+        description: 'Create a 35mm DIN-RAIL CLIP in ONE call: a mounting platform with a channel + retaining lips that snaps onto standard 35mm DIN rail. Use for panel/industrial mounting. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { width: N('Clip width along the rail (mm, default 20)'), platform: N('Platform span (mm, default 45)'), screw: N('Mounting screw Ø (mm, default 3.4)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addDINRailClip(i), `DIN clip ${i.width ?? 20}mm`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addCableClip',
+        description: 'Create a CABLE CLIP / saddle in ONE call: a single-piece clamp with a top-insert channel sized to the cable and two screw-down feet. Use for wire management / strain relief. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { cableDia: N('Cable Ø (mm)'), wall: N('Wall thickness (mm, default 2)'), screw: N('Foot screw Ø (mm, default 3)'), width: N('Clip width (mm, default 8)'), componentId: S('Target component id') }, required: ['cableDia'] },
+        handler: (i) => { try { return feat(addCableClip(i), `Cable clip Ø${i.cableDia}`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addGridfinityBin',
+        description: 'Create a GRIDFINITY storage BIN in ONE call: a bin on the 42mm Gridfinity grid (gridX×gridY units, heightUnits × 7mm tall) with a hollow cavity, a chamfered base foot, and a top stacking lip. v1 approximation of the standard profile. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { gridX: N('Grid units in X (×42mm, default 1)'), gridY: N('Grid units in Y (×42mm, default 1)'), heightUnits: N('Height units (×7mm, default 3)'), wall: N('Wall thickness (mm, default 1.2)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addGridfinityBin(i), `Gridfinity ${i.gridX ?? 1}×${i.gridY ?? 1}×${i.heightUnits ?? 3}U`); } catch (e) { return fail(e); } },
+    },
+    {
+        name: 'addTSlotBracket',
+        description: 'Create a T-SLOT corner BRACKET in ONE call: an inside-corner L sized to the extrusion series (20/30/40) with a bolt hole on each arm for a T-nut, plus a gusset — to join two pieces of aluminium framing. Pairs with addTSlotExtrusion. Sits on Z=0. mm.',
+        input_schema: { type: 'object', properties: { size: N('Extrusion series (20/30/40 mm, default 20)'), thickness: N('Bracket thickness (mm)'), armLength: N('Arm length (mm)'), holeDia: N('Bolt-hole Ø (mm; default from series)'), componentId: S('Target component id') }, required: [] },
+        handler: (i) => { try { return feat(addTSlotBracket(i), `T-slot bracket ${i.size ?? 20}`); } catch (e) { return fail(e); } },
+    },
 ];
