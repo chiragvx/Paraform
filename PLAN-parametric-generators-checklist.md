@@ -15,6 +15,91 @@ electronics-mounting ecosystems.
 
 ---
 
+## The north star: parts as functions, auto-fitting, and cascade
+
+A generator must not emit *frozen* geometry. It is a **function of its
+interfaces** — the parts it touches — and that relationship stays **live**:
+change an upstream part and everything downstream reflows automatically, with
+**no AI turn and no user action**. The user *describes*; the tooling owns the
+fit, the holes, the lengths, and the QA. **The user is never asked to validate a
+bolt circle.** On a large, complex assembly the user can't know the downstream
+consequences of a change — so the scripts must, because they can.
+
+All of this has precedent in the codebase — the **connector contract**, the
+**`addCasing`** emitter that stamps bosses/cutouts from enclosed parts'
+connectors, the plan-graph **`deps` + `markStale`** transitive propagation, the
+**mate solver** that re-places parts on change, and recipes already written as
+**f(the component they serve)**. The work is to generalise these into one
+**interface spine** every generator plugs into. Three mechanisms:
+
+### 1. Typed interfaces (ports) — the contract between parts
+Every generator **publishes** output interfaces and **consumes** input ones,
+layered on the connector contract:
+- a **motor** publishes `Shaft{dia,length,type}` + `BoltPattern{circle,count,screw}` + `Body{L,W,H}`;
+- a **motor mount** consumes a `Motor`, publishes a `MountFace{holePattern}` + a shaft pass-through;
+- a **mounting plate / frame** consumes `MountFace`s, publishes anchor faces.
+
+An interface is *typed + parametric* — not "a hole here" but "an M3 bolt circle
+Ø46, 4×, concentric with an 8 mm shaft." That is what lets a host fit a guest it
+has never seen.
+
+### 2. Host absorbs guest features — the auto-fitting / auto-QA
+When a guest attaches to a host, the **host regenerates its own negative
+features (holes, pockets, cutouts, reliefs) from the guest's published
+interface — on its own.** Drop a motor mount on the plate and the plate *grows
+the bolt holes that match the mount*; swap the mount and the holes move. The user
+never places a hole. **This already works for one host:** `addCasing` walks the
+enclosed components' connectors and stamps bosses + cutouts. We promote that from
+a Casing special-case to a general rule — *any* host part receives its guests'
+interface features.
+
+### 3. Cascade — the dependency DAG reflows itself
+Attachments form a directed graph (motor → mount → frame; motor → shaft → wheel).
+The plan-graph already records `deps` and marks dependents **stale** transitively
+on a spec edit — but today a stale node waits for the *AI* to rebuild it. We
+upgrade that to a **deterministic reflow**: each fabricate node's build is a pure
+function of its resolved inputs, so on any edit the engine
+
+1. recomputes the edited node's **published outputs**,
+2. walks downstream attachments in **topological order**,
+3. for each dependent: re-evaluates its **driven params** (references / equations
+   to upstream values — `boltPattern = @motor.boltPattern`,
+   `shaftLength = dist(@motorOut, @wheelHub)`), re-emits its geometry, and lets
+   the **mate solver** re-place it,
+4. re-runs invariants / interference / fit-clearance automatically and
+   self-repairs on failure — **no AI in the mechanical loop, no user validation.**
+
+Dimensional cascade (sizes, hole positions, shaft lengths) rides **driven
+params**; positional cascade (where parts sit) rides the **mate solver** that
+already re-solves on change. Both travel the same DAG.
+
+### Worked example — resize the RC-car motor
+User builds: car frame (foundation) → motor mount on it → motor in the mount →
+drive shaft from motor to wheel → screws. Later they only say *"use the bigger
+2845 motor."* The cascade, with zero further prompting:
+- **motor** body + shaft + bolt pattern grow (published outputs change);
+- **mount** reflows to the new body/bolt pattern; its `MountFace` hole pattern widens;
+- **frame** re-absorbs the mount's `MountFace` → its mounting holes move to match, and the mount's seat shifts to keep wall clearance;
+- **drive shaft** `length = dist(motorOutput, wheelHub)` recomputes → it lengthens/shortens; its coupler bore tracks the new shaft Ø;
+- **screws** re-place on the moved holes and re-length to the new stack height;
+- invariants + interference re-checked; if the bigger motor now clashes the frame wall, self-repair nudges the wall out or flags it — the user isn't asked.
+
+The user changed one number; the assembly stayed correct. *(The order above is
+illustrative — propagation is by the DAG, not a fixed sequence.)*
+
+### The interface spine (build it first / alongside P0)
+- **Interface/port types** on the connector contract: `Shaft`, `BoltPattern`, `MountFace`, `BoreFit`, `BeltPath`, `Keepout`, …
+- **Driven params**: a param may be a literal OR a reference/equation to an upstream published value; a resolver evaluates it (extends `addDocumentParameter` from intra-part to **inter-part**).
+- **A reflow executor** over the plan-graph DAG: topological recompute of driven params → re-emit → re-solve mates → auto-QA (upgrades `markStale`-for-the-AI into deterministic reflow).
+- **Host feature-stamping** generalised from the `addCasing` emitter to any host.
+- Generators built **interface-aware from birth** — each declares its in/out ports and reads them instead of frozen numbers. *Retrofitting later is worse, which is why the spine leads.*
+
+This is the deepest work on the page and the real moat: it is the difference
+between a library of static parts and a **self-consistent assembly that the user
+edits by describing.**
+
+---
+
 ## Legend
 
 - ✅ **Done** — a first-class generator exists today.
@@ -64,6 +149,21 @@ common AI-from-primitives failure.
 | `addPCBTray` | plate with standoff posts placed to a PCB hole pattern | pcbL, pcbW, holeInset/pattern, standoffH, screwSize, walls | Electronics mounting; AI fumbles hole spacing. |
 | `addKnob` | knurled / fluted / pointer control knob | diameter, height, gripType (knurl/flute/smooth), shaftBore, dFlat, setScrew | Super common; knurling is not hand-modelable. |
 
+**Interfaces each P0 part declares** (publishes ▸ / consumes ◂ — this is what makes them cascade, not the geometry):
+- `addMountingPlate` ▸ anchor faces ◂ absorbs *any* guest's `BoltPattern`/`Keepout` → grows matching holes itself.
+- `addBracket` ▸ two `MountFace`s ◂ `BoltPattern` on each arm.
+- `addThreadedInsertBoss` / `addNutTrap` ▸ a `Fastener` seat ◂ screw size from the joint.
+- `addSnapHook` ▸/◂ a mating `Snap` pair (hook ↔ catch) — the two halves track each other.
+- `addBearingPocket` ▸ `BoreFit` + bearing axis ◂ a standard `Bearing` size.
+- `addMotorMount` ▸ shaft pass-through + `BoltPattern` ◂ a `Motor` (body, shaft, bolt circle).
+- `addWheel` ▸ a `Shaft` bore + hub face ◂ shaft Ø/type.
+- `addShaftCoupler` ▸/◂ two `Shaft` ends (bore1 ◂ motor shaft, bore2 ◂ driven shaft).
+- `addTimingPulley` ▸ a `BeltPath` + `Shaft` bore ◂ shaft Ø, belt type.
+- `addHinge` ▸/◂ a mating leaf pair sharing a pin axis.
+- `addProjectBox` ▸ inner `Keepout` + lid seam ◂ the components it must contain.
+- `addPCBTray` ▸ standoff posts ◂ a `PCB`'s hole pattern (absorbs it like the plate).
+- `addKnob` ▸ a grip face ◂ a `Shaft` (bore/D-flat/set-screw from the shaft).
+
 ## P1 — High value (second wave)
 
 | Tool | Makes | Notes |
@@ -101,12 +201,14 @@ common AI-from-primitives failure.
 
 These make the *whole family* more powerful, not just one part:
 
-1. **Auto-declare connectors.** Every generator should stamp its snap points on
-   creation (a `addBearingPocket` → a bearing-axis connector; a `addMotorMount`
-   → a shaft connector + the bolt pattern; a `addShaftCoupler` → two shaft
-   ends). Then parts **auto-mate** instead of the model guessing transforms.
-   This is the connector contract (CLAUDE.md) applied at generator level — the
-   biggest force-multiplier on the list.
+1. **Auto-declare interfaces (ports), not just connectors.** Every generator
+   stamps its typed in/out interfaces on creation (`addBearingPocket` → a
+   `BoreFit` + bearing-axis connector; `addMotorMount` → consumes `Motor`,
+   publishes a shaft pass-through + `BoltPattern`; `addShaftCoupler` → two
+   `Shaft` ends). This is the connector contract applied at generator level and
+   the **entry point to the whole interface-spine + cascade model above** — the
+   single biggest force-multiplier on the page. Parts then auto-mate AND
+   auto-fit (hosts absorb guest holes) instead of the model guessing.
 2. **Edit-in-place wiring (every new type).** Register each new feature type in
    **both** `BODY_EMITTING` sets and give it an `_extentHint` case, or a relative
    edit ("make it 12 blades") silently builds a duplicate. (This bit `addFan`
@@ -125,7 +227,13 @@ These make the *whole family* more powerful, not just one part:
 
 ## Recommended build order
 
-1. **`addBracket` + `addMountingPlate`** — unblock generic structure (used everywhere).
+0. **The interface spine first** (see "north star" above) — port types on the
+   connector contract, driven params (inter-part references/equations), the
+   reflow executor over the plan-graph DAG, and host feature-stamping
+   generalised from `addCasing`. Land a thin vertical slice (e.g. motor →
+   mount → plate cascade) before scaling generators, so each generator is born
+   interface-aware. This is the moat; the generators are leaves on it.
+1. **`addBracket` + `addMountingPlate`** — unblock generic structure (used everywhere). The plate is the first **host** that absorbs its guests' hole patterns — the auto-fitting proof.
 2. **`addThreadedInsertBoss` + `addNutTrap` + `addSnapHook`** — the joining/assembly trio (turns separate prints into assemblies).
 3. **`addBearingPocket` + `addMotorMount` + `addShaftCoupler` + `addWheel`** — the drivetrain set (with auto-connectors → snap a motor→coupler→shaft→wheel chain).
 4. **`addTimingPulley`** — completes belt drive alongside the existing gear/sprocket/pulley.
