@@ -15,9 +15,30 @@
  */
 
 import {
-    addPulley, addSprocket, addTSlotExtrusion, addScrewBoss, addStandoff,
+    addPulley, addSprocket, addTSlotExtrusion, addScrewBoss, addStandoff, addFan,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
+
+/** Shared fan/blade input schema (addFanBlade is addFan with bladeCount fixed). */
+const FAN_PROPS = {
+    diameter: N('Overall fan / propeller tip diameter (mm)'),
+    bladeCount: N('Number of blades (default 5; 3+ recommended)'),
+    airfoil: S('Blade cross-section: a NACA 4-digit code like "4412" or "0012", or a preset "flat" / "cambered" (default "4412")'),
+    pitch: N('Geometric pitch — axial advance per revolution (mm/rev); sets the blade twist. Default ≈ diameter (1:1). Larger = more aggressive bite.'),
+    pitchAngleDeg: N('Alternative to pitch: blade angle at the 75% station (deg); the twist distribution is derived from it.'),
+    rootChord: N('Blade chord (width) at the hub (mm; default ~18% of diameter)'),
+    tipChord: N('Blade chord at the tip (mm; default ~60% of rootChord — a taper)'),
+    thicknessScale: N('Multiplier on the airfoil thickness for print strength (default 1.0; try 1.5–2 for small printed blades)'),
+    handed: S('Spin/twist handedness', { enum: ['ccw', 'cw'] }),
+    hubDiameter: N('Central hub outer diameter (mm; default ~35% of diameter)'),
+    hubHeight: N('Hub length along the spin (Z) axis (mm; default ~0.8× rootChord)'),
+    bore: N('Centre shaft-hole diameter through the hub (mm, 0 = none)'),
+    setScrew: N('Radial grub-screw hole diameter into the bore (mm, 0 = none)'),
+    shroud: B('Add a non-contacting outer duct/shroud ring around the blade tips (for a ducted EDF fan; default false)'),
+    shroudThickness: N('Shroud ring wall thickness (mm; default 3)'),
+    tipGap: N('Radial gap between blade tips and the shroud inner wall (mm; default 1)'),
+    componentId: S('Target component id (default: active / root)'),
+};
 
 export const GENERATOR_TOOLS = [
     {
@@ -125,6 +146,24 @@ export const GENERATOR_TOOLS = [
         },
         handler: (i) => {
             try { return feat(addStandoff(i), `Standoff ${i.shape || 'hex'} ${i.size}×${i.height}mm`); }
+            catch (e) { return fail(e); }
+        },
+    },
+    {
+        name: 'addFan',
+        description: 'Create a complete axial FAN / PROPELLER / EDF rotor in ONE call: a central hub with a ring of TWISTED AIRFOIL blades. Do NOT build fan/propeller/impeller/EDF blades from boxes, cylinders, or extrudes — a real blade is a twisted, cambered, tapered airfoil loft that you CANNOT express by hand, and a box "blade" is wrong. Use this. The cross-section is a real airfoil (airfoil: a NACA 4-digit code like "4412", or "flat"/"cambered"); the twist comes from a physical pitch (mm of advance per rev) — bigger pitch = more aggressive blades. Size by diameter (tip Ø) + bladeCount. Add a bore for the motor shaft (+ setScrew to lock it), thicknessScale 1.5–2 to strengthen small printed blades, and shroud:true for a ducted EDF fan. Sits on Z=0, spins about Z. Dimensions mm. Verify with measure {type:"bbox"} and capture_views after — confirm the blades are twisted airfoils, not flat plates.',
+        input_schema: { type: 'object', properties: FAN_PROPS, required: ['diameter'] },
+        handler: (i) => {
+            try { return feat(addFan(i), `Fan Ø${i.diameter} ${i.bladeCount ?? 5} blades, NACA ${i.airfoil || '4412'}${i.shroud ? ', shrouded' : ''}`); }
+            catch (e) { return fail(e); }
+        },
+    },
+    {
+        name: 'addFanBlade',
+        description: 'Create a SINGLE twisted-airfoil fan/propeller blade (no hub) — for mating one blade onto a custom hub or studying a profile. Same airfoil + pitch + chord controls as addFan; it just fixes bladeCount=1. For a whole fan use addFan instead (it builds the hub + the full blade ring). Do NOT approximate a blade with a box/extrude — use this so it is a real twisted airfoil. Sits on Z=0. Dimensions mm.',
+        input_schema: { type: 'object', properties: FAN_PROPS, required: ['diameter'] },
+        handler: (i) => {
+            try { return feat(addFan({ ...i, bladeCount: 1 }), `Fan blade Ø${i.diameter}, NACA ${i.airfoil || '4412'}`); }
             catch (e) { return fail(e); }
         },
     },
