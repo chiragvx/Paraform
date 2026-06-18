@@ -208,6 +208,77 @@ common AI-from-primitives failure.
 
 ---
 
+## Tier 2 — Complex / specialized generators (the next frontier)
+
+The P0/P1 set is mostly boolean compositions of primitives. Tier 2 is a real
+complexity step up — true profile math, helical sweeps, multi-part mechanism
+assemblies, and generative structures. It's where the "scaffold not the model"
+moat deepens most: a planetary gearbox or an involute worm pair is *completely*
+beyond a weak model's spatial reasoning.
+
+**Three infrastructure unlocks gate this tier (build each once, many generators
+reuse it):**
+- **(H) Robust helical-sweep helper** — `Helix` + `sweep(profile)` exists in
+  build123d, but helical sweeps are OCCT-fragile. One shared, fail-safe helper
+  (degrade → cosmetic groove → plain cylinder) unlocks *all* threads, springs,
+  worms, and helical gears. No `bd_warehouse`/`Thread` class is installed, so we
+  generate threads ourselves.
+- **(M) Multi-body + joint emit pattern** — an *assembly* generator emits several
+  `n_<id>` bodies, declares the **connectors + induced joints** between them
+  (revolute/prismatic), and reports a sub-BOM. This is the same machinery the
+  interface/cascade spine needs — build it here and the assemblies become live.
+- **(S) Implicit / SDF path** — true TPMS lattices (gyroid) are **not** B-rep
+  cheap; they need an implicit kernel (a separate compute track, per the
+  scale-architecture research). Honeycomb / 2D-voronoi infills ARE B-rep-able now.
+
+### Foundational-complex set (build-first within Tier 2)
+
+| Tool | Makes | Needs | Why foundational |
+|---|---|---|---|
+| `addGear` **→ true involute** | upgrade the current straight-flank teeth to real involute flanks | profile math | gears are everywhere; correct meshing is the point |
+| `addHelicalGear` / `addHerringboneGear` | angled / double-helical involute gear | H | quiet, high-load drives; herringbone = no axial thrust |
+| `addBevelGear` | conical involute gear (right-angle drive) | profile math | every right-angle gearbox |
+| `addWormGear` (+ wheel) | worm + matching worm wheel **pair** | H + M | high-ratio, self-locking drives |
+| `addPlanetaryGearbox` | sun + N planets + ring + carrier, ratio-solved | M + involute | the showcase complex assembly; one node = a gearbox |
+| `addThread` (external + internal) | real ISO-metric helical thread on a shaft / in a hole | H | unlocks custom screws, caps, bottle/jar lids, adjusters |
+| `addLeadScrew` (+ nut) | ACME / trapezoidal power screw + matching nut | H + M | linear actuators, Z-axes, vises |
+| `addCompressionSpring` | real helical coil (compression / extension / torsion) | H | the canonical "can't model by hand" part |
+| `addGripper` | parallel-jaw or linkage gripper (jaws + slides/pivots) | M | robotics end-effector; articulating |
+| `addUniversalJoint` | Cardan U-joint (two yokes + cross), revolute pairs | M | shaft drives at an angle |
+| `addHeatSink` | pin-fin / plate-fin array sized to a footprint + power | (base) | thermal management for any electronics build |
+| `addImpeller` (+ volute) | centrifugal pump/blower rotor + spiral housing | loft/revolve | the centrifugal complement to the axial `addFan` |
+| `addCam` | disc cam from a motion law (dwell-rise-dwell, follower) | profile math | timing/automation mechanisms |
+| `addInfillPanel` | honeycomb / voronoi lightweight panel | (base) / S for gyroid | strength-to-weight; the entry to the lattice track |
+
+### The rest of Tier 2 (second wave)
+
+- **Gear/drive depth:** `addInternalGear` (ring), `addCycloidalDrive` (disc +
+  pins, huge ratio), `addDifferential`, `addGenevaWheel` (intermittent),
+  `addRatchet` (+ pawl), `addTimingIdler`.
+- **Linkages:** `addFourBarLinkage`, `addScissorLift` / `addPantograph`,
+  `addSliderCrank`, `addBallJoint` (promote `ballSocket`).
+- **Threads/fasteners:** `addThreadedRodCoupler`, `addPipeThread` (NPT/BSP),
+  `addBottleThread`, `addKnurledThumbscrew`.
+- **Springs/compliant:** `addTorsionSpring`, `addWaveSpring`, `addFlexurePivot`,
+  `addConstantForceSpring`, `addLivingHingeArray`.
+- **Thermal/fluid:** `addManifold` (branching channels), `addNozzle` /
+  `addVenturi`, `addBellows` (corrugated flex), `addHeatExchangerCore`,
+  `addCycloneSeparator`.
+- **Generative (needs S):** `addGyroidLattice` / `addTPMS`, `addVoronoiShell`,
+  `addConformalLattice`, `addTopologyBracket` (load-path).
+- **Sheet/frame:** `addSheetMetalBend` (flanges + bend allowance), `addTruss` /
+  `addSpaceFrame`, `addPerfPanel`, `addHoneycombCore`.
+
+**Order:** land **(H)** first → ship `addThread` + `addCompressionSpring` +
+`addLeadScrew` (immediate, high-want, all reuse H). Then **(M)** → ship
+`addPlanetaryGearbox` + `addGripper` + `addUniversalJoint` (the assembly
+showcase, and it doubles as the interface/cascade spine's first real users).
+The involute-gear upgrade + bevel/helical/worm slot in alongside. `addHeatSink`
++ `addImpeller` + `addCam` need no new infra — quick wins anytime. Defer the
+**(S)** lattice track until the implicit-kernel decision.
+
+---
+
 ## Cross-cutting multipliers (do alongside the generators — this is the real leverage)
 
 These make the *whole family* more powerful, not just one part:
