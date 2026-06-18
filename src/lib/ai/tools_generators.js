@@ -19,6 +19,8 @@ import {
     addMountingPlate, addBracket, addThreadedInsertBoss, addNutTrap, addSnapHook,
     addBearingPocket, addMotorMount, addShaftCoupler, addWheel, addTimingPulley,
     addHinge, addProjectBox, addPCBTray, addKnob,
+    addFoot, addGusset, addHandle, addShaftHub, addLid, addRackGear,
+    addBatteryHolder, addDINRailClip, addCableClip, addGridfinityBin, addTSlotBracket,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
 

@@ -100,6 +100,17 @@ edits by describing.**
 
 ---
 
+## Status — 2026-06-18
+
+**P0 (14) + P1 (11) are BUILT, kernel-verified, and shipped** — 32 generator
+tools total. Each is a full vertical slice (type + op + fail-safe emitter +
+EMITTERS hook + index re-export + AI tool + both BODY_EMITTING sets +
+`_extentHint` edit-in-place + standard-size tables + tests), all compiling on
+real build123d 0.10. Commits: `95360ea` (P0), `c524f22` (P1). Remaining: the
+**interface spine / cascade** (the north-star engine — auto-connectors, driven
+params, reflow executor; a distinct architectural phase, not yet built) and the
+**P2** specialised set (as demand appears).
+
 ## Legend
 
 - ✅ **Done** — a first-class generator exists today.
