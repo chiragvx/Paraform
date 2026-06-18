@@ -147,5 +147,39 @@ await t('getPlanGraph singleton is replaceable via setPlanGraph', () => {
     setPlanGraph(new PlanGraph());   // reset for any later suite sharing the process
 });
 
+await t('approval gate: approve sets it, a structural edit revokes it, status edits do not', () => {
+    const g = new PlanGraph({ now: fixedClock() });
+    const root = g.addNode({ kind: 'assembly', label: 'Laptop stand' });
+    const base = g.addNode({ kind: 'part', label: 'Base', parentId: root });
+    assert.equal(g.isApproved(), false, 'a fresh plan is not approved');
+
+    const v = g.approve();
+    assert.ok(v, 'approve commits a revert-point version');
+    assert.equal(g.isApproved(), true);
+
+    // Build-status changes during the build must NOT revoke approval.
+    g.setStatus(base, 'building');
+    g.setStatus(base, 'verified');
+    g.setBinding(base, { featureIds: ['f1'] });
+    assert.equal(g.isApproved(), true, 'building the plan keeps it approved');
+
+    // A steer (spec edit / new part / removal) revokes approval → re-approve.
+    g.editNodeSpec(base, { sizeBand: 'large' });
+    assert.equal(g.isApproved(), false, 'a spec edit revokes approval');
+
+    g.approve();
+    g.addNode({ kind: 'part', label: 'Feet', parentId: root });
+    assert.equal(g.isApproved(), false, 'adding a part revokes approval');
+});
+
+await t('approval survives snapshot/restore round-trip', () => {
+    const g = new PlanGraph({ now: fixedClock() });
+    g.addNode({ kind: 'assembly', label: 'Stand' });
+    g.approve();
+    const restored = PlanGraph.restore(g.snapshot());
+    assert.equal(restored.isApproved(), true);
+    assert.equal(restored.approvedAt, g.approvedAt);
+});
+
 console.log(`\nPlan-Graph: ${_pass} passed, ${_fail} failed`);
 if (_fail) process.exit(1);

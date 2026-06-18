@@ -36,6 +36,10 @@ function compactNode(n) {
         role: n.spec?.role || undefined,
         partRef: n.spec?.partRef || undefined,
         recipe: n.binding?.recipe || undefined,
+        // The geometry features this plan node produced — use these to edit the
+        // part in ISOLATION (setFeatureParams on exactly these ids), never the
+        // whole model, when the user names this part by id or label.
+        featureIds: n.binding?.featureIds?.length ? n.binding.featureIds : undefined,
         deps: n.deps?.length ? n.deps : undefined,
     };
 }
@@ -71,7 +75,7 @@ export const PLAN_TOOLS = [
     // ── Read ────────────────────────────────────────────────────────────────────
     {
         name: 'get_plan_graph',
-        description: 'Read the current PLAN-GRAPH — the source of truth for the design (assemblies → subassemblies → parts), each leaf classed buy/reuse/fabricate, with version history. Returns the nodes, a mermaid view, the version list, and any STALE nodes that need rebuilding. Call this before editing the plan or building geometry.',
+        description: 'Read the current PLAN-GRAPH — the source of truth for the design (assemblies → subassemblies → parts), each leaf classed buy/reuse/fabricate, with version history. Returns the nodes, a mermaid view, the version list, any STALE nodes that need rebuilding, and the APPROVAL state. `approved` is the build gate: when false the user has NOT signed off on the plan — present the hierarchy + part list and WAIT for their approval before building geometry; when true you may build to the plan. Call this before editing the plan or building geometry.',
         input_schema: { type: 'object', properties: {} },
         handler: () => {
             const graph = g();
@@ -84,6 +88,8 @@ export const PLAN_TOOLS = [
                 versions: graph.listVersions(),
                 currentVersion: graph.currentVersionId,
                 stale: graph.staleNodes().map((n) => n.id),
+                approved: graph.isApproved(),
+                approvedAt: graph.approvedAt || null,
             };
         },
     },

@@ -98,7 +98,33 @@ export class PlanGraph {
         this.currentVersionId = null;
         this._nodeSeq = 0;
         this._verSeq = 0;
+        /**
+         * Approval gate (clarify→plan→APPROVE→build). The user approves the plan
+         * in the UI; the AI reads this (via get_plan_graph) and must not build
+         * geometry until it is true. Any STRUCTURAL change (new node, spec edit,
+         * part swap, removal → markStale / addNode / removeNode) revokes approval,
+         * so a steered plan must be re-approved. Build-status changes
+         * (pending→building→verified via setStatus) do NOT revoke it.
+         */
+        this.approved = false;
+        this.approvedAt = 0;
     }
+
+    /** Revoke approval — called by every structural mutation (a steer). */
+    _revokeApproval() { this.approved = false; this.approvedAt = 0; }
+
+    /**
+     * Mark the current plan APPROVED for build and commit it as a revert point.
+     * The user drives this from the plan map; the AI never approves on their
+     * behalf. Returns the committed version id.
+     */
+    approve(label = 'approved ✓') {
+        this.approved = true;
+        this.approvedAt = this._now();
+        return this.commit(label);
+    }
+
+    isApproved() { return !!this.approved; }
 
     // ── node CRUD ──────────────────────────────────────────────────────────────
 
@@ -115,6 +141,7 @@ export class PlanGraph {
         this.nodes.set(node.id, node);
         if (parent) { if (!parent.children.includes(node.id)) parent.children.push(node.id); }
         else this.rootIds.push(node.id);
+        this._revokeApproval();   // adding a part changes the plan → re-approval needed
         return node.id;
     }
 
@@ -187,6 +214,7 @@ export class PlanGraph {
     /** Mark a node and all transitive dependents stale (reverse-dep walk). */
     markStale(id) {
         if (!this.nodes.has(id)) return 0;
+        this._revokeApproval();   // a spec edit / part swap changes the plan → re-approve
         const dependents = this._dependentIndex();
         const seen = new Set();
         const stack = [id];
@@ -272,6 +300,7 @@ export class PlanGraph {
         for (const other of this.nodes.values()) {
             if (other.deps.includes(id)) other.deps = other.deps.filter((d) => d !== id);
         }
+        this._revokeApproval();   // removing a part changes the plan → re-approve
         return true;
     }
 
@@ -398,6 +427,8 @@ export class PlanGraph {
             currentVersionId: this.currentVersionId,
             nodeSeq: this._nodeSeq,
             verSeq: this._verSeq,
+            approved: this.approved,
+            approvedAt: this.approvedAt,
         };
     }
 
@@ -410,6 +441,10 @@ export class PlanGraph {
                 .filter((v) => isObj(v) && isStr(v.id))
                 .map((v) => ({ id: v.id, label: v.label, parentId: v.parentId ?? null, createdAt: v.createdAt ?? 0, snapshot: clone(v.snapshot) || { nodes: [], rootIds: [] } }));
             this.currentVersionId = isStr(pojo.currentVersionId) ? pojo.currentVersionId : null;
+            // _loadDraft builds nodes directly (no addNode), so restoring the
+            // approval flag here is safe — it won't be revoked by the load.
+            this.approved = !!pojo.approved;
+            this.approvedAt = Number.isFinite(pojo.approvedAt) ? pojo.approvedAt : 0;
             // Restore counters above the max seen id so new ids never collide.
             const maxN = this.allNodes().reduce((m, n) => Math.max(m, +String(n.id).replace(/\D/g, '') || 0), 0);
             this._nodeSeq = Number.isFinite(pojo.nodeSeq) ? Math.max(pojo.nodeSeq, maxN) : maxN;

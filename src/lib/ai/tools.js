@@ -59,6 +59,7 @@ import { RECIPE_TOOLS } from './tools_recipes.js';
 import { PLAN_TOOLS } from './tools_plan.js';
 import { PATTERN_TOOLS } from './tools_patterns.js';
 import { GENERATOR_TOOLS } from './tools_generators.js';
+import { getPlanGraph } from './plan/graph.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
 //
@@ -902,6 +903,21 @@ const _ID_FIELDS = new Set([
 ]);
 const _ID_ARRAY_FIELDS = new Set(['featureIds', 'toolIds', 'sketchIds']);
 
+// Geometry/assembly CREATION entry points subject to the approval gate. These
+// are the tools that START fabricating a part or placing hardware — blocking
+// them stops a build from beginning before the user approves the plan, without
+// touching reads, planning, verification, or isolated edits of existing parts.
+// (Not exhaustive by design: a niche creator that slips through is still caught
+// by the prompt-level gate. Erring toward fewer entries keeps reads unblocked.)
+const _BUILD_GATED = new Set([
+    'addBox', 'addCylinder', 'addSphere', 'addTorus',
+    'addSketch', 'addExtrude', 'addRevolve', 'addSweep', 'addLoft',
+    'placeLibraryPart', 'addStandardPart',
+    'addGear', 'addPulley', 'addSprocket', 'addTSlotExtrusion', 'addScrewBoss', 'addStandoff',
+    'build_part_recipe', 'writeBuildScript',
+    'add_mate', 'replace_component',
+]);
+
 /** Map alias names → ids on id-bearing fields. Never throws; echoes on failure. */
 function resolveAliases(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) return input;
@@ -963,6 +979,22 @@ function validateInput(schema, input) {
 export async function dispatchTool(name, input) {
     const tool = _byName.get(name);
     if (!tool) return { ok: false, error: `unknown tool '${name}'` };
+    // ── Hard approval gate (clarify → plan → APPROVE → build) ──────────────────
+    // Once the AI has laid out a real multi-part plan, the user must APPROVE it
+    // (in the plan map) before the AI may start FABRICATING. We refuse only the
+    // geometry-CREATION entry points — reads, planning, verification, and
+    // isolated edits to already-built parts stay open, and a trivial single-part
+    // build (no plan, or a one-node plan) is never gated. Best-effort: any error
+    // here falls through to normal dispatch so the gate can't wedge the agent.
+    if (_BUILD_GATED.has(name)) {
+        try {
+            const pg = getPlanGraph();
+            if (pg && typeof pg.isApproved === 'function' && pg.allNodes().length > 1 && !pg.isApproved()) {
+                return { ok: false, gated: true, error:
+                    `Build blocked: the plan is not approved yet. Show the user the part hierarchy (get_plan_graph) and the part list (plan_bom), then WAIT for them to approve the plan in the panel before calling ${name}. Do not build geometry until the plan is approved.` };
+            }
+        } catch { /* gate is best-effort — never block dispatch on its own failure */ }
+    }
     // Resolve English aliases ("the bracket" → box_3) on id-bearing fields so
     // the user can talk in names while tools still receive ids.
     const resolved = resolveAliases(input);

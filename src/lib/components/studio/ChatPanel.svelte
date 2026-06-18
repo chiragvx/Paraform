@@ -102,6 +102,18 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   }
 
+  // Click a part in the plan map → prefill the composer with an isolated-edit
+  // reference to that node, so a follow-up like "make it 2mm thicker" lands on
+  // just that part (the AI maps the id → its bound featureIds).
+  let composerEl = $state(null);
+  function editPart(node) {
+    if (!node) return;
+    const ref = `In part ${node.id} ("${node.label}"): `;
+    // Replace any prior leading reference; otherwise keep what the user typed.
+    input = /^In part n\d+ \(".*?"\):\s/.test(input) ? input.replace(/^In part n\d+ \(".*?"\):\s/, ref) : ref + input;
+    if (composerEl) { composerEl.focus(); const end = input.length; queueMicrotask(() => { try { composerEl.setSelectionRange(end, end); } catch { /* noop */ } }); }
+  }
+
   function startNewChat() { newSession(); showHistory = false; }
   function openSession(id) { loadSession(id); showHistory = false; }
 
@@ -192,7 +204,7 @@
     </div>
   {:else}
     <!-- Plan-graph map (design intent — shown when a plan exists) -->
-    <PlanMap />
+    <PlanMap onEditPart={editPart} />
     <!-- Message list -->
     <div bind:this={listEl} class="flex-1 space-y-2 overflow-y-auto px-3 py-3">
       {#each chat.items as item (item)}
@@ -246,6 +258,7 @@
         </div>
       {/if}
       <textarea
+        bind:this={composerEl}
         bind:value={input}
         onkeydown={onKeydown}
         onpaste={onPaste}

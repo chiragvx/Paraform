@@ -12,6 +12,7 @@
 
 import { getPlanGraph } from './graph.js';
 import { runClosureCheck } from './closure.js';
+import { syncPlanGraphToDoc } from './sync.js';
 
 export const planState = $state({
     nodeCount: 0,
@@ -22,6 +23,8 @@ export const planState = $state({
     stale: [],
     mermaid: '',
     closure: null,        // last closure result, or null
+    approved: false,      // user signed off on the plan → AI may build
+    approvedAt: 0,
 });
 
 function compact(n) {
@@ -52,7 +55,24 @@ export function refreshPlan() {
         planState.currentVersion = g.currentVersionId;
         planState.stale = g.staleNodes().map((n) => n.id);
         planState.mermaid = g.toMermaid();
+        planState.approved = g.isApproved();
+        planState.approvedAt = g.approvedAt || 0;
     } catch { /* leave last good state */ }
+}
+
+/**
+ * User approves the current plan for build (clarify→plan→APPROVE→build). Commits
+ * a revert point, persists to the document, and re-snapshots so the panel + the
+ * AI (via get_plan_graph) both see `approved: true`. Returns the version id.
+ */
+export function approvePlan() {
+    let versionId = null;
+    try {
+        versionId = getPlanGraph().approve();
+        try { syncPlanGraphToDoc(); } catch { /* persistence optional */ }
+    } catch { /* leave state unchanged */ }
+    refreshPlan();
+    return versionId;
 }
 
 /** Run the physics closure pass and store the result for the panel. */
