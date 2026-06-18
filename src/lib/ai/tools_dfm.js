@@ -35,7 +35,7 @@ const BODY_EMITTING = new Set([
     'PathPattern', 'Mirror', 'StandardPart', 'ImportedMesh',
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
-    'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff',
+    'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff', 'Fan',
 ]);
 
 /** Live document, or an empty stand-in so callers never see `undefined`. */

@@ -688,7 +688,7 @@ const BODY_EMITTING = new Set([
     'PathPattern', 'Mirror', 'StandardPart', 'ImportedMesh',
     'PushPullFace', 'MoveFace', 'OffsetFace', 'DeleteFace', 'Draft',
     'Casing', 'Gear',
-    'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff',
+    'Pulley', 'Sprocket', 'TSlotExtrusion', 'ScrewBoss', 'Standoff', 'Fan',
     // A BuildScript that assigns `result` renders a body (see emit.js _bs_run).
     // Helper-only scripts (no `result`) still list here harmlessly — the AI
     // verifies real geometry with measure.
@@ -816,6 +816,23 @@ function _extentHint(f) {
             const a = Math.abs(n(p.amount, 10));
             return `extruded profile, ${a}mm tall — measure bbox for exact placement`;
         }
+        // Parametric generators: surface the SIGNATURE editable params so a
+        // relative edit ("make it 12 blades", "30 teeth") maps straight to
+        // setFeatureParams on THIS feature — never a second part.
+        case 'Fan':
+            return `fan Ø${n(p.diameter, 80)}, ${n(p.bladeCount, 5)} blades, airfoil ${p.airfoil || '4412'}, pitch ${n(p.pitch, p.diameter)}${p.shroud ? ', shrouded' : ''} — change with setFeatureParams (bladeCount/diameter/pitch/airfoil/…)`;
+        case 'Gear':
+            return `gear ${n(p.teeth, 12)}T, module ${n(p.module, 2)}, ${n(p.thickness, 10)}mm thick — change with setFeatureParams (teeth/module/thickness/bore/…)`;
+        case 'Pulley':
+            return `${p.pulleyType || 'flat'} pulley Ø${n(p.diameter, 30)}×${n(p.width, 10)} — change with setFeatureParams (diameter/width/bore/…)`;
+        case 'Sprocket':
+            return `sprocket ${n(p.teeth, 16)}T pitch ${n(p.chainPitch, 12.7)} — change with setFeatureParams (teeth/chainPitch/bore/…)`;
+        case 'TSlotExtrusion':
+            return `T-slot ${n(p.size, 20)}×${n(p.size, 20)} × ${n(p.length, 100)}mm — change with setFeatureParams (size/length/…)`;
+        case 'ScrewBoss':
+            return `boss ${p.screwSize || ''} h${n(p.height, 8)} — change with setFeatureParams (screwSize/height/ribs/…)`;
+        case 'Standoff':
+            return `${p.shape || 'hex'} standoff ${n(p.size, 6)}×${n(p.height, 10)} — change with setFeatureParams (size/height/bore)`;
         default:
             return 'measure bbox for exact placement';
     }
