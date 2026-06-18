@@ -16,7 +16,9 @@
     newSession, loadSession, deleteSession, sessionList, ensureHydrated, syncCloud,
   } from '$lib/ai/chat_store.svelte.js';
   import PlanMap from './PlanMap.svelte';
+  import ClarifyQuestions from './ClarifyQuestions.svelte';
   import { refreshPlan } from '$lib/ai/plan/plan_store.svelte.js';
+  import { parseAskBlock, stripPartialAsk } from '$lib/ai/clarify.js';
 
   let input = $state('');
   let health = $state(undefined); // undefined=loading, null=unreachable, obj=known
@@ -143,7 +145,7 @@
   }
 </script>
 
-<aside class="flex w-72 shrink-0 flex-col overflow-hidden border-l border-border bg-card">
+<aside class="flex w-96 shrink-0 flex-col overflow-hidden border-l border-border bg-card">
   <div class="relative flex items-center justify-between border-b border-border px-3 py-2">
     <div class="text-xs font-medium uppercase tracking-wider text-muted-foreground">AI Assistant</div>
     <div class="flex items-center gap-1">
@@ -220,8 +222,15 @@
             {#if item.text}<div class="whitespace-pre-wrap">{item.text}</div>{/if}
           </div>
         {:else if item.role === 'assistant'}
-          <div class="mr-6 rounded-md bg-secondary/40 px-3 py-2 text-sm {item.error ? 'text-destructive' : 'text-foreground'} whitespace-pre-wrap">
-            {item.text}{#if item.streaming}<span class="opacity-50">▋</span>{/if}
+          {@const ask = item.streaming ? null : parseAskBlock(item.text)}
+          <div class="mr-6 rounded-md bg-secondary/40 px-3 py-2 text-sm {item.error ? 'text-destructive' : 'text-foreground'}">
+            {#if ask}
+              {#if ask.before}<div class="whitespace-pre-wrap">{ask.before}</div>{/if}
+              <ClarifyQuestions questions={ask.questions} disabled={chat.running} onSubmit={(text) => submitChat({ text, attachments: [] })} />
+              {#if ask.after}<div class="mt-2 whitespace-pre-wrap">{ask.after}</div>{/if}
+            {:else}
+              <span class="whitespace-pre-wrap">{item.streaming ? stripPartialAsk(item.text) : item.text}</span>{#if item.streaming}<span class="opacity-50">▋</span>{/if}
+            {/if}
           </div>
         {:else if item.role === 'tool' && item.kind === 'call'}
           <div class="ml-3 rounded border border-border bg-background/60 px-2 py-1 text-xs text-muted-foreground">

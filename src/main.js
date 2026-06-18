@@ -14,6 +14,7 @@ import { dialogs } from './lib/dialogs/dialogs.svelte.js';
 import { initSession } from './lib/auth/session.svelte.js';
 import { getPlanGraph as _planGraph } from './lib/ai/plan/graph.js';
 import { refreshPlan as _refreshPlan, approvePlan as _approvePlan } from './lib/ai/plan/plan_store.svelte.js';
+import { chat as _chat } from './lib/ai/chat_store.svelte.js';
 
 // Boot the Supabase auth session (non-blocking — the network round-trip runs
 // in the background; the store's `loading` flag gates auth-required routes).
@@ -108,6 +109,12 @@ if (typeof window !== 'undefined') {
       graph: () => _planGraph(),
       refresh: () => _refreshPlan(),
       approve: () => _approvePlan(),
+    },
+    // Chat transcript hook for smoke tests — inject synthetic turns to render
+    // assistant UI (e.g. the clarification card) without driving the AI loop.
+    chat: {
+      push: (item) => { _chat.items = [..._chat.items, item]; },
+      clear: () => { _chat.items = []; },
     },
   };
   queueMicrotask(() => { window.__paraform__.ready = true; });
