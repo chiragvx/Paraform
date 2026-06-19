@@ -31,6 +31,7 @@
   // `openai/gpt-oss-120b`) back to the default, so the <select> and the value
   // agent.js sends stay in sync with an offered option.
   const OPENAI_MODELS = [
+    'google/gemma-4-31b-it:free',
     'nvidia/nemotron-3-ultra-550b-a55b:free',
     'nex-agi/nex-n2-pro:free',
     'qwen/qwen3-coder:free',

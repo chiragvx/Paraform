@@ -996,10 +996,69 @@ const _BUILD_GATED = new Set([
     'addBox', 'addCylinder', 'addSphere', 'addTorus',
     'addSketch', 'addExtrude', 'addRevolve', 'addSweep', 'addLoft',
     'placeLibraryPart', 'addStandardPart',
-    'addGear', 'addPulley', 'addSprocket', 'addTSlotExtrusion', 'addScrewBoss', 'addStandoff',
     'build_part_recipe', 'writeBuildScript',
     'add_mate', 'replace_component',
+    // Parametric generators — each STARTS fabricating a whole part, so they are
+    // gated exactly like a primitive. (Previously only a handful were listed,
+    // which let a weak model build a "blender" out of ungated addMountingPlate /
+    // addImpeller calls straight past the approval gate.)
+    'addGear', 'addPulley', 'addSprocket', 'addTSlotExtrusion', 'addScrewBoss', 'addStandoff',
+    'addFan', 'addFanBlade', 'addImpeller', 'addAuger', 'addBlowerWheel', 'addPaddleWheel',
+    'addMountingPlate', 'addBracket', 'addGusset', 'addTSlotBracket', 'addShaftHub',
+    'addThreadedInsertBoss', 'addNutTrap', 'addSnapHook',
+    'addBearingPocket', 'addMotorMount', 'addShaftCoupler', 'addWheel', 'addTimingPulley', 'addRackGear',
+    'addProjectBox', 'addLid', 'addPCBTray', 'addHinge', 'addKnob', 'addHandle', 'addFoot',
+    'addBatteryHolder', 'addDINRailClip', 'addCableClip', 'addGridfinityBin', 'addPiCase',
 ]);
+
+// PART/ASSEMBLY-SCALE creation tools — a strict subset of _BUILD_GATED. Reaching
+// for one of these (a whole-part generator, a library placement, a mate, a
+// scripted body) signals a real multi-part build, so they ALSO require captured
+// INTENT (a recorded brief or an approved plan) once the document already holds
+// geometry. Bare primitives + sketch construction (addBox / addExtrude / …) are
+// deliberately NOT here: they are how you build and incrementally edit a SINGLE
+// simple part, and must stay unblocked ("a box, now a cylinder on top" must not
+// demand a brief). This is the line between "modelling one part" and "assembling
+// many", which is exactly where the clarify→plan→approve workflow earns its keep.
+const _INTENT_GATED = new Set([...
+    _BUILD_GATED].filter((n) => ![
+        'addBox', 'addCylinder', 'addSphere', 'addTorus',
+        'addSketch', 'addExtrude', 'addRevolve', 'addSweep', 'addLoft',
+    ].includes(n)));
+
+/**
+ * Decide whether a build-gated tool call may proceed, or must be blocked pending
+ * intent capture / plan approval. PURE — every piece of state is passed in, so it
+ * is unit-testable without the document / plan / context singletons (mirrors the
+ * "pure data, node:assert-testable" discipline of plan/graph.js).
+ *
+ * Returns null to ALLOW, or { error } to BLOCK (the dispatcher wraps the latter
+ * as { ok:false, gated:true, error }). The rules enforce clarify→plan→APPROVE→
+ * build as TOOL STATE, so a model can no longer fake the brief/plan in prose:
+ *
+ *   1. APPROVAL GATE — a real multi-node plan (>1 node) must be APPROVED before
+ *      any fabrication begins (applies to every build-gated tool).
+ *   2. INTENT GATE — for a PART/ASSEMBLY-SCALE tool (partScale), a brief must be
+ *      recorded once the document already holds geometry. The first such part on
+ *      an empty document is free; bare primitives never trip this. An approved
+ *      multi-node plan implies a vetted intent, so it satisfies this gate too.
+ *
+ * @param {string} name
+ * @param {{ planNodes?:number, planApproved?:boolean, hasBrief?:boolean, featureCount?:number, partScale?:boolean }} state
+ * @returns {{ error:string } | null}
+ */
+export function evaluateBuildGate(name, { planNodes = 0, planApproved = false, hasBrief = false, featureCount = 0, partScale = false } = {}) {
+    if (planNodes > 1 && !planApproved) {
+        return { error:
+            `Build blocked: the plan is not approved yet. Show the user the part hierarchy (get_plan_graph) and the part list (plan_bom), then WAIT for them to approve the plan in the panel before calling ${name}. Do not build geometry until the plan is approved.` };
+    }
+    const approvedPlan = planNodes > 1 && planApproved;
+    if (partScale && !hasBrief && !approvedPlan && featureCount > 0) {
+        return { error:
+            `Build blocked: no design brief recorded. This document already has ${featureCount} feature(s) and "${name}" adds another whole part — so this is a multi-part build. Capture intent FIRST by actually CALLING propose_brief (function, key dimensions, fits, material). Describing the brief in prose does NOT count. For an assembly, also build a real plan-graph (propose_plan_graph / plan_split_node) and get the user's approval before building.` };
+    }
+    return null;
+}
 
 /** Map alias names → ids on id-bearing fields. Never throws; echoes on failure. */
 function resolveAliases(input) {
@@ -1072,10 +1131,14 @@ export async function dispatchTool(name, input) {
     if (_BUILD_GATED.has(name)) {
         try {
             const pg = getPlanGraph();
-            if (pg && typeof pg.isApproved === 'function' && pg.allNodes().length > 1 && !pg.isApproved()) {
-                return { ok: false, gated: true, error:
-                    `Build blocked: the plan is not approved yet. Show the user the part hierarchy (get_plan_graph) and the part list (plan_bom), then WAIT for them to approve the plan in the panel before calling ${name}. Do not build geometry until the plan is approved.` };
-            }
+            const planNodes = (pg && typeof pg.allNodes === 'function') ? pg.allNodes().length : 0;
+            const planApproved = !!(pg && typeof pg.isApproved === 'function' && pg.isApproved());
+            let hasBrief = false;
+            try { hasBrief = !!getAIContext().brief; } catch { /* context optional */ }
+            let featureCount = 0;
+            try { const s = documentSummary(); featureCount = Number.isFinite(s.featureCount) ? s.featureCount : (s.features || []).length; } catch { /* doc optional */ }
+            const blocked = evaluateBuildGate(name, { planNodes, planApproved, hasBrief, featureCount, partScale: _INTENT_GATED.has(name) });
+            if (blocked) return { ok: false, gated: true, error: blocked.error };
         } catch { /* gate is best-effort — never block dispatch on its own failure */ }
     }
     // Resolve English aliases ("the bracket" → box_3) on id-bearing fields so

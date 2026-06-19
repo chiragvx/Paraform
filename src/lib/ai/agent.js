@@ -284,6 +284,27 @@ function modelSupportsVision(providerName, model) {
     return /vision|4o|gpt-4\.1|gpt-5|[^a-z]o3|[^a-z]o4|llava|pixtral|-vl|internvl|gemini|claude|minimax-m3/.test(m);
 }
 
+/**
+ * Is the active model a known-WEAK tool driver — capable of emitting tool calls
+ * but unreliable at the multi-step clarify→plan→approve→build sequence (it tends
+ * to narrate the protocol in prose and skip the actual plan_* / propose_brief
+ * tools, then flounder at build time)? These are advised against, not refused,
+ * so a free-tier user is never locked out — the hard correctness rail is the
+ * tool-layer build gate, which is model-agnostic. Conservative on purpose: only
+ * flag families we've actually watched fail this way (see the GPT-OSS-120B
+ * blender transcript), so a capable model is never wrongly warned.
+ */
+export function isWeakDriver(providerName, model) {
+    const m = String(model || '').toLowerCase();
+    if (!m) return false;
+    if (/gpt-oss|gemma/.test(m)) return true;
+    // Small open instruct models (≤ ~13B) rarely sustain the pipeline.
+    if (/(^|[^0-9])(1|2|3|7|8|9|11|13)b([^0-9]|$)/.test(m) && /llama|qwen|mistral|phi/.test(m)) return true;
+    return false;
+}
+
+const WEAK_DRIVER_ADVISORY = "⚠️ Heads-up: the current AI model is a lightweight one that often struggles to carry a multi-part build through the plan→approve→build workflow (it may stall or produce rough geometry). For a complex assembly like this, consider switching to a stronger model in AI settings, or set an escalation model so the hard steps run on it. I'll keep going regardless.";
+
 // Tools that observe but don't mutate the document — used to distinguish a
 // turn that actually built something from one that only inspected state.
 const READ_ONLY_TOOLS = new Set([
@@ -356,6 +377,10 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     // a render is never sent to a text-only model (which errors the request).
     const baseVision = modelSupportsVision(providerName, model);
     const escVision = escalationModel ? modelSupportsVision(providerName, escalationModel) : false;
+    // Known-weak tool driver? Used to surface a one-time advisory the first time
+    // the build gate bites this turn (the gate firing is the signal the request
+    // is non-trivial — exactly where a weak model tends to fall apart).
+    const weakDriver = isWeakDriver(providerName, model);
     // Vision critic: a multimodal reviewer (Gemma via AI Studio) that LOOKS at
     // capture_views renders on behalf of a blind builder and feeds back a text
     // critique. Only meaningful when the builder can't already see; resolved once.
@@ -386,6 +411,7 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     let capturedAfterBuild = false;     // capture_views ran since the last mutation (visual gate)
     let visualGateNudges = 0;           // bound the "look before you finish" gate per turn
     let escalated = false;              // a hard step escalated us to the stronger model this turn
+    let weakDriverWarned = false;       // emitted the weak-model advisory once this turn
 
     // Send a set of renders to the vision critic (Gemma) and inject its TEXT
     // verdict as the next builder turn. Returns true if a critique was injected.
@@ -550,6 +576,18 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 toolResults.push({ id: tc.id, name: tc.name, result: r });
                 turnToolResults.push({ name: tc.name, result: r });
 
+                // Build gate fired (clarify→plan→approve not satisfied). This is
+                // the signal that the request is a real multi-part build: surface
+                // the weak-model advisory once, and treat it as a hard step so a
+                // configured escalation model drives the planning/recovery.
+                if (r && r.gated) {
+                    if (weakDriver && !weakDriverWarned) {
+                        weakDriverWarned = true;
+                        emit({ type: 'text', text: WEAK_DRIVER_ADVISORY });
+                    }
+                    if (escalationModel) escalated = true;
+                }
+
                 const failed = r && r.ok === false;
                 // Visual-gate bookkeeping: a successful capture satisfies the
                 // gate; any successful mutation re-arms it (new geometry needs a
@@ -622,7 +660,18 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                     // A failing compile is a hard step — escalate to the stronger
                     // model (if configured) for the repair and the rest of the turn.
                     if (escalationModel) escalated = true;
-                    if (n <= MAX_REPAIRS_PER_ERROR) {
+                    // "No bodies" means the document is EMPTY (e.g. an addComponent
+                    // shell with no geometry, or the only body was deleted). The
+                    // generic "remove the offending feature" advice is exactly
+                    // wrong here — following it deletes the last body and loops.
+                    // Steer toward ADDING a real body instead (this is the
+                    // delete-thrash seen in the blender transcript).
+                    const emptyDoc = /produced no bodies|no bodies|empty document/i.test(String(status.error || ''));
+                    if (emptyDoc) {
+                        messages.push({ role: 'user', text:
+                            `[automatic check] The document has NO solid bodies yet, so it cannot compile:\n${truncate(status.error, 300)}\n` +
+                            `Do NOT delete anything — there is nothing to remove. ADD the first real body of the part now (a primitive like addBox/addCylinder, or the matching generator), placed inside the component you created. Then verify with compile_status.` });
+                    } else if (n <= MAX_REPAIRS_PER_ERROR) {
                         messages.push({ role: 'user', text:
                             `[automatic check] The kernel could NOT compile the model after your last operation:\n${truncate(status.error, 600)}\n` +
                             `This was almost certainly caused by what you just did. Repair it now: adjust the offending feature's parameters (setFeatureParams) or remove it (deleteFeature / suppressFeature) and rebuild a working version. Do not ask me — fix it, then verify with compile_status or measure. If it truly cannot be done, say so plainly.` });

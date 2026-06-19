@@ -267,6 +267,7 @@ const FULL_SETTINGS_SCHEMA = [
         label: 'Model',
         kind: 'select',
         options: [
+          { value: 'google/gemma-4-31b-it:free', label: 'google/gemma-4-31b-it:free' },
           { value: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'nvidia/nemotron-3-ultra-550b-a55b:free' },
           { value: 'nex-agi/nex-n2-pro:free', label: 'nex-agi/nex-n2-pro:free' },
           { value: 'qwen/qwen3-coder:free', label: 'qwen/qwen3-coder:free' },
