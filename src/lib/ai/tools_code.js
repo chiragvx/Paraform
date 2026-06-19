@@ -36,6 +36,9 @@ export const CODE_TOOLS = [
         description:
             'ESCAPE HATCH — create a new body from raw build123d Python. PREFER THE TYPED OPS (addBox/addExtrude/addRevolve/addSketch/addGear/placeLibraryPart/…) and the part library; drop to a script ONLY for geometry the typed ops genuinely cannot express: lofts/sweeps along math curves, equation-driven surfaces, algorithmic lattices/voronoi, text, parametric generative shapes. ' +
             'The code is build123d 0.10, world Z-UP, millimetres. You MUST `from build123d import *` and assign the final body to a variable named exactly `result` (e.g. `result = part.part` or `result = my_solid`) — a script that assigns no `result` renders NOTHING. ' +
+            'ONE PART PER SCRIPT: a BuildScript is a single body/part. For an ASSEMBLY of distinct parts (e.g. a chassis + a motor mount + gears), make a SEPARATE component and script (or typed ops) per part and mate them — do NOT fuse multiple parts into one `result` (that produces an un-editable, un-movable blob). ' +
+            'Do NOT call typed-op tools from inside the script — addBox/addGear/placeLibraryPart/build_part_recipe/etc. do NOT exist in the sandbox and will NameError; build geometry with plain build123d here, or call those tools directly (outside a script). ' +
+            'You MAY use `centered=True/False` on Box/Cylinder/Cone/Sphere (XY-centred, sitting on Z=0 — same convention as the typed ops); most build123d otherwise uses `align=`. ' +
             'After writing, the system auto-compiles the model; if it fails you get the kernel error back and must repair your own script (call editBuildScript). ' +
             'SANDBOX: filesystem, network, and process access are blocked — do NOT import os/sys/subprocess/socket/shutil/pathlib/requests/etc.; only build123d, math, and numpy are available. ' +
             'To give your custom part snap points, use declareConnector after it compiles (create-only / immutable).',

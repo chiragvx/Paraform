@@ -1085,6 +1085,63 @@ except (TypeError, ValueError):
     _BS_TIMEOUT_S = 20.0
 
 
+_BS_CENTERED_PATCHED = False
+
+
+def _bs_install_centered_patches() -> None:
+    """Teach the common build123d primitives to ALSO accept a `centered=` kwarg,
+    mapping it to the project's Z-up align convention:
+    `centered=True`  → XY-centred, sitting on the Z=0 ground (Align.MIN on Z);
+    `centered=False` → corner at origin (all Align.MIN). This mirrors emit.js
+    (Box/Cylinder), so a hand- or AI-written BuildScript behaves identically to a
+    typed-op primitive.
+
+    WHY: real build123d has no `centered` kwarg (it's a CadQuery/OpenSCAD-ism the
+    model habitually reaches for), so an un-patched `Box(10, 10, 10, centered=True)`
+    dies with `TypeError: unexpected keyword 'centered'`. Patching it lets the
+    natural code compile AND keeps it Z-up correct instead of burying half the
+    body below the grid.
+
+    Implementation: monkeypatch each class's `__init__` IN PLACE (idempotent).
+    We can't inject subclasses into the script globals because the script itself
+    runs `from build123d import *`, which would re-import the real classes and
+    clobber them. Patching the shared class object survives any re-import. This is
+    transparent to trusted typed-op code, which always passes `align=` and never
+    `centered=`, so the wrapper is a pass-through there (centered=None).
+    """
+    global _BS_CENTERED_PATCHED
+    if _BS_CENTERED_PATCHED:
+        return
+    import build123d as _b
+
+    A = _b.Align
+
+    def _align_for(centered):
+        return (A.CENTER, A.CENTER, A.MIN) if centered else (A.MIN, A.MIN, A.MIN)
+
+    def _patch(base):
+        orig = base.__init__
+        if getattr(orig, "_paraform_centered", False):
+            return  # already wrapped
+
+        def __init__(self, *args, centered=None, **kwargs):
+            if centered is not None and "align" not in kwargs:
+                kwargs["align"] = _align_for(centered)
+            orig(self, *args, **kwargs)
+
+        __init__._paraform_centered = True
+        base.__init__ = __init__
+
+    for nm in ("Box", "Cylinder", "Cone", "Sphere"):
+        base = getattr(_b, nm, None)
+        if isinstance(base, type):
+            try:
+                _patch(base)
+            except Exception:  # noqa: BLE001 — never let a patch failure break scripting
+                pass
+    _BS_CENTERED_PATCHED = True
+
+
 def _make_bs_run(helpers: dict):
     """Build the `_bs_run` the emitted code calls, closing over the kernel helper
     facade (resolve_edges, make_hole, standard_parts, …) so scripts get the same
@@ -1101,6 +1158,11 @@ def _make_bs_run(helpers: dict):
         if not isinstance(src, str):
             raise TypeError("BuildScript source must be a string")
         g = {"__builtins__": _BS_SAFE_BUILTINS, "__name__": "__buildscript__"}
+        # Teach build123d's primitives to accept the `centered=` kwarg the model
+        # habitually writes (maps to the Z-up align convention). Idempotent and
+        # patched on the class itself, so it survives the script's own
+        # `from build123d import *`. Cheap after the first call.
+        _bs_install_centered_patches()
         # Preload the build123d public API so a script works with or without an
         # explicit `from build123d import *` (the guarded import allows it too).
         exec("from build123d import *", g)

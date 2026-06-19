@@ -40,6 +40,33 @@ const BLOCKED_DUNDERS = [
     '__class__',
 ];
 
+// Paraform typed-op TOOL names. These are DOCUMENT operations exposed to the
+// agent OUTSIDE a script (addBox, addGear, placeLibraryPart, …) — they are NOT
+// functions in the build123d sandbox. A script that calls one dies with a
+// NameError at compile ("name 'addGear' is not defined"); the model then burns
+// turns guessing. Catch the common ones HERE with an actionable redirect: either
+// call the tool directly, or write the geometry in plain build123d. The list is
+// not exhaustive — an unlisted tool still NameErrors in the sandbox, this just
+// turns the frequent mistakes into a clear message up front. Mirrors the
+// generators/primitives in _BUILD_GATED (tools.js); keep roughly in step.
+const TYPED_OP_TOOLS = [
+    // primitives + feature ops
+    'addBox', 'addCylinder', 'addSphere', 'addTorus', 'addCone',
+    'addSketch', 'addExtrude', 'addRevolve', 'addSweep', 'addLoft',
+    'addFillet', 'addChamfer', 'addShell', 'addHole',
+    'addUnion', 'addCut', 'addIntersect',
+    // parametric generators
+    'addGear', 'addPulley', 'addSprocket', 'addTSlotExtrusion', 'addScrewBoss', 'addStandoff',
+    'addFan', 'addFanBlade', 'addImpeller', 'addAuger', 'addBlowerWheel', 'addPaddleWheel',
+    'addMountingPlate', 'addBracket', 'addGusset', 'addTSlotBracket', 'addShaftHub',
+    'addThreadedInsertBoss', 'addNutTrap', 'addSnapHook',
+    'addBearingPocket', 'addMotorMount', 'addShaftCoupler', 'addWheel', 'addTimingPulley', 'addRackGear',
+    'addProjectBox', 'addLid', 'addPCBTray', 'addHinge', 'addKnob', 'addHandle', 'addFoot',
+    'addBatteryHolder', 'addDINRailClip', 'addCableClip', 'addGridfinityBin', 'addPiCase',
+    // placement / assembly / scripting
+    'placeLibraryPart', 'addStandardPart', 'add_mate', 'replace_component', 'build_part_recipe',
+];
+
 /** Escape a token for safe interpolation into a RegExp source. */
 function _esc(tok) {
     return tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -99,6 +126,20 @@ export function guardScript(code) {
         if (code.includes(d)) {
             return { ok: false, error: `blocked dunder '${d}' — interpreter-escape attribute access is not allowed in a build123d script.` };
         }
+    }
+
+    // 4) Paraform typed-op tool calls — these don't exist inside the build123d
+    //    sandbox (they're document operations, not script functions), so a script
+    //    that calls one would NameError at compile. Redirect early. The `(^|…)`
+    //    prefix avoids matching method calls (`obj.addBox(`) and longer
+    //    identifiers (`my_addGear(`); a name the script DEFINES itself
+    //    (`def addGear(...)` — a user implementing their own helper) is allowed.
+    for (const fn of TYPED_OP_TOOLS) {
+        const e = _esc(fn);
+        if (!new RegExp(`(^|[^.\\w])${e}\\s*\\(`, 'm').test(code)) continue;
+        if (new RegExp(`\\bdef\\s+${e}\\s*\\(`).test(code)) continue;  // locally defined → their own
+        return { ok: false, error:
+            `'${fn}' is a Paraform typed-op TOOL, not a function available inside a build123d script (the sandbox has only build123d, math, numpy). Two options: (1) call the ${fn} tool DIRECTLY instead of from a script, or (2) build this geometry with pure build123d here (primitives, lofts, sweeps, booleans). A BuildScript is the escape hatch for geometry the typed ops can't express — not for re-invoking them.` };
     }
 
     return { ok: true };
