@@ -30,6 +30,7 @@
 import { AGENT_TOOLS, dispatchTool, documentSummary, sceneDigest } from './tools.js';
 import { GENERATOR_TOOLS } from './tools_generators.js';
 import { MECHANISM_TOOLS } from './tools_mechanism.js';
+import { WEB_TOOLS } from './tools_web.js';
 import { SYSTEM_PROMPT } from './system_prompt.js';
 import { streamChat } from './provider.js';
 import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
@@ -42,23 +43,28 @@ import { seedPlanGraph } from './plan/decompose.js';
 import { syncPlanGraphToDoc } from './plan/sync.js';
 
 // ── Per-turn tool triage ─────────────────────────────────────────────────────
-// The full surface is ~146 tools (~30k tokens). Sending all of them every turn
-// is expensive AND degrades tool selection (the model has to find the right one
-// in a 146-item list — exactly where weak/mid models hallucinate or mis-pick).
-// We send a RELEVANT subset instead, with NO caching dependency:
-//   - every non-generator tool stays on (the workflow / edit / assembly /
-//     verify / plan surface is always available),
-//   - the 70 parametric generators are GATED by keyword: a generator is offered
-//     only when the conversation actually mentions it (a few structural staples
-//     stay always-on so common "glue" parts are reachable).
+// The full surface is large and grows with every new capability. Advertising all
+// of it every turn is expensive AND degrades tool selection (the model has to
+// find the right tool in a long list — exactly where weak/mid models mis-pick).
+// We advertise a RELEVANT subset, with three gating strategies layered on top of
+// Anthropic prompt caching (the tool block is cached, so a STABLE subset across
+// a turn's iterations is also cheap — see providers/anthropic.js):
+//   - The whole parametric-generator CATALOG is reachable through three constant
+//     meta-tools (list_generators / describe_generator / generate_part, always
+//     on). So the advertised generator cost is O(1) no matter how big the catalog
+//     grows — that is the fix for unbounded expansion. Individual generators are
+//     ALSO offered directly, but ONLY when the conversation names one by keyword
+//     (a direct tool is nicer for a strong model and for multi-part requests);
+//     there are no longer any "always-on staple" generators, because generate_part
+//     already makes every one reachable without paying for its schema each turn.
+//   - Mechanism/linkage tools (only needed for things that MOVE) are gated on
+//     SEMANTIC cues — their names can't be keyword-derived (plan_mechanism would
+//     falsely match the common word "plan").
+//   - Web tools (search / fetch) are gated on research cues — irrelevant to the
+//     overwhelming majority of pure-CAD turns.
 // dispatchTool still resolves against ALL tools, so nothing breaks if a gated
 // tool is somehow invoked — it just isn't advertised when irrelevant.
 const _GENERATOR_NAMES = new Set(GENERATOR_TOOLS.map((t) => t.name));
-// Structural staples a build commonly needs even when unnamed — kept always-on.
-const _ALWAYS_GENERATORS = new Set([
-    'addGear', 'addBracket', 'addMountingPlate', 'addStandoff', 'addScrewBoss',
-    'addProjectBox', 'addLid', 'addPCBTray',
-]);
 /** Keywords for a generator, derived from its name (addBatteryHolder → battery, holder). */
 function _toolKeywords(name) {
     return name
@@ -79,6 +85,13 @@ const _MECHANISM_CUES = [
     'revolute', 'prismatic', 'walk', 'gait', 'four-bar', 'crank', 'rocker',
     'steer', 'gearbox', 'rotate', 'rotating', 'hinge', 'gripper', 'leg', 'wheel',
 ];
+// Web research tools — only when the request actually reaches outside the model
+// (datasheet lookups, finding a real spec / part online).
+const _WEB_NAMES = new Set(WEB_TOOLS.map((t) => t.name));
+const _WEB_CUES = [
+    'search', 'look up', 'lookup', 'datasheet', 'spec sheet', 'online', 'web',
+    'http://', 'https://', 'url', 'google', 'find the', 'research', 'download',
+];
 
 /**
  * Pick the tools to advertise this turn. `convText` is the running conversation
@@ -89,11 +102,15 @@ export function selectAgentTools(all, convText) {
     const text = String(convText || '').toLowerCase();
     return all.filter((tool) => {
         if (_GENERATOR_NAMES.has(tool.name)) {
-            if (_ALWAYS_GENERATORS.has(tool.name)) return true;  // staple → always on
+            // Direct generators are offered only when named; otherwise the model
+            // reaches them via the always-on generate_part meta-tool.
             return _toolKeywords(tool.name).some((w) => text.includes(w));
         }
         if (_MECHANISM_NAMES.has(tool.name)) {
             return _MECHANISM_CUES.some((w) => text.includes(w));  // only for moving things
+        }
+        if (_WEB_NAMES.has(tool.name)) {
+            return _WEB_CUES.some((w) => text.includes(w));        // only for outside lookups
         }
         return true;                                             // everything else → always on
     });

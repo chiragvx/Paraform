@@ -410,6 +410,86 @@ export const RECIPES = {
 export const RECIPE_NAMES = Object.keys(RECIPES);
 
 /**
+ * Machine-readable per-recipe metadata — the SINGLE SOURCE OF TRUTH that the
+ * recipe meta-tools (tools_recipe_meta.js) read. `describe_recipe(recipe)`
+ * returns one of these entries as a TOOL RESULT, so the heavy per-recipe
+ * parameter docs are fetched ON DEMAND instead of being inlined in an always-on
+ * tool description. That is what keeps the advertised recipe surface O(1) as the
+ * library grows: the `tools` array carries three small fixed tools, and the
+ * per-recipe schema only enters context for the one recipe the model commits to.
+ *
+ * Shape: { purpose, params: { key: { type, description, default? } }, required }.
+ * Keep this in lock-step with the recipe functions above — a param a recipe
+ * reads from `opts` should appear here so the model can discover it.
+ */
+export const RECIPE_SPECS = {
+    servoMount: {
+        purpose: 'U-bracket that cradles a servo by its flange ears — hole pattern + body envelope derive from the servo dims, wall thickness from load. Reflows when the servo is swapped.',
+        params: {
+            servo: { type: 'object', description: 'Hosted servo dims object: {bodyL,bodyW,bodyH,flangeEar,flangeZ,bossR,shaftR,mountHoleD} in mm. Omitted fields default to SG90.' },
+            loadNm: { type: 'number', description: 'Joint load in Nm — drives the load-derived wall thickness.', default: 0.3 },
+            clearance: { type: 'number', description: 'Printed mating clearance in mm.', default: 0.2 },
+        },
+        required: [],
+    },
+    legLink: {
+        purpose: 'A beam/link between two joints — length derives from neighbour spacing, end bores from the pivot pin, web thickness from load.',
+        params: {
+            lengthMm: { type: 'number', description: 'Joint-to-joint span in mm.', default: 60 },
+            loadNm: { type: 'number', description: 'Joint load in Nm — drives web thickness.', default: 0.3 },
+            boreD: { type: 'number', description: 'Pivot bore diameter at each end in mm.', default: 3.2 },
+            clearance: { type: 'number', description: 'Printed mating clearance in mm.', default: 0.2 },
+        },
+        required: [],
+    },
+    revoluteClevis: {
+        purpose: 'Forked (clevis) ears + coaxial pin bore for a single-axis REVOLUTE joint — the ear gap derives from the mating tongue, the bore from the pin, ear/wall thickness from load.',
+        params: {
+            tongueW: { type: 'number', description: 'Mating tongue thickness in mm — sets the slot between the ears.', default: 12 },
+            pinD: { type: 'number', description: 'Pivot pin diameter in mm.', default: 4 },
+            loadNm: { type: 'number', description: 'Joint load in Nm — drives ear/wall thickness.', default: 0.3 },
+            baseW: { type: 'number', description: 'Mounting base width in mm (defaults derived from tongue + walls).' },
+            clearance: { type: 'number', description: 'Printed clearance in the slot in mm.', default: 0.3 },
+        },
+        required: [],
+    },
+    ballSocket: {
+        purpose: 'A snap-fit spherical socket cup for a multi-DOF ball joint — socket radius derives from the ball, wall from load, mounted on a stem.',
+        params: {
+            ballD: { type: 'number', description: 'Mating ball diameter in mm.', default: 10 },
+            loadNm: { type: 'number', description: 'Joint load in Nm — drives the cup wall.', default: 0.3 },
+            clearance: { type: 'number', description: 'Printed snap clearance in mm.', default: 0.25 },
+            stemD: { type: 'number', description: 'Mounting stem diameter in mm (defaults ~0.6×ball).' },
+        },
+        required: [],
+    },
+    bodyShellWithBosses: {
+        purpose: 'A hollow chassis/casing with a ring of lid screw bosses — the cavity is the electronics keep-out envelope, wall from load, boss bore from the fastener.',
+        params: {
+            innerL: { type: 'number', description: 'Cavity (keep-out) length in mm.', default: 60 },
+            innerW: { type: 'number', description: 'Cavity (keep-out) width in mm.', default: 40 },
+            innerH: { type: 'number', description: 'Cavity (keep-out) height in mm.', default: 25 },
+            loadNm: { type: 'number', description: 'Load in Nm — drives the shell wall.', default: 0.3 },
+            screwD: { type: 'number', description: 'Lid screw size in mm.', default: 3 },
+            bossCount: { type: 'number', description: 'Number of lid screw bosses (corner-biased, max 4 placed).', default: 4 },
+            clearance: { type: 'number', description: 'Printed clearance in mm.', default: 0.2 },
+        },
+        required: [],
+    },
+    ventGrille: {
+        purpose: 'A louvred panel placed over a heat source — panel size covers the area, slot count/pitch derive from the open-area target, rib thickness from load.',
+        params: {
+            panelL: { type: 'number', description: 'Panel length (over the source) in mm.', default: 50 },
+            panelW: { type: 'number', description: 'Panel width in mm.', default: 30 },
+            loadNm: { type: 'number', description: 'Load in Nm — drives panel/rib thickness (clamped thin).', default: 0.3 },
+            slotCount: { type: 'number', description: 'Number of vent slots.', default: 6 },
+            openFraction: { type: 'number', description: 'Open-area target as a fraction 0.2–0.8.', default: 0.5 },
+        },
+        required: [],
+    },
+};
+
+/**
  * Generate the build123d source for `name(opts)`, or null if the name is not a
  * known recipe. Never throws on a bad opts — recipes coerce their own inputs.
  */

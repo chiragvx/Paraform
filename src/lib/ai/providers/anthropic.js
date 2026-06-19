@@ -14,13 +14,35 @@
 
 const UPSTREAM_PATH = '/v1/messages';
 
-/** Canonical tools pass straight through — Anthropic's native shape. */
+const EPHEMERAL = { type: 'ephemeral' };
+
+/**
+ * Canonical tools → Anthropic's native shape, with the LAST tool marked for
+ * prompt caching.
+ *
+ * Why the last tool: an Anthropic cache breakpoint caches the contiguous request
+ * prefix up to and including the marked block, and `tools` precede `system` +
+ * `messages` in that prefix. The tool surface (~30k tokens) is the single
+ * largest STABLE part of every request — agent.js builds `tools` once per turn
+ * (outside the iteration loop) and reuses the identical array on every
+ * tool-call round-trip. One breakpoint here turns that whole block into a
+ * ~90%-cheaper cache READ on iterations 2..N of a multi-step build, which is
+ * where the cost actually lived (the block was re-billed in full 10–50× per
+ * build before this). The 1.25× write surcharge on the first call is recouped
+ * on the second; any multi-iteration turn — i.e. every real build — comes out
+ * far ahead, and a single-shot turn still seeds the cache for the next user
+ * message within the 5-minute TTL.
+ */
 function toolsForProvider(agentTools) {
-    return (agentTools || []).map((t) => ({
+    const list = (agentTools || []).map((t) => ({
         name: t.name,
         description: t.description,
         input_schema: t.input_schema,
     }));
+    if (list.length) {
+        list[list.length - 1] = { ...list[list.length - 1], cache_control: EPHEMERAL };
+    }
+    return list;
 }
 
 /** Serialise one neutral history entry into Anthropic message form. */
@@ -61,6 +83,19 @@ function toWireMessage(entry) {
 
 function buildBody({ system, history = [], tools, model, maxTokens, stream }) {
     const messages = history.map(toWireMessage).filter(Boolean);
+    // Rolling conversation cache: mark the last block of the last message so the
+    // growing message-history prefix is cached incrementally. In a multi-step
+    // build the history balloons (every tool result is appended), so on each
+    // round-trip the prior turns become a cache READ and only the new delta is
+    // billed at full rate. Anthropic finds the longest cached prefix, so a single
+    // rolling breakpoint suffices; combined with the tools breakpoint that is 2
+    // of the allowed 4. Only array-content messages carry blocks — a plain text
+    // turn (string content) has nowhere to hang the marker, so we skip it.
+    const last = messages[messages.length - 1];
+    if (last && Array.isArray(last.content) && last.content.length) {
+        const i = last.content.length - 1;
+        last.content[i] = { ...last.content[i], cache_control: EPHEMERAL };
+    }
     const body = {
         provider: 'anthropic',
         model,

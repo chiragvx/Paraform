@@ -56,9 +56,11 @@ import { WEB_TOOLS } from './tools_web.js';
 import { CODE_TOOLS } from './tools_code.js';
 import { MECHANISM_TOOLS } from './tools_mechanism.js';
 import { RECIPE_TOOLS } from './tools_recipes.js';
+import { RECIPE_META_TOOLS } from './tools_recipe_meta.js';
 import { PLAN_TOOLS } from './tools_plan.js';
 import { PATTERN_TOOLS } from './tools_patterns.js';
 import { GENERATOR_TOOLS } from './tools_generators.js';
+import { GENERATOR_META_TOOLS } from './tools_generator_meta.js';
 import { getPlanGraph } from './plan/graph.js';
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
@@ -71,6 +73,13 @@ import { getPlanGraph } from './plan/graph.js';
 const N = (desc, opts = {}) => ({ type: 'number', description: desc, ...opts });
 const S = (desc, opts = {}) => ({ type: 'string', description: desc, ...opts });
 const B = (desc) => ({ type: 'boolean', description: desc });
+
+// Shared schema fragment for the ubiquitous optional `componentId` param. Defined
+// once and reused so the identical wording isn't re-authored (and re-billed) at
+// every call site. (JSON Schema $ref would dedup it on the wire too, but the
+// Gemini provider strips $ref/$defs — see providers/gemini.js — so we share the
+// fragment at the source instead and keep an inline, every-provider-safe schema.)
+const COMPONENT_ID = S('Target component (default: active/root)');
 
 /** Wrap a created feature into the standard write-op result. */
 function feat(f, summary) {
@@ -107,7 +116,7 @@ const TOOLS = [
                 width: N('Size along Y (mm)'),
                 height: N('Size along Z (mm)'),
                 centered: B('Centre in XY (default true)'),
-                componentId: S('Target component id (default: active / root)'),
+                componentId: COMPONENT_ID,
             },
             required: ['length', 'width', 'height'],
         },
@@ -122,7 +131,7 @@ const TOOLS = [
                 radius: N('Radius (mm)'),
                 height: N('Height along Z (mm)'),
                 centered: B('Centre in XY (default true)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['radius', 'height'],
         },
@@ -135,7 +144,7 @@ const TOOLS = [
             type: 'object',
             properties: {
                 radius: N('Radius (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['radius'],
         },
@@ -153,7 +162,7 @@ const TOOLS = [
                 amount: N('Extrude distance (mm)'),
                 both: B('Extrude symmetrically both directions'),
                 taper: N('Draft taper angle (degrees)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['sketchFeatureId', 'amount'],
         },
@@ -171,7 +180,7 @@ const TOOLS = [
                 sketchFeatureId: S('Id of the sketch feature to revolve'),
                 angle: N('Revolve angle in degrees (default 360)'),
                 axis: S('Axis to revolve about: X, Y, or Z', { enum: ['X', 'Y', 'Z'] }),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['sketchFeatureId'],
         },
@@ -190,7 +199,7 @@ const TOOLS = [
             properties: {
                 targetFeatureId: S('Id of the body feature to fillet'),
                 radius: N('Fillet radius (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['targetFeatureId', 'radius'],
         },
@@ -205,7 +214,7 @@ const TOOLS = [
                 targetFeatureId: S('Id of the body feature to chamfer'),
                 length: N('Chamfer length (mm)'),
                 length2: N('Optional second length for asymmetric chamfer (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['targetFeatureId', 'length'],
         },
@@ -219,7 +228,7 @@ const TOOLS = [
             properties: {
                 targetFeatureId: S('Id of the body feature to shell'),
                 thickness: N('Wall thickness (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['targetFeatureId', 'thickness'],
         },
@@ -238,7 +247,7 @@ const TOOLS = [
                 type: S('Hole type', { enum: ['simple', 'counterbore', 'countersink'] }),
                 counterDia: N('Counterbore/countersink diameter (mm)'),
                 counterDepth: N('Counterbore depth (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['targetBodyId', 'diameter'],
         },
@@ -257,7 +266,7 @@ const TOOLS = [
             properties: {
                 featureIds: { type: 'array', items: { type: 'string' }, description: 'Ids of the bodies to union (>= 2)' },
                 keepTools: B('Keep the input bodies renderable instead of consuming them'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['featureIds'],
         },
@@ -272,7 +281,7 @@ const TOOLS = [
                 targetId: S('Id of the body to cut from'),
                 toolIds: { type: 'array', items: { type: 'string' }, description: 'Ids of the tool bodies to subtract' },
                 keepTools: B('Keep the tool bodies renderable'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['targetId', 'toolIds'],
         },
@@ -286,7 +295,7 @@ const TOOLS = [
             properties: {
                 featureIds: { type: 'array', items: { type: 'string' }, description: 'Ids of the bodies to intersect (>= 2)' },
                 keepTools: B('Keep the input bodies renderable'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['featureIds'],
         },
@@ -318,7 +327,7 @@ const TOOLS = [
     // ── Gear generator ────────────────────────────────────────────────────────
     {
         name: 'addGear',
-        description: 'Create a parametric spur gear in ONE call: a toothed disk with an optional centre bore and an optional ring of screw holes (bolt circle). Do NOT try to build a gear from primitives + circular-pattern — use this. Size it by exactly one of module, outerDiameter (the overall/tip diameter), or pitchDiameter. For a ring of screw holes around the centre, set boltCount + boltCircleDiameter + boltHoleDiameter (an M3 screw clearance ≈ 3.4mm; tap ≈ 2.5mm). toothFillet rounds the tooth edges ("smooth teeth"). Sits on Z=0, spanning 0..thickness. Dimensions mm. Verify with measure {type:"bbox"} after.',
+        description: 'Create a parametric spur gear in ONE call: a toothed disk with an optional centre bore and an optional ring of screw holes (bolt circle). Do NOT try to build a gear from primitives + circular-pattern — use this. Size it by exactly one of module, outerDiameter (the overall/tip diameter), or pitchDiameter. For a ring of screw holes around the centre, set boltCount + boltCircleDiameter + boltHoleDiameter (an M3 screw clearance ≈ 3.4mm; tap ≈ 2.5mm). toothFillet rounds the tooth edges ("smooth teeth"). Spans Z=0..thickness.',
         input_schema: {
             type: 'object',
             properties: {
@@ -333,7 +342,7 @@ const TOOLS = [
                 boltCircleDiameter: N('Diameter of the circle the screw holes sit on (mm)'),
                 boltHoleDiameter: N('Each screw-hole diameter (mm, default 3 for M3)'),
                 toothFillet: N('Fillet radius for smooth tooth/edge rounding (mm, default 0 = sharp)'),
-                componentId: S('Target component id (default: active / root)'),
+                componentId: COMPONENT_ID,
             },
             required: ['teeth'],
         },
@@ -351,7 +360,7 @@ const TOOLS = [
                 direction: S('Axis: X, Y, or Z', { enum: ['X', 'Y', 'Z'] }),
                 count: N('Number of copies including the original'),
                 spacing: N('Spacing between copies (mm)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['featureId', 'count', 'spacing'],
         },
@@ -368,7 +377,7 @@ const TOOLS = [
                 axis: S('Axis to rotate about: X, Y, or Z', { enum: ['X', 'Y', 'Z'] }),
                 count: N('Number of copies including the original'),
                 angle: N('Total spread angle in degrees (default 360)'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['featureId', 'count'],
         },
@@ -383,7 +392,7 @@ const TOOLS = [
             properties: {
                 featureId: S('Id of the body to mirror'),
                 plane: S('Mirror plane', { enum: ['XY', 'YZ', 'XZ'] }),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['featureId', 'plane'],
         },
@@ -400,7 +409,7 @@ const TOOLS = [
             properties: {
                 entryId: S('Catalog entry id'),
                 name: S('Optional display name'),
-                componentId: S('Target component id'),
+                componentId: COMPONENT_ID,
             },
             required: ['entryId'],
         },
@@ -971,8 +980,8 @@ function _collectTools() {
         CONTEXT_TOOLS, VALIDATION_TOOLS, DFM_TOOLS, ASSEMBLY_TOOLS,
         ASSEMBLY_CHECK_TOOLS, PLANNER_TOOLS,
         VISION_TOOLS, WEB_TOOLS, CODE_TOOLS,
-        MECHANISM_TOOLS, RECIPE_TOOLS, PLAN_TOOLS, PATTERN_TOOLS,
-        GENERATOR_TOOLS,
+        MECHANISM_TOOLS, RECIPE_TOOLS, RECIPE_META_TOOLS, PLAN_TOOLS, PATTERN_TOOLS,
+        GENERATOR_TOOLS, GENERATOR_META_TOOLS,
     ];
     const out = [];
     const seen = new Set();
@@ -1034,6 +1043,10 @@ const _BUILD_GATED = new Set([
     'addBearingPocket', 'addMotorMount', 'addShaftCoupler', 'addWheel', 'addTimingPulley', 'addRackGear',
     'addProjectBox', 'addLid', 'addPCBTray', 'addHinge', 'addKnob', 'addHandle', 'addFoot',
     'addBatteryHolder', 'addDINRailClip', 'addCableClip', 'addGridfinityBin', 'addPiCase',
+    // The generator meta-tool builds ANY of the above by kind, so it must be
+    // gated exactly like a direct generator — otherwise generate_part would be a
+    // hole straight through the clarify→plan→approve gate.
+    'generate_part',
 ]);
 
 // PART/ASSEMBLY-SCALE creation tools — a strict subset of _BUILD_GATED. Reaching
