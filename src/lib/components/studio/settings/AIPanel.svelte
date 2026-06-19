@@ -36,6 +36,7 @@
     'nex-agi/nex-n2-pro:free',
     'qwen/qwen3-coder:free',
     'openai/gpt-oss-120b:free',
+    'deepseek/deepseek-v4-flash',
   ];
   const DEFAULT_OPENAI_MODEL = OPENAI_MODELS[0];
   $effect(() => {

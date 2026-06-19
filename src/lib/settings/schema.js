@@ -272,6 +272,7 @@ const FULL_SETTINGS_SCHEMA = [
           { value: 'nex-agi/nex-n2-pro:free', label: 'nex-agi/nex-n2-pro:free' },
           { value: 'qwen/qwen3-coder:free', label: 'qwen/qwen3-coder:free' },
           { value: 'openai/gpt-oss-120b:free', label: 'openai/gpt-oss-120b:free' },
+          { value: 'deepseek/deepseek-v4-flash', label: 'deepseek/deepseek-v4-flash' },
         ],
       },
       { key: 'openaiApiKey', label: 'OpenRouter API key', kind: 'secret', placeholder: 'sk-or-v1-… (paste from openrouter.ai/keys)' },
