@@ -31,6 +31,7 @@ import { AGENT_TOOLS, dispatchTool, documentSummary, sceneDigest } from './tools
 import { GENERATOR_TOOLS } from './tools_generators.js';
 import { MECHANISM_TOOLS } from './tools_mechanism.js';
 import { WEB_TOOLS } from './tools_web.js';
+import { PLAN_TOOLS } from './tools_plan.js';
 import { SYSTEM_PROMPT } from './system_prompt.js';
 import { streamChat } from './provider.js';
 import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
@@ -93,13 +94,49 @@ const _WEB_CUES = [
     'http://', 'https://', 'url', 'google', 'find the', 'research', 'download',
 ];
 
+// Plan-graph tools are PHASE-gated by STATE, not keywords ("plan" is far too
+// common a word to cue on). The fine-grained plan-authoring ops are needed
+// during the CLARIFY→PLAN phase; once a plan is APPROVED the turn is in the
+// build/steer phase, where the model executes rather than restructures — so they
+// are withheld there (which is also where the expensive multi-iteration loops
+// live, so the ~2.6k-token saving lands on every build iteration). A small core
+// stays on in EVERY phase so build turns can still read the plan, mark progress,
+// link built features, and — crucially — RE-OPEN planning: propose_plan_graph
+// re-proposes the whole graph, which revokes approval and brings the rest of the
+// plan tools back on the next turn. That keeps a "I need to re-plan mid-build"
+// path open without advertising 16 authoring tools every build iteration.
+const _PLAN_NAMES = new Set(PLAN_TOOLS.map((t) => t.name));
+const _PLAN_BUILD_CORE = new Set([
+    'get_plan_graph',     // read the plan (needed every phase)
+    'plan_set_status',    // mark a node started/done during the build
+    'plan_bind',          // link a built feature to its plan node
+    'propose_plan_graph', // re-enter planning (revokes approval → others return)
+]);
+
+// DFM EXPORT tools are end-of-pipeline — the model reaches for them only when
+// finalising/exporting, which carries distinctive cues. Cue-gate just those.
+// check_printability + compute_clearance are deliberately NOT gated: they are
+// design/VERIFICATION tools the model may want proactively, and a verification
+// tool must never be gated away (a miss = shipping unchecked geometry).
+const _DFM_EXPORT_NAMES = new Set([
+    'export_for_print', 'export_parts', 'estimate_print', 'recommend_material',
+]);
+const _DFM_EXPORT_CUES = [
+    'export', 'print', 'stl', '3mf', 'material', 'slice', 'slicer',
+    'manufactur', 'fdm', 'resin', 'gcode', 'g-code', 'fabricat',
+];
+
 /**
  * Pick the tools to advertise this turn. `convText` is the running conversation
  * text (all user/goal messages joined) so a generator named in the request stays
  * offered across the whole turn sequence, not just the turn it was mentioned.
+ * `opts.planApproved` flips the plan tools into build-phase mode (see above) —
+ * it defaults false (planning phase), so callers/tests that omit it get the full
+ * plan surface, preserving prior behaviour.
  */
-export function selectAgentTools(all, convText) {
+export function selectAgentTools(all, convText, opts = {}) {
     const text = String(convText || '').toLowerCase();
+    const planApproved = !!(opts && opts.planApproved);
     return all.filter((tool) => {
         if (_GENERATOR_NAMES.has(tool.name)) {
             // Direct generators are offered only when named; otherwise the model
@@ -111,6 +148,12 @@ export function selectAgentTools(all, convText) {
         }
         if (_WEB_NAMES.has(tool.name)) {
             return _WEB_CUES.some((w) => text.includes(w));        // only for outside lookups
+        }
+        if (_DFM_EXPORT_NAMES.has(tool.name)) {
+            return _DFM_EXPORT_CUES.some((w) => text.includes(w)); // only when exporting
+        }
+        if (_PLAN_NAMES.has(tool.name) && !_PLAN_BUILD_CORE.has(tool.name)) {
+            return !planApproved;   // authoring ops: planning phase only
         }
         return true;                                             // everything else → always on
     });
@@ -476,7 +519,17 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     // tools + generators the conversation actually names). Derived from the full
     // user-message text so a part named earlier stays available across the turn.
     const convText = messages.filter((m) => m && m.role === 'user').map((m) => m.text || '').join(' ');
-    const tools = provider.toolsForProvider(selectAgentTools(AGENT_TOOLS, convText));
+    // Build phase = a real (multi-node) plan that has been APPROVED. In that
+    // phase the fine-grained plan-authoring tools are withheld (see
+    // selectAgentTools). Best-effort: a missing/throwing plan singleton → treat
+    // as planning phase (full plan surface), never breaks the turn.
+    let planApproved = false;
+    try {
+        const pg = getPlanGraph();
+        planApproved = !!(pg && typeof pg.isApproved === 'function' && pg.isApproved()
+            && typeof pg.allNodes === 'function' && pg.allNodes().length > 1);
+    } catch { /* no plan singleton → planning phase */ }
+    const tools = provider.toolsForProvider(selectAgentTools(AGENT_TOOLS, convText, { planApproved }));
 
     // Track turn-level activity so we can synthesize a completion message when
     // the model ends a turn silently (tool chips but no final prose — observed

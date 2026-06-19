@@ -236,6 +236,40 @@ await t('Tier3: web tools are cue-gated', () => {
     assert.ok(withCue.has('web_search'), 'web_search advertised when research is implied');
 });
 
+// ── Tier 3b — phase-gating (state-based plan gate · DFM export cue-gate) ───────
+
+await t('Tier3b: plan authoring tools are advertised during PLANNING (no/unapproved plan)', () => {
+    // planApproved defaults false → planning phase → full plan surface
+    const planning = new Set(selectAgentTools(AGENT_TOOLS, 'design a robot arm').map((x) => x.name));
+    for (const n of ['propose_plan_graph', 'plan_add_node', 'plan_split_node', 'plan_edit_spec', 'plan_commit']) {
+        assert.ok(planning.has(n), `planning phase should advertise ${n}`);
+    }
+});
+
+await t('Tier3b: plan AUTHORING tools are withheld once a plan is APPROVED (build phase)', () => {
+    const building = new Set(selectAgentTools(AGENT_TOOLS, 'design a robot arm', { planApproved: true }).map((x) => x.name));
+    // fine-grained authoring ops are hidden during the build phase (~2.6k tok saved)
+    for (const n of ['plan_add_node', 'plan_split_node', 'plan_edit_spec', 'plan_commit', 'plan_checkout', 'plan_diff']) {
+        assert.ok(!building.has(n), `build phase should withhold ${n}`);
+    }
+    // the build-core stays on in EVERY phase (read · progress · link · re-open)
+    for (const n of ['get_plan_graph', 'plan_set_status', 'plan_bind', 'propose_plan_graph']) {
+        assert.ok(building.has(n), `build-phase core must keep ${n}`);
+    }
+    assert.ok(building.has('addBox'), 'core primitive unaffected by plan gating');
+});
+
+await t('Tier3b: DFM export tools are cue-gated; verification DFM tools stay on', () => {
+    const noExport = new Set(selectAgentTools(AGENT_TOOLS, 'make a phone stand').map((x) => x.name));
+    assert.ok(!noExport.has('export_for_print'), 'export tool withheld with no export cue');
+    assert.ok(!noExport.has('estimate_print'), 'estimate tool withheld with no export cue');
+    // verification/design DFM tools are NEVER gated (a miss = unchecked geometry)
+    assert.ok(noExport.has('check_printability'), 'check_printability always advertised');
+    assert.ok(noExport.has('compute_clearance'), 'compute_clearance always advertised');
+    const withExport = new Set(selectAgentTools(AGENT_TOOLS, 'export this as STL for 3D printing').map((x) => x.name));
+    assert.ok(withExport.has('export_for_print'), 'export tool advertised when exporting');
+});
+
 console.log(`\n${_pass} passed, ${_fail} failed`);
 if (typeof process !== 'undefined' && process.exitCode === undefined && _fail > 0) process.exitCode = 1;
 export const ok = _fail === 0;
