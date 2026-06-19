@@ -42,6 +42,8 @@ import { runVisionCritique, visionCriticActive } from './vision_critic.js';
 import { getPlanGraph } from './plan/graph.js';
 import { seedPlanGraph } from './plan/decompose.js';
 import { syncPlanGraphToDoc } from './plan/sync.js';
+import { compactHistory, estimateTokens } from './context_window.js';
+import { makeOscillationGuard } from './loop_brakes.js';
 
 // ── Per-turn tool triage ─────────────────────────────────────────────────────
 // The full surface is large and grows with every new capability. Advertising all
@@ -211,6 +213,17 @@ export const MAX_ITERATIONS = 500;
 // How many times the loop will auto-feed the SAME compile error back for repair
 // before giving up and asking the user. Prevents thrashing on an unfixable build.
 const MAX_REPAIRS_PER_ERROR = 2;
+
+// ── Cost / convergence brakes ────────────────────────────────────────────────
+// On un-caching providers every iteration re-bills the whole (compacted) prompt,
+// so an unbounded loop is an unbounded bill. MAX_ITERATIONS is the blunt ceiling;
+// these are the smarter, tighter brakes that actually fire on the failure mode we
+// saw (a model hand-nudging one part's coordinates dozens of times):
+//   - a per-turn TOKEN budget (estimated) — a true-runaway tripwire, and
+//   - an ANTI-OSCILLATION guard on repeated edits to the SAME target: soft nudge,
+//     then hard-block further edits to that one target so the model is forced to
+//     either position deterministically (connectors + mate_parts) or move on.
+const MAX_TURN_TOKENS = 1_200_000;
 
 // Auto / focus mode: when on, the agent doesn't accept the model's first "I'm
 // done" — it nudges it to keep working until the whole request is genuinely
@@ -552,6 +565,7 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             && typeof pg.allNodes === 'function' && pg.allNodes().length > 1);
     } catch { /* no plan singleton → planning phase */ }
     const tools = provider.toolsForProvider(selectAgentTools(AGENT_TOOLS, convText, { planApproved }));
+    const toolsTokens = estimateTokens(tools);   // ~constant across the turn (built once)
 
     // Track turn-level activity so we can synthesize a completion message when
     // the model ends a turn silently (tool chips but no final prose — observed
@@ -569,6 +583,8 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     let visualGateNudges = 0;           // bound the "look before you finish" gate per turn
     let escalated = false;              // a hard step escalated us to the stronger model this turn
     let weakDriverWarned = false;       // emitted the weak-model advisory once this turn
+    let spentTokens = 0;                // estimated input tokens billed across this turn
+    const oscillationGuard = makeOscillationGuard();  // brakes the re-edit-one-part spiral
 
     // Send a set of renders to the vision critic (Gemma) and inject its TEXT
     // verdict as the next builder turn. Returns true if a critique was injected.
@@ -602,6 +618,12 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 return { history: messages };
             }
 
+            // One iteration == exactly one round-trip to the model below
+            // (`streamChat`). Surface the running count so the UI can show an
+            // accurate "N LLM calls" for the turn (each auto-nudge / vision
+            // re-prompt that `continue`s back here is a real extra call).
+            emit({ type: 'llm_call', n: iter + 1 });
+
             // Difficulty escalation: once a hard step (self-repair / repeated
             // failure) has tripped, drive the rest of the turn with the stronger
             // model if one is configured. The base model still handles the easy
@@ -617,9 +639,31 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             // ("No endpoints found that support image input"). Send it a
             // stripped history; the full `messages` keeps images for the critic
             // and any vision-capable escalation.
-            const bodyHistory = activeVision ? messages : stripImagesFromHistory(messages);
+            const sendHistory = activeVision ? messages : stripImagesFromHistory(messages);
+            // Compact the OLD tail of the transcript (digest verbose tool results,
+            // elide stale code blobs / renders) so a long build doesn't re-bill a
+            // huge history every call. Non-destructive: `messages` stays full.
+            const bodyHistory = compactHistory(sendHistory);
+            // Kept FRESH each iteration on purpose: the system block carries the
+            // live "Current bodies" digest the model edits against. On un-caching
+            // providers there is no cache to preserve anyway; the cost is tamed by
+            // cutting the CALL COUNT (the oscillation guard + budget below) and the
+            // history (compaction above), not by freezing this.
+            const system = buildSystem(activeVision, criticForBlind);
+
+            // Per-turn token budget — a runaway tripwire. Estimate what THIS call
+            // will be billed and stop cleanly if the turn has blown its budget,
+            // rather than silently grinding through hundreds of calls.
+            spentTokens += estimateTokens(system) + estimateTokens(bodyHistory) + toolsTokens;
+            if (spentTokens > MAX_TURN_TOKENS) {
+                emit({ type: 'text', text:
+                    `I've spent the per-request token budget on this turn (~${Math.round(spentTokens / 1000)}k tokens over ${iter} model calls) without converging — stopping so this doesn't run up an unbounded bill. The build so far is preserved. Tell me a smaller next step (e.g. one part at a time), or raise the budget.` });
+                emit({ type: 'done' });
+                return { history: messages };
+            }
+
             const { body } = provider.buildBody({
-                system: buildSystem(activeVision, criticForBlind),
+                system,
                 history: bodyHistory,
                 tools,
                 model: activeModel,
@@ -712,8 +756,26 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             const capturedImages = [];        // vision frames to feed the model
             let mutatedGeometry = false;     // a geometry op succeeded this iteration
             let repeatedFailureNote = null;   // the model keeps repeating a failing call
+            let oscillationNote = null;       // the model keeps re-editing the SAME target
             for (const tc of result.toolCalls) {
                 emit({ type: 'tool_call', name: tc.name, input: tc.input });
+
+                // ── Anti-oscillation guard ───────────────────────────────────
+                // The "rethink layout … reposition … recompile" spiral re-edits
+                // one part's coordinates over and over. After a soft limit, steer
+                // toward deterministic placement; after a hard limit, BLOCK further
+                // edits to that one target so the model must change strategy
+                // instead of burning calls (and tokens) in circles.
+                const brake = oscillationGuard.check(tc.name, tc.input || {});
+                if (brake.action === 'block') {
+                    const r = { ok: false, error: brake.note };
+                    emit({ type: 'tool_result', name: tc.name, result: r });
+                    toolResults.push({ id: tc.id, name: tc.name, result: r });
+                    turnToolResults.push({ name: tc.name, result: r });
+                    continue; // skip dispatch entirely
+                }
+                if (brake.action === 'nudge' && !oscillationNote) oscillationNote = brake.note;
+
                 let r = await dispatchTool(tc.name, tc.input || {});
 
                 // A vision tool (capture_views) returns image bytes under
@@ -845,6 +907,12 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
                 // The model is stuck repeating a failing call — a hard step.
                 if (escalationModel) escalated = true;
                 messages.push({ role: 'user', text: repeatedFailureNote });
+            }
+            if (oscillationNote) {
+                // Re-editing one target in circles — a hard step worth the stronger
+                // model, and worth steering toward deterministic placement.
+                if (escalationModel) escalated = true;
+                messages.push({ role: 'user', text: oscillationNote });
             }
         }
 
