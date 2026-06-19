@@ -43,3 +43,7 @@ __pycache__/
 # PyInstaller sidecar build artifacts (regenerate: npm run sidecar:build)
 b123d_server/build/
 src-tauri/binaries/
+
+# local cloudflare tunnel (demo) — never commit the binary/log
+cloudflared.exe
+cloudflared.log
