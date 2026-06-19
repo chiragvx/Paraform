@@ -126,6 +126,22 @@ const _DFM_EXPORT_CUES = [
     'manufactur', 'fdm', 'resin', 'gcode', 'g-code', 'fabricat',
 ];
 
+// Assembly tools split by WHEN they're needed (see #4):
+//   - Build-time connector ops (declareConnector / find_compatible_connectors /
+//     list_connectors) stay ALWAYS-ON — they drive mid-build mating and a gating
+//     miss would block assembly; they aren't cleanly cue-separable.
+//   - plan_skeleton_envelope / plan_serviceability are FUNCTIONAL-MACHINE only
+//     (they lay out actuators/electronics and check servo/battery access), so
+//     they ride the SAME mechanism cues as the mechanism tools — a static part
+//     never needs them.
+//   - generate_bom is finalisation/reporting (buy vs fabricate) — cue-gated.
+const _MACHINE_ASSEMBLY_NAMES = new Set(['plan_skeleton_envelope', 'plan_serviceability']);
+const _BOM_NAMES = new Set(['generate_bom']);
+const _BOM_CUES = [
+    'bom', 'bill of material', 'parts list', 'part list', 'buy', 'order',
+    'purchase', 'procure', 'shopping', 'what to buy', 'cost',
+];
+
 /**
  * Pick the tools to advertise this turn. `convText` is the running conversation
  * text (all user/goal messages joined) so a generator named in the request stays
@@ -151,6 +167,12 @@ export function selectAgentTools(all, convText, opts = {}) {
         }
         if (_DFM_EXPORT_NAMES.has(tool.name)) {
             return _DFM_EXPORT_CUES.some((w) => text.includes(w)); // only when exporting
+        }
+        if (_MACHINE_ASSEMBLY_NAMES.has(tool.name)) {
+            return _MECHANISM_CUES.some((w) => text.includes(w));  // machine-only (skeleton/serviceability)
+        }
+        if (_BOM_NAMES.has(tool.name)) {
+            return _BOM_CUES.some((w) => text.includes(w));        // finalisation/reporting
         }
         if (_PLAN_NAMES.has(tool.name) && !_PLAN_BUILD_CORE.has(tool.name)) {
             return !planApproved;   // authoring ops: planning phase only

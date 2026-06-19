@@ -270,6 +270,33 @@ await t('Tier3b: DFM export tools are cue-gated; verification DFM tools stay on'
     assert.ok(withExport.has('export_for_print'), 'export tool advertised when exporting');
 });
 
+// ── Tier 3c — assembly tools split by when they're needed (#4) ─────────────────
+
+await t('Tier3c: build-time connector ops are always advertised', () => {
+    // declareConnector / find_compatible_connectors / list_connectors drive
+    // mid-build mating — a gating miss would block assembly, so they stay on.
+    const stat = new Set(selectAgentTools(AGENT_TOOLS, 'make a two-part enclosure').map((x) => x.name));
+    for (const n of ['declareConnector', 'find_compatible_connectors', 'list_connectors']) {
+        assert.ok(stat.has(n), `connector op ${n} should always be advertised`);
+    }
+});
+
+await t('Tier3c: machine-only assembly tools are mechanism-cue-gated', () => {
+    const stat = new Set(selectAgentTools(AGENT_TOOLS, 'make a desk phone stand').map((x) => x.name));
+    assert.ok(!stat.has('plan_skeleton_envelope'), 'skeleton withheld on a static part');
+    assert.ok(!stat.has('plan_serviceability'), 'serviceability withheld on a static part');
+    const machine = new Set(selectAgentTools(AGENT_TOOLS, 'design a servo-driven robot arm').map((x) => x.name));
+    assert.ok(machine.has('plan_skeleton_envelope'), 'skeleton advertised for a machine');
+    assert.ok(machine.has('plan_serviceability'), 'serviceability advertised for a machine');
+});
+
+await t('Tier3c: generate_bom is cue-gated (finalisation/reporting)', () => {
+    const noBom = new Set(selectAgentTools(AGENT_TOOLS, 'fillet the top edge 2mm').map((x) => x.name));
+    assert.ok(!noBom.has('generate_bom'), 'BOM withheld with no finalisation cue');
+    const withBom = new Set(selectAgentTools(AGENT_TOOLS, 'give me the parts list to buy').map((x) => x.name));
+    assert.ok(withBom.has('generate_bom'), 'BOM advertised when asked what to buy');
+});
+
 console.log(`\n${_pass} passed, ${_fail} failed`);
 if (typeof process !== 'undefined' && process.exitCode === undefined && _fail > 0) process.exitCode = 1;
 export const ok = _fail === 0;
