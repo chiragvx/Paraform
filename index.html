@@ -26,7 +26,7 @@
       // Prefer VITE_ENGINE_URL pointing at a STABLE kernel (HF Space — see
       // b123d_server/DEPLOY_HUGGINGFACE.md).
       //
-      // TEMPORARY (set 2026-06-14): cloudflared quick-tunnel to a LOCAL kernel.
+      // TEMPORARY (refreshed 2026-06-19): cloudflared quick-tunnel to a LOCAL kernel.
       // This URL DIES when the tunnel or the local kernel stops — it is not a
       // permanent host. Swap it for the HF Space URL as soon as that's up. To
       // refresh after a restart: start a new tunnel and replace the URL below.
@@ -37,7 +37,7 @@
       // kernel_client.js would pick up this global BEFORE the desktop default
       // and mis-route the app to a dead/remote tunnel.
       if (!('__TAURI_INTERNALS__' in window)) {
-        window.__PARAFORM_ENGINE_URL__ = 'https://profiles-punch-traveler-petersburg.trycloudflare.com';
+        window.__PARAFORM_ENGINE_URL__ = 'https://defensive-avi-pipes-theory.trycloudflare.com';
       }
     </script>
     <script type="module" src="/src/main.js"></script>
