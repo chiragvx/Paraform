@@ -18,7 +18,9 @@
   import PlanMap from './PlanMap.svelte';
   import ClarifyQuestions from './ClarifyQuestions.svelte';
   import { refreshPlan } from '$lib/ai/plan/plan_store.svelte.js';
-  import { parseAskBlock, stripPartialAsk } from '$lib/ai/clarify.js';
+  import { parseAskBlock } from '$lib/ai/clarify.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
   let input = $state('');
   let health = $state(undefined); // undefined=loading, null=unreachable, obj=known
@@ -57,8 +59,10 @@
   function scrollToEnd() {
     queueMicrotask(() => { if (listEl) listEl.scrollTop = listEl.scrollHeight; });
   }
-  // Re-scroll whenever the transcript grows or a stream tick lands.
-  $effect(() => { void chat.items.length; void chat.running; scrollToEnd(); });
+  // Re-scroll whenever the transcript grows, a stream tick lands, or another
+  // LLM round folds more steps into the activity accordion (which doesn't grow
+  // items.length, so track the call count too).
+  $effect(() => { void chat.items.length; void chat.running; void chat.llmCalls; scrollToEnd(); });
   // Refresh the plan-map after each turn (the AI may have edited the plan-graph).
   // refreshPlan WRITES planState; call it untracked so this effect depends only
   // on the chat signals above, never on what refreshPlan touches (no feedback loop).
@@ -143,6 +147,28 @@
     try { const s = JSON.stringify(obj); return s.length > 120 ? s.slice(0, 120) + '…' : s; }
     catch { return ''; }
   }
+
+  // ── Tool-activity accordion ───────────────────────────────────────────────
+  // Open state is per-group, keyed by the item itself. Default: open while the
+  // turn is still running (live progress), auto-collapsed once it finishes —
+  // unless the user has explicitly toggled it.
+  let openState = $state(new Map());
+  function isOpen(item) { return openState.has(item) ? openState.get(item) : !!item.running; }
+  function toggleOpen(item) {
+    const next = !isOpen(item);
+    openState.set(item, next);
+    openState = new Map(openState);
+  }
+  function namesPreview(calls) {
+    const names = [...new Set((calls || []).map((c) => c.name))];
+    const shown = names.slice(0, 3).join(', ');
+    return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
+  }
+  function runningLabel(item) {
+    const calls = item.calls || [];
+    for (let i = calls.length - 1; i >= 0; i--) if (calls[i].pending) return `${calls[i].name}…`;
+    return calls.length ? `${calls[calls.length - 1].name}…` : 'working…';
+  }
 </script>
 
 <aside class="flex w-96 shrink-0 flex-col overflow-hidden border-l border-border bg-card">
@@ -219,28 +245,68 @@
                 {/each}
               </div>
             {/if}
-            {#if item.text}<div class="whitespace-pre-wrap">{item.text}</div>{/if}
+            {#if item.text}<div class="whitespace-pre-wrap break-words">{item.text}</div>{/if}
           </div>
         {:else if item.role === 'assistant'}
-          {@const ask = item.streaming ? null : parseAskBlock(item.text)}
-          <div class="mr-6 rounded-md bg-secondary/40 px-3 py-2 text-sm {item.error ? 'text-destructive' : 'text-foreground'}">
-            {#if ask}
-              {#if ask.before}<div class="whitespace-pre-wrap">{ask.before}</div>{/if}
-              <ClarifyQuestions questions={ask.questions} disabled={chat.running} onSubmit={(text) => submitChat({ text, attachments: [] })} />
-              {#if ask.after}<div class="mt-2 whitespace-pre-wrap">{ask.after}</div>{/if}
-            {:else}
-              <span class="whitespace-pre-wrap">{item.streaming ? stripPartialAsk(item.text) : item.text}</span>{#if item.streaming}<span class="opacity-50">▋</span>{/if}
+          <!-- Buffer: don't paint partial text (half-formed markdown / ask blocks
+               reflow the panel). While streaming, the running indicator below the
+               transcript stands in; the message renders here once, fully, on done. -->
+          {#if !item.streaming}
+            {@const ask = parseAskBlock(item.text)}
+            <div class="mr-6 overflow-hidden rounded-md bg-secondary/40 px-3 py-2 text-sm {item.error ? 'text-destructive' : 'text-foreground'}">
+              {#if ask}
+                {#if ask.before}<div class="whitespace-pre-wrap break-words">{ask.before}</div>{/if}
+                <ClarifyQuestions questions={ask.questions} disabled={chat.running} onSubmit={(text) => submitChat({ text, attachments: [] })} />
+                {#if ask.after}<div class="mt-2 whitespace-pre-wrap break-words">{ask.after}</div>{/if}
+              {:else}
+                <div class="whitespace-pre-wrap break-words">{item.text}</div>
+              {/if}
+            </div>
+          {/if}
+        {:else if item.role === 'activity'}
+          <!-- Collapsible accordion folding the turn's tool calls + LLM-call count. -->
+          <div class="ml-3 overflow-hidden rounded-md border border-border bg-background/40 text-xs">
+            <button
+              class="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-muted-foreground hover:bg-accent/50"
+              onclick={() => toggleOpen(item)}
+              aria-expanded={isOpen(item)}
+            >
+              {#if isOpen(item)}<ChevronDown class="h-3.5 w-3.5 shrink-0" />{:else}<ChevronRight class="h-3.5 w-3.5 shrink-0" />{/if}
+              <span class="font-medium text-foreground">{item.calls.length} step{item.calls.length === 1 ? '' : 's'}</span>
+              {#if item.llmCalls}<span class="opacity-70">· {item.llmCalls} LLM call{item.llmCalls === 1 ? '' : 's'}</span>{/if}
+              {#if item.running}
+                <span class="ml-auto flex min-w-0 items-center gap-1.5 text-primary">
+                  <span class="h-1.5 w-1.5 shrink-0 animate-ping rounded-full bg-current"></span>
+                  <span class="truncate">{runningLabel(item)}</span>
+                </span>
+              {:else}
+                <span class="ml-auto truncate pl-2 opacity-60">{namesPreview(item.calls)}</span>
+              {/if}
+            </button>
+            {#if isOpen(item)}
+              <div class="space-y-1 border-t border-border/60 px-2 py-1.5">
+                {#each item.calls as c}
+                  <div class="flex items-start gap-1.5">
+                    <span class="mt-px shrink-0 {c.pending ? 'text-muted-foreground/60' : (c.ok ? 'text-emerald-500' : 'text-destructive')}">{c.pending ? '⋯' : (c.ok ? '✓' : '✗')}</span>
+                    <div class="min-w-0 flex-1">
+                      <div><span class="font-medium text-foreground">{c.name}</span> <span class="break-words opacity-60">{compactInput(c.input)}</span></div>
+                      {#if !c.pending}<div class="break-words opacity-70">{summarizeResult(c.result)}</div>{/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
             {/if}
           </div>
         {:else if item.role === 'tool' && item.kind === 'call'}
+          <!-- Legacy flat tool chips (sessions saved before the accordion). -->
           <div class="ml-3 rounded border border-border bg-background/60 px-2 py-1 text-xs text-muted-foreground">
             🔧 <span class="font-medium text-foreground">{item.name}</span>
-            <span class="opacity-70">{compactInput(item.input)}</span>
+            <span class="break-words opacity-70">{compactInput(item.input)}</span>
           </div>
         {:else if item.role === 'tool' && item.kind === 'result'}
           <div class="ml-3 rounded border border-border px-2 py-1 text-xs {item.ok ? 'text-muted-foreground' : 'text-destructive'}">
             {item.ok ? '✓' : '✗'} <span class="font-medium">{item.name}</span>
-            <span class="opacity-70">{summarizeResult(item.result)}</span>
+            <span class="break-words opacity-70">{summarizeResult(item.result)}</span>
           </div>
         {/if}
       {:else}
@@ -248,6 +314,19 @@
           Describe what to build. e.g. "Make a 40×40×10 mm plate with an M3 clearance hole in each corner."
         </div>
       {/each}
+
+      <!-- Single running indicator, in the transcript flow after the last message
+           (not in the composer). Carries the live LLM-call + queued counts. -->
+      {#if chat.running}
+        <div class="ml-3 flex items-center gap-2 text-xs text-muted-foreground/70">
+          <span class="flex gap-1">
+            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"></span>
+            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"></span>
+            <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-current"></span>
+          </span>
+          <span>{chat.pendingCount ? `${chat.pendingCount} queued · ` : ''}working…{chat.llmCalls ? ` · ${chat.llmCalls} LLM call${chat.llmCalls === 1 ? '' : 's'}` : ''}</span>
+        </div>
+      {/if}
     </div>
 
     <!-- Composer -->
@@ -290,9 +369,6 @@
           title="Auto mode: keep working until the whole request is complete instead of stopping early"
           aria-pressed={chat.autoMode}
         >{chat.autoMode ? '⚡ Auto' : 'Auto'}</button>
-        {#if chat.running}
-          <span class="text-xs text-muted-foreground/70">{chat.pendingCount ? `${chat.pendingCount} queued · ` : ''}working…</span>
-        {/if}
         <div class="ml-auto flex gap-2">
           {#if chat.running}
             <button

@@ -52,6 +52,7 @@ export const chat = $state({
     running: false,
     pendingCount: 0,
     autoMode: false,  // focus/auto mode: keep going until the goal is complete
+    llmCalls: 0,      // model round-trips in the IN-FLIGHT turn (live; reset per job)
 });
 
 /** Toggle auto/focus mode (persisted). */
@@ -64,6 +65,7 @@ let reSteering = false;
 let _pending = [];      // [{ text, images }]
 let _saveTimer = null;
 let _hydrated = false;
+let _activity = null;   // current turn's tool-activity group item (the accordion)
 
 function uid() {
     return 'chat_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 1e6).toString(36);
@@ -115,6 +117,8 @@ function serialize() {
             updatedAt: s.updatedAt || Date.now(),
             items: (s.items || []).map((it) => {
                 if (it && it.images && it.images.length) { const { images, ...rest } = it; return rest; }
+                // A persisted turn is finished — never restore a spinning accordion.
+                if (it && it.role === 'activity' && it.running) return { ...it, running: false };
                 return it;
             }),
             history: (s.history || []).map((h) => {
@@ -329,22 +333,86 @@ function finalizeAssistant() {
     }
 }
 
+// ── Tool-activity group (the collapsible accordion) ───────────────────────────
+// Every tool call in a turn is folded into ONE `activity` item so the transcript
+// stays a clean call→answer rhythm instead of a wall of tool chips. The group is
+// created lazily on the first tool call and also carries the turn's LLM-call
+// count, so a turn with no tools (a plain text answer) shows no accordion at all.
+
+function ensureActivity() {
+    if (_activity && chat.items.includes(_activity)) return _activity;
+    const a = { role: 'activity', calls: [], llmCalls: chat.llmCalls, running: true };
+    chat.items = [...chat.items, a];
+    // Re-point at the reactive proxy now living in the array.
+    _activity = chat.items[chat.items.length - 1];
+    return _activity;
+}
+
+function activityAddCall(name, input) {
+    const a = ensureActivity();
+    a.calls.push({ name, input, result: undefined, ok: undefined, pending: true });
+    a.llmCalls = chat.llmCalls;
+    chat.items = [...chat.items];
+    markDirty();
+}
+
+function activityResolveCall(name, result) {
+    const a = _activity;
+    if (!a || !Array.isArray(a.calls)) return;
+    // Pair with the most recent still-pending call of this name (tools run
+    // sequentially in the loop, so call→result are adjacent).
+    for (let i = a.calls.length - 1; i >= 0; i--) {
+        const c = a.calls[i];
+        if (c && c.pending && c.name === name) {
+            c.result = result;
+            c.ok = !(result && result.ok === false);
+            c.pending = false;
+            break;
+        }
+    }
+    chat.items = [...chat.items];
+    markDirty();
+}
+
+function finalizeActivity() {
+    if (_activity && chat.items.includes(_activity)) {
+        _activity.running = false;
+        _activity.llmCalls = chat.llmCalls;
+        // Drop a group that never recorded a call (defensive; shouldn't happen).
+        if (!_activity.calls || _activity.calls.length === 0) {
+            chat.items = chat.items.filter((it) => it !== _activity);
+        } else {
+            chat.items = [...chat.items];
+        }
+        markDirty();
+    }
+    _activity = null;
+}
+
 const onEvent = (ev) => {
     switch (ev.type) {
+        case 'llm_call':
+            chat.llmCalls = ev.n || (chat.llmCalls + 1);
+            if (_activity && chat.items.includes(_activity)) {
+                _activity.llmCalls = chat.llmCalls;
+                chat.items = [...chat.items];
+            }
+            break;
         case 'text': appendAssistantText(ev.text); break;
         case 'tool_call':
             finalizeAssistant();
-            pushItem({ role: 'tool', kind: 'call', name: ev.name, input: ev.input });
+            activityAddCall(ev.name, ev.input);
             break;
         case 'tool_result':
-            pushItem({ role: 'tool', kind: 'result', name: ev.name, ok: !(ev.result && ev.result.ok === false), result: ev.result });
+            activityResolveCall(ev.name, ev.result);
             break;
         case 'error':
+            finalizeActivity();
             finalizeAssistant();
             if (ev.error === 'cancelled' && (reSteering || _pending.length)) break;
             pushItem({ role: 'assistant', error: true, text: ev.error });
             break;
-        case 'done': finalizeAssistant(); break;
+        case 'done': finalizeActivity(); finalizeAssistant(); break;
         // 'usage' — ignored.
     }
 };
@@ -379,6 +447,10 @@ async function drain() {
             chat.running = true;
             reSteering = false;
             controller = new AbortController();
+            // Fresh per-response counters: each runAgentTurn is one set of model
+            // round-trips folded into one tool-activity accordion.
+            chat.llmCalls = 0;
+            _activity = null;
             try {
                 if (job.images && job.images.length) setAttachedImages(job.images);
                 const res = await runAgentTurn({ userMessage: job.text, images: job.images, history: chat.history, onEvent, signal: controller.signal, autoMode: chat.autoMode });
@@ -388,6 +460,7 @@ async function drain() {
             } catch (e) {
                 if (!(reSteering || _pending.length)) pushItem({ role: 'assistant', error: true, text: (e && e.message) || String(e) });
             } finally {
+                finalizeActivity();
                 finalizeAssistant();
                 controller = null;
             }

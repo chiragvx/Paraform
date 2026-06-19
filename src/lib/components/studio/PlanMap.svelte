@@ -68,13 +68,16 @@
       </div>
     </div>
 
-    <!-- Approval gate: clarify → plan → APPROVE → build -->
-    <div class="mx-2 mb-2 flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-[11px] {planState.approved ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/50 text-amber-300'}">
+    <!-- Approval gate: clarify → plan → APPROVE → build.
+         The label TRUNCATES to one line; the pending count + button never shrink,
+         so the banner stays a single tidy row no matter how long the copy gets. -->
+    <div class="mx-2 mb-2 flex items-center gap-2 rounded border px-2 py-1.5 text-[11px] {planState.approved ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/50 text-amber-300'}">
       {#if planState.approved}
-        <span class="font-medium">✓ Plan approved — the AI may build{#if pendingCount} ({pendingCount} part{pendingCount === 1 ? '' : 's'} pending){/if}</span>
+        <span class="min-w-0 flex-1 truncate font-medium">✓ Plan approved — the AI may build</span>
+        {#if pendingCount}<span class="shrink-0 text-emerald-300/80">{pendingCount} pending</span>{/if}
         <button class="shrink-0 rounded border border-border px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground" onclick={onApprove} title="Re-approve the current plan as a new revert point">Re-approve</button>
       {:else}
-        <span class="font-medium">Awaiting your approval — review the parts below</span>
+        <span class="min-w-0 flex-1 truncate font-medium">Awaiting your approval — review the parts below</span>
         <button class="shrink-0 rounded bg-emerald-600 px-2 py-0.5 font-medium text-white hover:bg-emerald-500" onclick={onApprove} title="Approve this plan so the AI can start building">Approve plan ✓</button>
       {/if}
     </div>
