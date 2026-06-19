@@ -805,8 +805,9 @@ export function timelineSummary() {
 }
 
 /**
- * A compact, SYNCHRONOUS spatial digest of the current bodies, injected into
- * the system prompt each turn (see agent.js buildSystem). It tells the model
+ * A compact, SYNCHRONOUS spatial digest of the current bodies, injected each
+ * turn as the live-context tail message (see agent.js buildLiveContext — kept
+ * OUT of the system prompt so the cacheable prefix stays stable). It tells the model
  * what exists and roughly WHERE in world space — so before it sketches a boss
  * or a pocket it knows "box_1's top face is at Z=20" instead of dropping the
  * profile at the origin. Extents are derived from feature params (primitives

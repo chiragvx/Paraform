@@ -223,7 +223,17 @@ const MAX_REPAIRS_PER_ERROR = 2;
 //   - an ANTI-OSCILLATION guard on repeated edits to the SAME target: soft nudge,
 //     then hard-block further edits to that one target so the model is forced to
 //     either position deterministically (connectors + mate_parts) or move on.
-const MAX_TURN_TOKENS = 1_200_000;
+// Budget is an estimate of BILLED tokens, not sent tokens. With a byte-stable
+// prefix a caching provider (DeepSeek/OpenAI/Anthropic/Gemini) only charges full
+// price for what is NEW each call (the history growth + the live-context tail);
+// the cached prefix is ~free. So this counts deltas, and is a generous runaway
+// backstop — the oscillation guard + MAX_ITERATIONS are the tighter brakes.
+const MAX_TURN_TOKENS = 600_000;
+// Only compact the sent history once it grows large enough to threaten the
+// context window. Below this we send it APPEND-ONLY so the cacheable prefix stays
+// byte-stable; compaction rewrites aging turns (cache churn) and is worth it only
+// to avoid overflowing the request on a very long build.
+const COMPACT_WATERMARK = 50_000;
 
 // Auto / focus mode: when on, the agent doesn't accept the model's first "I'm
 // done" — it nudges it to keep working until the whole request is genuinely
@@ -271,8 +281,39 @@ function selectionSummary() {
     } catch { return ''; }
 }
 
-/** Build the system prompt for this turn = base + design context + selection. */
-function buildSystem(visionCapable = true, criticAvailable = false) {
+/**
+ * Build the STABLE system prompt for this turn = doctrine + the vision-mode
+ * override. Deliberately carries NOTHING that changes between iterations (no
+ * scene digest, no selection, no design-context block) — those move to
+ * buildLiveContext() and ride as the last message instead. Keeping system[0]
+ * byte-identical across a turn's iterations is what lets a prefix-caching
+ * provider (DeepSeek, OpenAI, Anthropic, Gemini) cache system + tools + the whole
+ * history, so each call only pays full price for the newest exchange instead of
+ * re-billing the entire growing transcript. The only thing that varies it is the
+ * vision/critic flag pair, and only on escalation.
+ */
+export function buildSystem(visionCapable = true, criticAvailable = false) {
+    // Vision guidance depends on what the active model can do:
+    //  - can see            → keep SYSTEM_PROMPT's "look now" mandate (no override)
+    //  - blind + has critic → DO capture_views: a vision reviewer looks for it
+    //  - blind, no critic   → don't waste a step capturing; verify numerically
+    let noVision = '';
+    if (!visionCapable && criticAvailable) {
+        noVision = '# Vision: you cannot see images yourself, BUT a vision reviewer can. After you build or change geometry, CALL capture_views — a separate vision model will inspect the renders (front/right/top/iso) and report concrete problems (a bare box that should be a shaped part, missing holes/pockets/fillets, parts clipping, wrong proportions/orientation) back to you as text. Treat that feedback as authoritative for APPEARANCE, fix what it flags, and ALSO verify dimensions/fit NUMERICALLY (measure, mass_properties, run_invariants, self_critique).';
+    } else if (!visionCapable) {
+        noVision = '# Heads-up: the CURRENT model cannot SEE images. Do NOT call capture_views to "look" or verify appearance — it cannot help you and the render can\'t be shown to you. Verify everything NUMERICALLY instead: measure (bbox / interference / manifold / centroid / distance / normal), mass_properties, run_invariants, self_critique, and check_assembly_constraints for assemblies. Reason about orientation and placement from those numbers and the "Current bodies" digest.';
+    }
+    return [SYSTEM_PROMPT, noVision].filter(Boolean).join('\n\n');
+}
+
+/**
+ * The LIVE, per-iteration context that the stable system prompt intentionally
+ * excludes: the design-context memory block, the "Current bodies" scene digest,
+ * and the viewport selection. Returned as a string to ride as an EPHEMERAL last
+ * message (never persisted to history) so the model always sees fresh state
+ * WITHOUT mutating the cacheable prefix.
+ */
+function buildLiveContext() {
     let block = '';
     try {
         const ctx = getAIContext();
@@ -289,17 +330,7 @@ function buildSystem(visionCapable = true, criticAvailable = false) {
     let scene = '';
     try { scene = sceneDigest() || ''; } catch { scene = ''; }
     const sel = selectionSummary();
-    // Vision guidance depends on what the active model can do:
-    //  - can see            → keep SYSTEM_PROMPT's "look now" mandate (no override)
-    //  - blind + has critic → DO capture_views: a vision reviewer looks for it
-    //  - blind, no critic   → don't waste a step capturing; verify numerically
-    let noVision = '';
-    if (!visionCapable && criticAvailable) {
-        noVision = '# Vision: you cannot see images yourself, BUT a vision reviewer can. After you build or change geometry, CALL capture_views — a separate vision model will inspect the renders (front/right/top/iso) and report concrete problems (a bare box that should be a shaped part, missing holes/pockets/fillets, parts clipping, wrong proportions/orientation) back to you as text. Treat that feedback as authoritative for APPEARANCE, fix what it flags, and ALSO verify dimensions/fit NUMERICALLY (measure, mass_properties, run_invariants, self_critique).';
-    } else if (!visionCapable) {
-        noVision = '# Heads-up: the CURRENT model cannot SEE images. Do NOT call capture_views to "look" or verify appearance — it cannot help you and the render can\'t be shown to you. Verify everything NUMERICALLY instead: measure (bbox / interference / manifold / centroid / distance / normal), mass_properties, run_invariants, self_critique, and check_assembly_constraints for assemblies. Reason about orientation and placement from those numbers and the "Current bodies" digest.';
-    }
-    return [SYSTEM_PROMPT, block, scene, sel, noVision].filter(Boolean).join('\n\n');
+    return [block, scene, sel].filter(Boolean).join('\n\n');
 }
 
 /** Normalise a kernel error so repeated attempts on the SAME failure dedupe. */
@@ -583,7 +614,8 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     let visualGateNudges = 0;           // bound the "look before you finish" gate per turn
     let escalated = false;              // a hard step escalated us to the stronger model this turn
     let weakDriverWarned = false;       // emitted the weak-model advisory once this turn
-    let spentTokens = 0;                // estimated input tokens billed across this turn
+    let spentTokens = 0;                // estimated BILLED tokens across this turn (deltas)
+    let prevHistoryTokens = 0;          // last iteration's sent-history size, to bill only growth
     const oscillationGuard = makeOscillationGuard();  // brakes the re-edit-one-part spiral
 
     // Send a set of renders to the vision critic (Gemma) and inject its TEXT
@@ -640,24 +672,31 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
             // stripped history; the full `messages` keeps images for the critic
             // and any vision-capable escalation.
             const sendHistory = activeVision ? messages : stripImagesFromHistory(messages);
-            // Compact the OLD tail of the transcript (digest verbose tool results,
-            // elide stale code blobs / renders) so a long build doesn't re-bill a
-            // huge history every call. Non-destructive: `messages` stays full.
-            const bodyHistory = compactHistory(sendHistory);
-            // Kept FRESH each iteration on purpose: the system block carries the
-            // live "Current bodies" digest the model edits against. On un-caching
-            // providers there is no cache to preserve anyway; the cost is tamed by
-            // cutting the CALL COUNT (the oscillation guard + budget below) and the
-            // history (compaction above), not by freezing this.
+            // STABLE prefix = the whole point. system[0] carries only the doctrine
+            // (byte-identical across the turn) and the sent history stays APPEND-
+            // ONLY, so a prefix-caching provider caches system + tools + history and
+            // bills only the newest exchange. Compaction (which rewrites aging turns)
+            // is held back until the transcript threatens the context window.
             const system = buildSystem(activeVision, criticForBlind);
+            const sentTokens = estimateTokens(sendHistory);
+            const baseHistory = sentTokens > COMPACT_WATERMARK ? compactHistory(sendHistory) : sendHistory;
+            // Live state (scene digest, selection, design-context) rides as an
+            // EPHEMERAL last message — never persisted to `messages` — so the model
+            // always sees current state WITHOUT mutating the cacheable prefix.
+            const live = buildLiveContext();
+            const bodyHistory = live ? [...baseHistory, { role: 'user', text: live }] : baseHistory;
 
-            // Per-turn token budget — a runaway tripwire. Estimate what THIS call
-            // will be billed and stop cleanly if the turn has blown its budget,
-            // rather than silently grinding through hundreds of calls.
-            spentTokens += estimateTokens(system) + estimateTokens(bodyHistory) + toolsTokens;
+            // Budget tripwire — counts only what a caching provider actually bills:
+            // the history GROWTH since last call + the fresh live tail, plus the
+            // system + tools once (cached thereafter). Stops cleanly with the build
+            // preserved rather than grinding through hundreds of calls.
+            const baseTokens = baseHistory === sendHistory ? sentTokens : estimateTokens(baseHistory);
+            spentTokens += Math.max(0, baseTokens - prevHistoryTokens) + estimateTokens(live)
+                + (iter === 0 ? estimateTokens(system) + toolsTokens : 0);
+            prevHistoryTokens = baseTokens;
             if (spentTokens > MAX_TURN_TOKENS) {
                 emit({ type: 'text', text:
-                    `I've spent the per-request token budget on this turn (~${Math.round(spentTokens / 1000)}k tokens over ${iter} model calls) without converging — stopping so this doesn't run up an unbounded bill. The build so far is preserved. Tell me a smaller next step (e.g. one part at a time), or raise the budget.` });
+                    `I've spent the per-turn token budget on this build (~${Math.round(spentTokens / 1000)}k new tokens over ${iter} model calls) without converging — stopping so this doesn't run up an unbounded bill. The build so far is preserved. Tell me a smaller next step (e.g. one part at a time), or raise the budget.` });
                 emit({ type: 'done' });
                 return { history: messages };
             }

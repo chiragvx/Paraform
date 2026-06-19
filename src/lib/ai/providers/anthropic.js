@@ -91,10 +91,19 @@ function buildBody({ system, history = [], tools, model, maxTokens, stream }) {
     // rolling breakpoint suffices; combined with the tools breakpoint that is 2
     // of the allowed 4. Only array-content messages carry blocks — a plain text
     // turn (string content) has nowhere to hang the marker, so we skip it.
-    const last = messages[messages.length - 1];
-    if (last && Array.isArray(last.content) && last.content.length) {
-        const i = last.content.length - 1;
-        last.content[i] = { ...last.content[i], cache_control: EPHEMERAL };
+    // Place the rolling breakpoint on the last ARRAY-content message (tool
+    // results / image turns carry blocks). The agent loop may append a trailing
+    // plain-text "live context" turn whose content is a bare string — it has
+    // nowhere to hang the marker AND it changes every call, so caching it would
+    // waste the breakpoint. Scan back past such turns so the breakpoint still
+    // advances over the growing tool-result history.
+    for (let m = messages.length - 1; m >= 0; m--) {
+        const msg = messages[m];
+        if (msg && Array.isArray(msg.content) && msg.content.length) {
+            const i = msg.content.length - 1;
+            msg.content[i] = { ...msg.content[i], cache_control: EPHEMERAL };
+            break;
+        }
     }
     const body = {
         provider: 'anthropic',
