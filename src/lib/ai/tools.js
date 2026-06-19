@@ -33,6 +33,7 @@ import {
     getDocumentStore,
 } from '../../../lib/document/index.js';
 import { placeLibraryPart, mateConnectors } from '../library/place.js';
+import { driveJoint } from '../kinematics/limits.js';
 import { findPart, loadLibrary, replaceComponent, isVerifiedPart } from '../library/index.js';
 import { measure as measureKernel } from '../measure/api.js';
 import { runAllInvariants } from '../invariants/runner.js';
@@ -516,6 +517,48 @@ const TOOLS = [
                 jointId: r.jointId || null,
                 summary: `Seated ${i.partConnectorId} onto ${i.hostConnectorId}` + (r.jointId ? ` (${r.position ? `at [${r.position.map((n) => Math.round(n)).join(', ')}]` : ''})` : ''),
             };
+        },
+    },
+    {
+        name: 'drive_joint',
+        description:
+            'Pose a JOINT to a value — the DETERMINISTIC way to set a hinge angle or a slider position, and the right way to tilt a hinged part. A revolute joint (a hinge / pivot — e.g. the fold of a laptop stand, a lid, a leg) takes an ANGLE in DEGREES; a prismatic joint (a slider / rail) takes a DISTANCE in MM. The joint\'s child part is rotated/translated about the joint axis through the joint origin and re-seated; the value is clamped to the joint limits. ' +
+            'THIS IS HOW YOU TILT A HINGED PART: first mate_parts the two hinge connectors (that seats them folded-flat AND creates the revolute joint, returning its jointId), THEN drive_joint(jointId, 25) to open it to 25°. ' +
+            'NEVER hand-position a part with addMove/addRotate — those transform a body about the WORLD origin (not the hinge), so they cannot put a part on a pivot and will spiral without converging. Get jointId from the mate_parts / placeLibraryPart result, or from list_joints.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                jointId: S('Id of the joint to pose (from a mate_parts / placeLibraryPart result, or list_joints).'),
+                value: N('Target value — DEGREES for a revolute (hinge), MM for a prismatic (slider). Clamped to the joint limits.'),
+            },
+            required: ['jointId', 'value'],
+        },
+        handler: async (i) => {
+            const r = await driveJoint(i && i.jointId, Number(i && i.value));
+            if (!r || r.ok === false) return { ok: false, error: (r && r.error) || `no joint '${i && i.jointId}' — call list_joints to see what exists` };
+            return {
+                ok: true,
+                jointId: r.jointId,
+                value: r.value,
+                clamped: r.clamped,
+                child: r.child,
+                summary: `Drove ${r.jointId} to ${r.value}${r.clamped ? ' (clamped to its limit)' : ''}`,
+            };
+        },
+    },
+    {
+        name: 'list_joints',
+        description: 'List the joints in the document — id, kind (revolute / prismatic / fixed), the parent and child components they connect, the axis, the current driven value, and the limits. Use it to find a jointId for drive_joint, or to check how a hinge / slider is currently posed.',
+        input_schema: { type: 'object', properties: {} },
+        handler: () => {
+            const doc = getDocumentStore().doc;
+            const joints = Object.values(doc.joints || {}).map((j) => ({
+                id: j.id, kind: j.kind, parent: j.parent, child: j.child,
+                axis: j.axis || null,
+                value: (j.drive && Number.isFinite(j.drive.value)) ? j.drive.value : 0,
+                limits: j.limits || null,
+            }));
+            return { ok: true, count: joints.length, joints };
         },
     },
 

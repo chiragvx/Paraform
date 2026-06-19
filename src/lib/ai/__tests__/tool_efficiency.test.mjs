@@ -297,6 +297,17 @@ await t('Tier3c: generate_bom is cue-gated (finalisation/reporting)', () => {
     assert.ok(withBom.has('generate_bom'), 'BOM advertised when asked what to buy');
 });
 
+await t('Tier3c: the deterministic seat+pose tools are always advertised', () => {
+    // mate_parts / drive_joint / list_joints are the way a part is positioned and a
+    // hinge is angled. Even a "static" folding laptop stand has a hinge, so these
+    // must NOT be gated — a miss is exactly what sends the model into manual
+    // move/rotate flailing.
+    const stand = new Set(selectAgentTools(AGENT_TOOLS, 'make a folding laptop stand').map((x) => x.name));
+    for (const n of ['mate_parts', 'drive_joint', 'list_joints']) {
+        assert.ok(stand.has(n), `${n} should always be advertised`);
+    }
+});
+
 console.log(`\n${_pass} passed, ${_fail} failed`);
 if (typeof process !== 'undefined' && process.exitCode === undefined && _fail > 0) process.exitCode = 1;
 export const ok = _fail === 0;

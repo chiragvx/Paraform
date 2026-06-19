@@ -367,7 +367,7 @@ const NON_MUTATING_TOOLS = new Set([
     'get_document_summary', 'list_components', 'search_library', 'measure', 'run_invariants',
     'get_selection', 'compile_status', 'mass_properties', 'self_critique',
     'check_printability', 'recommend_material', 'compute_clearance', 'estimate_print',
-    'find_compatible_connectors', 'list_connectors', 'generate_bom',
+    'find_compatible_connectors', 'list_connectors', 'generate_bom', 'list_joints',
     'get_context', 'propose_brief', 'name_feature', 'record_decision', 'explain_decision',
     'add_requirement', 'verify_requirement', 'set_units',
     'export_for_print', 'export_parts',
