@@ -19,7 +19,13 @@
  * graceful fallback (null / passthrough), so plain-prose questions still render.
  */
 
-const FENCE = /```ask\s*\n([\s\S]*?)\n```/;
+// Tolerant of BOTH the canonical multi-line form (```ask\n{…}\n```) AND the
+// inline form some models emit (```ask {…}``` on a single line). Requiring a
+// newline after the opening fence / before the closing fence silently dropped
+// the inline form — the block rendered as raw text and the turn dead-ended
+// waiting for answers it could never receive. `\s*` after the tag eats an
+// optional space or newline; the lazy body runs to the first closing fence.
+const FENCE = /```ask\s*([\s\S]*?)```/;
 
 /**
  * Parse the first ```ask block out of an assistant message.

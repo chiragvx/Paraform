@@ -28,6 +28,19 @@ t('parses a well-formed ask block with prose before and after', () => {
     assert.equal(r.questions[0].multi, false);
 });
 
+t('parses the INLINE single-line form some models emit (```ask {…}```)', () => {
+    // The exact shape that dead-ended a live turn: opening fence, JSON, and
+    // closing fence all on one line with no surrounding newlines.
+    const text = 'Good idea — let me ask a few questions.\n\n```ask {"questions":[{"q":"Which Raspberry Pi model is this for?","options":["Pi 5","Pi 4b","Pi Zero"],"default":"Pi 4b","multi":false},{"q":"Battery type?","options":["18650 (1 cell)","18650 (2 cells)"],"default":"18650 (1 cell)"}]}```';
+    const r = parseAskBlock(text);
+    assert.ok(r, 'inline ask block must parse, not dump as raw text');
+    assert.equal(r.questions.length, 2);
+    assert.equal(r.questions[0].q, 'Which Raspberry Pi model is this for?');
+    assert.equal(r.questions[0].default, 'Pi 4b');
+    assert.deepEqual(r.questions[1].options, ['18650 (1 cell)', '18650 (2 cells)']);
+    assert.equal(r.before, 'Good idea — let me ask a few questions.');
+});
+
 t('drops a default that is not among the options', () => {
     const r = parseAskBlock('```ask\n{"questions":[{"q":"X?","options":["a","b"],"default":"z"}]}\n```');
     assert.equal(r.questions[0].default, null);
