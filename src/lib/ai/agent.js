@@ -28,6 +28,8 @@
  */
 
 import { AGENT_TOOLS, dispatchTool, documentSummary, sceneDigest } from './tools.js';
+import { GENERATOR_TOOLS } from './tools_generators.js';
+import { MECHANISM_TOOLS } from './tools_mechanism.js';
 import { SYSTEM_PROMPT } from './system_prompt.js';
 import { streamChat } from './provider.js';
 import { getProvider, DEFAULT_PROVIDER } from './providers/index.js';
@@ -38,6 +40,64 @@ import { runVisionCritique, visionCriticActive } from './vision_critic.js';
 import { getPlanGraph } from './plan/graph.js';
 import { seedPlanGraph } from './plan/decompose.js';
 import { syncPlanGraphToDoc } from './plan/sync.js';
+
+// ── Per-turn tool triage ─────────────────────────────────────────────────────
+// The full surface is ~146 tools (~30k tokens). Sending all of them every turn
+// is expensive AND degrades tool selection (the model has to find the right one
+// in a 146-item list — exactly where weak/mid models hallucinate or mis-pick).
+// We send a RELEVANT subset instead, with NO caching dependency:
+//   - every non-generator tool stays on (the workflow / edit / assembly /
+//     verify / plan surface is always available),
+//   - the 70 parametric generators are GATED by keyword: a generator is offered
+//     only when the conversation actually mentions it (a few structural staples
+//     stay always-on so common "glue" parts are reachable).
+// dispatchTool still resolves against ALL tools, so nothing breaks if a gated
+// tool is somehow invoked — it just isn't advertised when irrelevant.
+const _GENERATOR_NAMES = new Set(GENERATOR_TOOLS.map((t) => t.name));
+// Structural staples a build commonly needs even when unnamed — kept always-on.
+const _ALWAYS_GENERATORS = new Set([
+    'addGear', 'addBracket', 'addMountingPlate', 'addStandoff', 'addScrewBoss',
+    'addProjectBox', 'addLid', 'addPCBTray',
+]);
+/** Keywords for a generator, derived from its name (addBatteryHolder → battery, holder). */
+function _toolKeywords(name) {
+    return name
+        .replace(/^add/, '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 3);
+}
+// Mechanism/linkage planning tools (e.g. plan_mechanism, ~4k tokens alone) are
+// only needed for things that MOVE. Their NAMES can't be keyword-derived
+// (plan_mechanism would falsely match the very common word "plan"), so they are
+// gated on SEMANTIC cues instead.
+const _MECHANISM_NAMES = new Set(MECHANISM_TOOLS.map((t) => t.name));
+const _MECHANISM_CUES = [
+    'mechanism', 'linkage', 'servo', 'motor', 'actuat', 'robot', ' arm', 'joint',
+    'revolute', 'prismatic', 'walk', 'gait', 'four-bar', 'crank', 'rocker',
+    'steer', 'gearbox', 'rotate', 'rotating', 'hinge', 'gripper', 'leg', 'wheel',
+];
+
+/**
+ * Pick the tools to advertise this turn. `convText` is the running conversation
+ * text (all user/goal messages joined) so a generator named in the request stays
+ * offered across the whole turn sequence, not just the turn it was mentioned.
+ */
+export function selectAgentTools(all, convText) {
+    const text = String(convText || '').toLowerCase();
+    return all.filter((tool) => {
+        if (_GENERATOR_NAMES.has(tool.name)) {
+            if (_ALWAYS_GENERATORS.has(tool.name)) return true;  // staple → always on
+            return _toolKeywords(tool.name).some((w) => text.includes(w));
+        }
+        if (_MECHANISM_NAMES.has(tool.name)) {
+            return _MECHANISM_CUES.some((w) => text.includes(w));  // only for moving things
+        }
+        return true;                                             // everything else → always on
+    });
+}
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
@@ -372,7 +432,6 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
     const emit = (ev) => { try { onEvent(ev); } catch { /* UI handler must not break the loop */ } };
     const { providerName, model, maxTokens, apiKey, baseUrl, escalationModel } = resolveModelConfig();
     const provider = getProvider(providerName);
-    const tools = provider.toolsForProvider(AGENT_TOOLS);
     // Does the active model accept image input? Gates the capture→look loop so
     // a render is never sent to a text-only model (which errors the request).
     const baseVision = modelSupportsVision(providerName, model);
@@ -395,6 +454,12 @@ export async function runAgentTurn({ userMessage, images, history = [], onEvent 
         messages.push(entry);
         try { getAIContext().bumpTurn(); } catch { /* context optional */ }
     }
+
+    // Per-turn tool triage: advertise only the relevant subset (all non-generator
+    // tools + generators the conversation actually names). Derived from the full
+    // user-message text so a part named earlier stays available across the turn.
+    const convText = messages.filter((m) => m && m.role === 'user').map((m) => m.text || '').join(' ');
+    const tools = provider.toolsForProvider(selectAgentTools(AGENT_TOOLS, convText));
 
     // Track turn-level activity so we can synthesize a completion message when
     // the model ends a turn silently (tool chips but no final prose — observed

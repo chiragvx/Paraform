@@ -22,8 +22,69 @@ import {
     addFoot, addGusset, addHandle, addShaftHub, addLid, addRackGear,
     addBatteryHolder, addDINRailClip, addCableClip, addGridfinityBin, addTSlotBracket,
     addImpeller, addAuger, addBlowerWheel, addPaddleWheel, addPiCase,
+    getDocumentStore,
 } from '../../../lib/document/index.js';
 import { N, S, B, feat, fail } from './tools_util.js';
+import { mateConnectors } from '../library/place.js';
+import { connectorsCompatible } from '../library/mate_solver.js';
+
+/**
+ * After a generator builds a part, auto-assemble it with compatible parts that
+ * already exist — BIDIRECTIONALLY, so it works whichever order the model builds
+ * in (case-then-holder OR holder-then-case). This is "tooling owns placement": a
+ * weak driver reliably skips discovering connectors and calling mate_parts,
+ * leaving parts piled at the origin. Auto-assembly removes that step.
+ *
+ * Two directions, both driven off connector GENDER (male inserts into female):
+ *   (a) this part is a PAYLOAD (a male connector) → seat IT onto an existing
+ *       female host (moves this part).
+ *   (b) this part is a HOST   (a female connector) → pull an existing orphan
+ *       male payload onto it (moves the OTHER part).
+ * Only unoccupied, compatible connectors on a DIFFERENT part are considered, so
+ * nothing double-mates and a standalone part with no partner stays put.
+ * Returns a short note for the tool summary, or '' when nothing was assembled.
+ */
+function _autoAssemble(feature) {
+    try {
+        if (!feature || !feature.componentId) return '';
+        const doc = getDocumentStore().doc;
+        const conns = Object.values(doc.connectors || {});
+        const myComp = feature.componentId;
+        const mine = conns.filter((c) => c.parent === myComp);
+        if (!mine.length) return '';
+
+        const occupied = new Set();
+        for (const m of Object.values(doc.mates || {})) {
+            const hid = m.hostConnectorRef && m.hostConnectorRef.connectorId;
+            const pid = m.partConnectorRef && m.partConnectorRef.connectorId;
+            if (hid) occupied.add(hid);
+            if (pid) occupied.add(pid);
+        }
+        const free = (c) => !occupied.has(c.id);
+        const notes = [];
+
+        // (a) PAYLOAD side — this part's male connector seats into a female host.
+        for (const pc of mine.filter((c) => c.gender === 'male' && free(c))) {
+            const hc = conns.find((c) => c.parent !== myComp && c.gender === 'female'
+                && free(c) && connectorsCompatible(c, pc));
+            if (hc) {
+                const r = mateConnectors(hc.id, pc.id);
+                if (r && r.ok) { occupied.add(hc.id); occupied.add(pc.id); notes.push(`seated into ${doc.components[hc.parent]?.name || 'host'}`); }
+            }
+        }
+        // (b) HOST side — this part's female connector pulls in an orphan payload.
+        for (const hc of mine.filter((c) => c.gender === 'female' && free(c))) {
+            const pc = conns.find((c) => c.parent !== myComp && c.gender === 'male'
+                && free(c) && connectorsCompatible(hc, c));
+            if (pc) {
+                const r = mateConnectors(hc.id, pc.id);
+                if (r && r.ok) { occupied.add(hc.id); occupied.add(pc.id); notes.push(`seated ${doc.components[pc.parent]?.name || 'part'} into it`); }
+            }
+        }
+        return notes.length ? ` — auto-${notes.join('; ')}` : '';
+    } catch { /* never let auto-assembly break part creation */ }
+    return '';
+}
 
 /** Shared fan/blade input schema (addFanBlade is addFan with bladeCount fixed). */
 const FAN_PROPS = {
@@ -359,7 +420,7 @@ export const GENERATOR_TOOLS = [
         name: 'addBatteryHolder',
         description: 'Create a BATTERY HOLDER in ONE call: a cradle with N half-round troughs sized to a cell (18650, 21700, AA, AAA, C, 9V) side by side with end walls. Sits on Z=0. mm.',
         input_schema: { type: 'object', properties: { cellType: S('Cell', { enum: ['18650', '21700', 'AA', 'AAA', 'C', '9V'] }), cellCount: N('Number of cells (default 1)'), wall: N('Wall thickness (mm, default 2)'), componentId: S('Target component id') }, required: [] },
-        handler: (i) => { try { return feat(addBatteryHolder(i), `Battery holder ${i.cellCount ?? 1}× ${i.cellType || '18650'}`); } catch (e) { return fail(e); } },
+        handler: (i) => { try { const f = addBatteryHolder(i); const seat = _autoAssemble(f); return feat(f, `Battery holder ${i.cellCount ?? 1}× ${i.cellType || '18650'}${seat}`); } catch (e) { return fail(e); } },
     },
     {
         name: 'addDINRailClip',
@@ -450,6 +511,6 @@ export const GENERATOR_TOOLS = [
             lidScrews: B('Add lid screw holes over the mounting posts (default false)'),
             componentId: S('Target component id'),
         }, required: [] },
-        handler: (i) => { try { return feat(addPiCase(i), `Raspberry Pi ${i.model || '5'} case (${i.part || 'both'})`); } catch (e) { return fail(e); } },
+        handler: (i) => { try { const f = addPiCase(i); const seat = _autoAssemble(f); return feat(f, `Raspberry Pi ${i.model || '5'} case (${i.part || 'both'})${seat}`); } catch (e) { return fail(e); } },
     },
 ];

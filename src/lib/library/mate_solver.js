@@ -312,16 +312,25 @@ export function solveMateTransform(hostConnectorWorld, partConnector, opts = {})
         : _vec3Neg(hostAxis);
 
     let R = _rotBetween(partAxis, targetAxis);
-    // Optional user roll about the mate axis. The single-axis mate above pins
-    // only the part's connector axis to the host; the remaining spin around
-    // that axis is free, so a part can land in any roll (a bracket's holes
-    // pointing the "wrong" way, a nut's flats off-grid). `opts.roll` (radians)
-    // rotates the whole part about the world mate axis so the user can dial in
-    // the orientation — this is what the keyboard rotate-to-fit feeds. Compose
-    // in the world frame (Rroll · R) so roll is about the host axis, not the
-    // part's pre-mate local axis.
-    if (Number.isFinite(opts.roll) && opts.roll !== 0) {
-        R = _mat3Mul(_rotAboutAxis(targetAxis, opts.roll), R);
+    // Roll about the mate axis. The single-axis mate above pins only the part's
+    // connector axis to the host; the remaining SPIN about that axis is free, so
+    // a part can land in any roll (a bracket's holes the "wrong" way, a holder
+    // crossways in a cavity). Resolve the spin in priority order:
+    //   1. explicit opts.roll — keyboard rotate-to-fit / drop UX, else
+    //   2. AUTO-ALIGN — if BOTH connectors carry an in-plane reference `normal`,
+    //      pin the spin so the part's normal lines up with the host's (e.g. a
+    //      battery holder's long axis lays along the enclosure's long axis,
+    //      instead of crossways where it clips the walls).
+    // Compose in the world frame (Rroll · R) so roll is about the host axis, not
+    // the part's pre-mate local axis.
+    let roll = 0;
+    if (Number.isFinite(opts.roll)) {
+        roll = opts.roll;
+    } else if (Array.isArray(partConnector.normal) && Array.isArray(hostConnectorWorld.normal)) {
+        roll = _inPlaneAlignRoll(R, targetAxis, partConnector.normal, hostConnectorWorld.normal);
+    }
+    if (roll !== 0) {
+        R = _mat3Mul(_rotAboutAxis(targetAxis, roll), R);
     }
     const partOrigin = partConnector.origin || [0, 0, 0];
     const rotated = _rotApply(R, partOrigin);
@@ -336,6 +345,30 @@ export function solveMateTransform(hostConnectorWorld, partConnector, opts = {})
         euler: _eulerXYZFromR(R),
         position: t,
     };
+}
+
+/**
+ * Signed roll (radians) about `axis` that brings the part's in-plane reference
+ * direction (its `normal`, AFTER the axis-aligning rotation R) into line with the
+ * host's in-plane reference direction. Both are projected into the plane ⊥ axis
+ * first. Returns 0 when either projection is degenerate (a normal parallel to the
+ * axis carries no in-plane information). Fully constrains an otherwise
+ * free-spinning planar mate so a payload seats in a predictable orientation.
+ */
+function _inPlaneAlignRoll(R, axis, partNormal, hostNormal) {
+    const ax = _vec3Normalize(axis);
+    const proj = (v) => {
+        const d = _vec3Dot(v, ax);
+        const p = [v[0] - d * ax[0], v[1] - d * ax[1], v[2] - d * ax[2]];
+        return Math.hypot(p[0], p[1], p[2]) < 1e-6 ? null : _vec3Normalize(p);
+    };
+    const a = proj(_rotApply(R, partNormal));
+    const b = proj(hostNormal);
+    if (!a || !b) return 0;
+    const dot = Math.max(-1, Math.min(1, _vec3Dot(a, b)));
+    const sign = _vec3Dot(_vec3Cross(a, b), ax) >= 0 ? 1 : -1;
+    const ang = Math.acos(dot) * sign;
+    return Number.isFinite(ang) ? ang : 0;
 }
 
 /**

@@ -37,6 +37,7 @@ import {
     addStandardPart,
     addBox,
     makeConnector,
+    setComponentOrigin,
 } from '../../../lib/document/index.js';
 import { addConnectorChange } from '../../../lib/document/changelog.js';
 import { getPartById } from './index.js';
@@ -308,4 +309,87 @@ export function placeLibraryPart(args) {
 // the makeConnector-stamped id (so callers can reference it).
 function _addConnectorChangeOrFallback(connector) {
     return addConnectorChange(connector);
+}
+
+/**
+ * Mate two ALREADY-PLACED connectors and SOLVE the placement: the part
+ * connector's owning component is physically moved so the two connectors meet.
+ *
+ * This is the missing seam for parts that aren't library placements — two
+ * generated/custom parts (e.g. a battery holder seating into a Pi case cavity
+ * floor). `placeLibraryPart` positions a part at creation; `add_mate` only
+ * RECORDS a constraint and moves nothing. `mateConnectors` does what neither
+ * does for existing parts: resolve → solve → reposition → persist.
+ *
+ * The HOST stays put; the PART connector's component (`partC.parent`) is the one
+ * repositioned via `setComponentOrigin`, which both moves the rendered body
+ * (emit.js `composeComponentTransform`) and the part's connector world frames
+ * (mate_solver `componentWorldMatrix`) — they stay in agreement. A persistent
+ * Mate is recorded so a later swap / cascade re-solves against it.
+ *
+ * @param {string} hostConnectorId  connector that stays put (the seat)
+ * @param {string} partConnectorId  connector whose component moves to meet it
+ * @param {{ slide?: number, roll?: number }} [opts]
+ * @returns {{ ok: boolean, componentId?: string, mateId?: string, jointId?: string, position?: number[], error?: string }}
+ */
+export function mateConnectors(hostConnectorId, partConnectorId, opts = {}) {
+    const store = getDocumentStore();
+    const doc = store.doc;
+    const hostC = doc.connectors && doc.connectors[hostConnectorId];
+    const partC = doc.connectors && doc.connectors[partConnectorId];
+    if (!hostC) return { ok: false, error: `unknown host connector ${hostConnectorId}` };
+    if (!partC) return { ok: false, error: `unknown part connector ${partConnectorId}` };
+
+    // Compatibility on the RAW records (they carry interfaceId / gender / size);
+    // the world frame drops those, so checking against it would silently fall
+    // back to kind-only matching.
+    if (!connectorsCompatible(hostC, partC)) {
+        return { ok: false, error: `connectors are not compatible — interface/kind/gender/size mismatch (host ${hostC.interfaceId || hostC.kind} ⟂ part ${partC.interfaceId || partC.kind})` };
+    }
+
+    // The part must be a movable unit. Generator parts get their own component;
+    // a connector anchored to a raw feature or 'root' can't be repositioned.
+    const partComponentId = partC.parent;
+    if (!partComponentId || !(doc.components && doc.components[partComponentId])) {
+        return { ok: false, error: `part connector ${partConnectorId} must be anchored to a movable component to be mated (its parent is "${partComponentId}")` };
+    }
+
+    const hostWorld = worldConnectorFor(doc, hostC);
+    const slide = Number.isFinite(opts.slide) ? opts.slide : undefined;
+    const roll  = Number.isFinite(opts.roll)  ? opts.roll  : undefined;
+    const solved = solveMateTransform(hostWorld, partC, { slide, roll });
+
+    setComponentOrigin(partComponentId, {
+        position: solved.position.slice(),
+        rotation: solved.euler.slice(),
+        scale: [1, 1, 1],
+    });
+
+    // Induced joint (bearing+shaft→revolute, slot+nut→prismatic, else fixed).
+    let jointId = null;
+    let jointKind = null;
+    const jk = inducedJointFromMate(hostC, partC);
+    if (jk) {
+        const j = addJoint({
+            kind: jk,
+            parent: hostC.parent || 'root',
+            child:  partComponentId,
+            origin: hostWorld.origin.slice(),
+            axis:   hostWorld.axis.slice(),
+        });
+        jointId = j.id;
+        jointKind = jk;
+    }
+
+    const m = addMate({
+        hostConnectorRef: { connectorId: hostConnectorId, world: null },
+        partConnectorRef: { connectorId: partConnectorId },
+        componentId: partComponentId,
+        offset: (slide !== undefined || roll !== undefined)
+            ? { ...(slide !== undefined ? { slide } : {}), ...(roll !== undefined ? { roll } : {}) }
+            : null,
+        inducedJoint: { id: jointId, kind: jointKind },
+    });
+
+    return { ok: true, componentId: partComponentId, mateId: m.id, jointId, position: solved.position.slice() };
 }

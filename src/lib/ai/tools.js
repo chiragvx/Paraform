@@ -32,7 +32,7 @@ import {
     addMate,
     getDocumentStore,
 } from '../../../lib/document/index.js';
-import { placeLibraryPart } from '../library/place.js';
+import { placeLibraryPart, mateConnectors } from '../library/place.js';
 import { findPart, loadLibrary, replaceComponent, isVerifiedPart } from '../library/index.js';
 import { measure as measureKernel } from '../measure/api.js';
 import { runAllInvariants } from '../invariants/runner.js';
@@ -482,6 +482,31 @@ const TOOLS = [
                 inducedJoint: i.inducedJoint || null,
             });
             return { ok: true, mateId: m.id, summary: `Mated ${i.partConnectorId} → ${i.hostConnectorId}` };
+        },
+    },
+    {
+        name: 'mate_parts',
+        description: 'Seat one already-created part onto another at their connectors and SOLVE the placement — the part is physically MOVED so the two connectors meet (e.g. a battery holder dropped onto a Pi case cavity floor). Use this for parts you generated or built (whose connectors come from a generator or declareConnector); unlike add_mate, which only records a constraint and moves nothing. The HOST connector stays put; the PART connector\'s owning component is repositioned. Discover connector ids with list_connectors / find_compatible_connectors.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                hostConnectorId: S('Connector that stays put (the seat / host).'),
+                partConnectorId: S('Connector on the part that should MOVE to meet the host — its owning component is repositioned.'),
+                slide: N('Optional mm to slide along a channel/rail mate.'),
+                roll: N('Optional radians to spin the part about the mate axis.'),
+            },
+            required: ['hostConnectorId', 'partConnectorId'],
+        },
+        handler: (i) => {
+            const r = mateConnectors(i.hostConnectorId, i.partConnectorId, { slide: i.slide, roll: i.roll });
+            if (!r || r.ok === false) return { ok: false, error: (r && r.error) || 'mate_parts failed' };
+            return {
+                ok: true,
+                componentId: r.componentId,
+                mateId: r.mateId,
+                jointId: r.jointId || null,
+                summary: `Seated ${i.partConnectorId} onto ${i.hostConnectorId}` + (r.jointId ? ` (${r.position ? `at [${r.position.map((n) => Math.round(n)).join(', ')}]` : ''})` : ''),
+            };
         },
     },
 
@@ -997,7 +1022,7 @@ const _BUILD_GATED = new Set([
     'addSketch', 'addExtrude', 'addRevolve', 'addSweep', 'addLoft',
     'placeLibraryPart', 'addStandardPart',
     'build_part_recipe', 'writeBuildScript',
-    'add_mate', 'replace_component',
+    'add_mate', 'mate_parts', 'replace_component',
     // Parametric generators — each STARTS fabricating a whole part, so they are
     // gated exactly like a primitive. (Previously only a handful were listed,
     // which let a weak model build a "blender" out of ungated addMountingPlate /
